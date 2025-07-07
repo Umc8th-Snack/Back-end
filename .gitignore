@@ -36,6 +36,8 @@ out/
 ### VS Code ###
 .vscode/
 
-### OS
+### OS ###
 .DS_Store
 Thumbs.db
+
+.env
