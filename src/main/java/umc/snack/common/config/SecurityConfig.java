@@ -1,4 +1,4 @@
-package umc.snack.config;
+package umc.snack.common.config;
 
 
 import org.springframework.context.annotation.Bean;
