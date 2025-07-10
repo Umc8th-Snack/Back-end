@@ -23,12 +23,12 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/kakao",
                                 "/auth/kakao/callback",
-                                "/api/articles/**/related-articles",
+                                "/api/articles/*/related-articles",
                                 "/api/articles/search",
                                 "/api/articles/main",
                                 // 관리자 공개 api -> 개발 단계에서는 전체 공개
                                 "/api/articles/crawl/status",
-                                "/api/articles/**/summarize",
+                                "/api/articles/*/summarize",
                                 "/api/terms"
                         ).permitAll()
                         // 나머지는 모두 JWT 토큰 인증 필요
