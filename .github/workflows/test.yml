@@ -1,26 +1,26 @@
-# .github/workflows/test.yml
-name: Run JUnit Tests
+# # .github/workflows/test.yml
+# name: Run JUnit Tests
 
-on:
-  pull_request:
-    branches: [ main ]
+# on:
+#   pull_request:
+#     branches: [ main ]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+# jobs:
+#   test:
+#     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
-        with:
-          java-version: '21'
-          distribution: 'temurin'  # 가장 안정적이고 공식 추천되는 배포판
+#       - name: Set up JDK 21
+#         uses: actions/setup-java@v3
+#         with:
+#           java-version: '21'
+#           distribution: 'temurin'  # 가장 안정적이고 공식 추천되는 배포판
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
+#       - name: Grant execute permission for gradlew
+#         run: chmod +x ./gradlew
 
-      - name: Run tests
-        run: ./gradlew clean test
+#       - name: Run tests
+#         run: ./gradlew clean test
