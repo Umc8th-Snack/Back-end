@@ -46,4 +46,20 @@ public class ArticleController {
         // TODO: 개발 예정
         return ResponseEntity.ok("주요 용어 조회 API - 개발 예정");
     }
+    @Operation(summary = "키워드 기반 기사 검색", description = "키워드로 기사를 검색합니다. 최신순 정렬, 페이지네이션을 지원합니다.")
+    @GetMapping("/search/keyword")
+    public ResponseEntity<?> searchArticlesByKeyword(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "latest") String sort,
+            @RequestParam(defaultValue = "1") int page) {
+        // TODO: 개발 예정
+        return ResponseEntity.ok("키워드 기반 기사 검색 API - 개발 예정");
+    }
+
+    @Operation(summary = "관련 기사 조회", description = "현재 보고 있는 기사와 카테고리가 같은 관련 기사를 추천합니다.")
+    @GetMapping("/{articleId}/related-articles")
+    public ResponseEntity<?> getRelatedArticles(@PathVariable Long articleId) {
+        // TODO: 개발 예정
+        return ResponseEntity.ok("관련 기사 조회 API - 개발 예정");
+    }
 }
