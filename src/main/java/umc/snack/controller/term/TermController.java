@@ -1,4 +1,4 @@
-package umc.snack.controller.Term;
+package umc.snack.controller.term;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
