@@ -5,7 +5,7 @@ import lombok.*;
 @Getter
 @AllArgsConstructor
 @Builder
-public class UserQuizResultDto {
+public class UserQuizSubmissionDto {
     private Long resultId;
     private Long userId;
     private Long quizId;
