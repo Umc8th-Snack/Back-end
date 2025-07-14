@@ -2,10 +2,15 @@ package umc.snack.controller.user;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import umc.snack.domain.user.dto.UserSignupRequestDto;
 import umc.snack.domain.user.entity.User;
+import umc.snack.service.user.UserService;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -13,12 +18,23 @@ import umc.snack.domain.user.entity.User;
 @Tag(name = "User", description = "회원 관련 API")
 public class UserController {
 
+    private final UserService userService;
+
     @Operation(summary = "회원가입",description = "이메일, 비밀번호, 닉네임으로 회원가입합니다.")
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody User user) {
+    public ResponseEntity<?> signup(@RequestBody @Valid UserSignupRequestDto request) {
         // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
+        userService.signup(request);
+        return ResponseEntity.ok(
+                Map.of(
+                        "isSuccess", true,
+                        "code", "USER_2000",
+                        "message", "회원가입이 정상적으로 처리되었습니다.",
+                        "result", null
+                )
+        );
     }
+
     @Operation(summary = "내 비밀번호 변경", description = "현재 비밀번호와 새 비밀번호를 입력하여 비밀번호를 변경합니다.")
     @PatchMapping("/me/password")
     public ResponseEntity<?> updatePassword(@RequestBody Object request) {

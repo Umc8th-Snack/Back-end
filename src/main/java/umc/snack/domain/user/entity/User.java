@@ -41,8 +41,18 @@ public class User extends BaseEntity {
     @Column(name = "delete_at")
     private java.time.LocalDateTime deleteAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
+
     public enum Status {
         ACTIVE,
         DELETED
     }
+
+    public enum Role {
+        ROLE_USER,
+        ROLE_ADMIN
+    }
+
 }
