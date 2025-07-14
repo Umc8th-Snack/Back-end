@@ -24,13 +24,13 @@ public class UserController {
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody @Valid UserSignupRequestDto request) {
         // TODO: 구현 예정
-        userService.signup(request);
+        var result = userService.signup(request);
         return ResponseEntity.ok(
                 Map.of(
                         "isSuccess", true,
-                        "code", "USER_2000",
+                        "code", "USER_2501",
                         "message", "회원가입이 정상적으로 처리되었습니다.",
-                        "result", null
+                        "result", result
                 )
         );
     }
