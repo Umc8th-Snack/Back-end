@@ -83,10 +83,20 @@ public class ArticleCollectorService {
     // 기사 본문이 50자가 남는지 유효성 검사
     private boolean isValidArticle(String url) {
         try {
-            Document doc = Jsoup.connect(url).get();
-            String text = doc.select("#dic_area, #newsEndContents, article").text();
+            Document doc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .timeout(3000)
+                    .get();
+            String text = doc.select("#dic_area").text();
+            if (text.isEmpty()) {
+                text = doc.select("#newsEndContents").text();
+            }
+            if (text.isEmpty()) {
+                text = doc.select("article").text();
+            }
             return text != null && text.length() > 50; // 50자 이상이면 유효한 기사로 판단
         } catch (IOException e) {
+            log.debug("기사 유효성 검사 실패: {}", url);
             return false;
         }
     }

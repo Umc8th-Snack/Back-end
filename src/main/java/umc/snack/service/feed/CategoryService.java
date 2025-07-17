@@ -3,6 +3,7 @@ package umc.snack.service.feed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.article.entity.ArticleCategory;
 import umc.snack.domain.feed.entity.Category;
@@ -16,6 +17,7 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
