@@ -54,13 +54,20 @@ public class ArticleCrawlerService {
 
                 log.info("[크롤링 결과] link: {}\ncontent: {}", link, content);
 
-                // 기자 이름 추출
+                // 기자/특파원 이름 추출
                 String author = "";
-                Element journalistElement = doc.selectFirst(".media_end_head_journalist_name");
+                // .media_end_head_journalist_name(기자) 뿐 아니라 .byline_s(특파원) 도 함께 선택
+                Element journalistElement = doc.selectFirst(".media_end_head_journalist_name, .byline_s");
                 if (journalistElement != null) {
-                    author = journalistElement.text().replace("기자", "").trim();
+                    String text = journalistElement.text();
+                    // "파리=유근형 특파원" 처럼 접두부에 "파리=" 가 붙은 경우 뒷부분만 취하도록
+                    if (text.contains("=")) {
+                        text = text.substring(text.indexOf("=") + 1);
+                    }
+                    // "기자" 또는 "특파원" 접미사를 정규식으로 깔끔히 제거
+                    author = text.replaceAll("(기자|특파원)$", "").trim();
                 }
-                log.info("👤 기자: {}", author);        // 이정하
+                log.info("👤 기자/특파원: {}", author);
 
 
                 // 발행일 = 수정일로 취급, 수정일잉 없을 경우, 발행일로 대체

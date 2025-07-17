@@ -66,7 +66,6 @@ public class ArticleCollectorService {
                     String articleUrl = href.startsWith("http") ? href : NAVER_PREFIX + href;
                     String extractedOid = extractOidFromUrl(articleUrl);
                     if (extractedOid == null || !NEWS_OIDS.contains(extractedOid)) continue;
-                    if (!NEWS_OIDS.contains(extractedOid)) continue;
                     if (isValidArticle(articleUrl)) {
                         validLinks.add(articleUrl);
                         break;
