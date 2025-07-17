@@ -56,16 +56,18 @@ public class ArticleCrawlerService {
 
                 // 기자/특파원 이름 추출
                 String author = "";
-                // .media_end_head_journalist_name(기자) 뿐 아니라 .byline_s(특파원) 도 함께 선택
                 Element journalistElement = doc.selectFirst(".media_end_head_journalist_name, .byline_s");
                 if (journalistElement != null) {
                     String text = journalistElement.text();
-                    // "파리=유근형 특파원" 처럼 접두부에 "파리=" 가 붙은 경우 뒷부분만 취하도록
-                    if (text.contains("=")) {
-                        text = text.substring(text.indexOf("=") + 1);
+                    // 이메일 주소 제거
+                    text = text.replaceAll("\\s*\\S+@\\S+", "");
+                    // "파리=유근형 특파원" 처럼 접두부 "=" 뒤만 취하도록
+                    int eqIndex = text.indexOf("=");
+                    if (eqIndex >= 0) {
+                        text = text.substring(eqIndex + 1);
                     }
-                    // "기자" 또는 "특파원" 접미사를 정규식으로 깔끔히 제거
-                    author = text.replaceAll("(기자|특파원)$", "").trim();
+                    // "기자" 또는 "특파원" 단어 제거
+                    author = text.replaceAll("(기자|특파원)", "").trim();
                 }
                 log.info("👤 기자/특파원: {}", author);
 
