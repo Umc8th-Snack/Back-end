@@ -97,7 +97,7 @@ public class ArticleCrawlerService {
                 String articleId = link.substring(link.lastIndexOf("/") + 1);
 
                 // 카테고리 할당 (sid1은 내부에서 추출됨)
-                categoryService.assignCategoryToArticle(article, link, html, articleId);
+                categoryService.assignCategoryToArticle(article, link);
 
                 CrawledArticle crawledArticle = CrawledArticle.builder()
                         .articleUrl(link)

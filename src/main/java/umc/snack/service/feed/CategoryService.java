@@ -22,11 +22,11 @@ public class CategoryService {
     private final ArticleCategoryRepository articleCategoryRepository;
 
     /**
-     * 기사 HTML에서 sectionId를 추출하고 카테고리 매핑
+     * 기사 URL에서 sectionId를 추출하고 카테고리 매핑
      */
-    public void assignCategoryToArticle(Article article, String articleUrl, String articleHtml, String currentArticleId) {
+    public void assignCategoryToArticle(Article article, String articleUrl) {
         // 1. sid1 추출
-        String sid1 = extractSid1FromHtml(articleHtml, currentArticleId);
+        String sid1 = extractSidFromUrl(articleUrl);
         log.info("articleUrl={}, sid1={}", articleUrl, sid1);
 
         // 2. sid1 → categoryName 매핑
@@ -52,32 +52,16 @@ public class CategoryService {
     }
 
     /**
-     * HTML 내 script 태그에서 sectionId 추출
+     * URL에서 sid 파라미터를 추출합니다 (예: sid=102 → "102").
      */
-    public String extractSid1FromHtml(String html, String currentArticleId) {
-        Pattern scriptPattern = Pattern.compile("<script[^>]*>([\\s\\S]*?)</script>", Pattern.CASE_INSENSITIVE);
-        Matcher scriptMatcher = scriptPattern.matcher(html);
-
-        Pattern articleIdPattern = Pattern.compile("[\"']?articleId[\"']?\\s*[:=]\\s*[\"']?" +
-                Pattern.quote(currentArticleId) + "[\"']?");
-        Pattern sectionIdPattern = Pattern.compile("[\"']?sectionId[\"']?\\s*[:=]\\s*[\"']?(\\d{3})[\"']?");
-
-        while (scriptMatcher.find()) {
-            String script = scriptMatcher.group(1);
-
-            if (articleIdPattern.matcher(script).find()) {
-                Matcher sidMatcher = sectionIdPattern.matcher(script);
-                if (sidMatcher.find()) {
-                    String sid = sidMatcher.group(1);
-                    log.info("✔ sectionId 추출 성공: {}", sid);
-                    return sid;
-                } else {
-                    log.warn("⚠ articleId는 찾았지만, 해당 script 내에 sectionId가 없음");
-                }
-            }
+    private String extractSidFromUrl(String url) {
+        Pattern pattern = Pattern.compile("sid=(\\d{3})");
+        Matcher matcher = pattern.matcher(url);
+        if (matcher.find()) {
+            log.info("✔ sectionId 추출 성공 from URL: {}", matcher.group(1));
+            return matcher.group(1);
         }
-
-        log.warn("⚠ HTML 전체에서 sectionId를 찾지 못했습니다.");
-        return "000"; // fallback
+        log.warn("⚠ URL에서 sectionId를 찾지 못했습니다.");
+        return "000";
     }
 }
