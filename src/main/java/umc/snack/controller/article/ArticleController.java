@@ -1,5 +1,8 @@
 package umc.snack.controller.article;
 
+import umc.snack.domain.article.entity.CrawledArticle;
+import umc.snack.repository.article.CrawledArticleRepository;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -12,11 +15,21 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Article", description = "기사 관련 API")
 public class ArticleController {
 
+    private final CrawledArticleRepository crawledArticleRepository;
+
     @Operation(summary = "기사 크롤링 상태 확인", description = "현재 크롤링 작업이 진행 중인지 확인합니다.")
     @GetMapping("/crawl/status")
     public ResponseEntity<?> checkCrawlStatus() {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("크롤링 상태 확인 API - 개발 예정");
+        long total = crawledArticleRepository.count();
+        long success = crawledArticleRepository.countByStatus(CrawledArticle.Status.PROCESSED);
+        long failed = crawledArticleRepository.countByStatus(CrawledArticle.Status.FAILED);
+
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("total", total);
+        response.put("success", success);
+        response.put("failed", failed);
+
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "기사 요약 생성", description = "AI 모델을 통해 기사 요약을 생성합니다.")
