@@ -62,9 +62,13 @@ public class ArticleCrawlerService {
                 log.info("👤 기자: {}", author);        // 이정하
 
 
-                // 발행일 = 수정일로 취급
+                // 발행일 = 수정일로 취급, 수정일잉 없을 경우, 발행일로 대체
+                String publishedDateStr = doc.select("span._ARTICLE_MODIFY_DATE_TIME").attr("data-modify-date-time");
+                if (publishedDateStr.isEmpty()) {
+                    publishedDateStr = doc.select("span._ARTICLE_DATE_TIME").attr("data-date-time");
+                }
+
                 LocalDateTime publishedAt = null;
-                String publishedDateStr = doc.select("._ARTICLE_MODIFY_DATE_TIME").attr("data-modify-date-time");
                 if (!publishedDateStr.isEmpty()) {
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                     publishedAt = LocalDateTime.parse(publishedDateStr, formatter);
