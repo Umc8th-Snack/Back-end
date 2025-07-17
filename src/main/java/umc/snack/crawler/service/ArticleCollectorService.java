@@ -1,5 +1,8 @@
 package umc.snack.crawler.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -8,10 +11,14 @@ import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -47,15 +54,18 @@ public class ArticleCollectorService {
                     sid1, oid, formattedDate
             );
             try {
-                Document doc = Jsoup.connect(listUrl).get();
+                Document doc = Jsoup.connect(listUrl)
+                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                        .timeout(5000)
+                        .get();
+
                 Elements articleLinks = doc.select("a[href*='/article/']");
                 log.info("🔍 [{}] 링크 개수: {}", listUrl, articleLinks.size());
                 for (Element link : articleLinks) {
                     String href = link.attr("href");
                     String articleUrl = href.startsWith("http") ? href : NAVER_PREFIX + href;
-                    String[] parts = articleUrl.split("/");
-                    if (parts.length < 6) continue;
-                    String extractedOid = parts[5];
+                    String extractedOid = extractOidFromUrl(articleUrl);
+                    if (extractedOid == null || !NEWS_OIDS.contains(extractedOid)) continue;
                     if (!NEWS_OIDS.contains(extractedOid)) continue;
                     if (isValidArticle(articleUrl)) {
                         validLinks.add(articleUrl);
@@ -63,7 +73,7 @@ public class ArticleCollectorService {
                     }
                 }
             } catch (IOException e) {
-                log.warn("[수집 실패] URL: {}", listUrl);
+                log.warn("[수집 실패] URL: {}, 오류: {}", listUrl, e.getMessage());
             }
         }
 
@@ -83,13 +93,32 @@ public class ArticleCollectorService {
     }
 
     public String toJson(List<String> links) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{ \"items\": [");
-        List<String> jsonItems = links.stream()
-                .map(link -> String.format("{\"link\": \"%s\"}", link))
-                .collect(Collectors.toList());
-        sb.append(String.join(", ", jsonItems));
-        sb.append("] }");
-        return sb.toString();
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode root = mapper.createObjectNode();
+            ArrayNode items = mapper.createArrayNode();
+
+            for (String link : links) {
+                ObjectNode item = mapper.createObjectNode();
+                item.put("link", link);
+                items.add(item);
+            }
+
+            root.set("items", items);
+            return mapper.writeValueAsString(root);
+        } catch (Exception e) {
+            log.error("JSON 변환 실패", e);
+            return "{\"items\": []}";
+        }
+    }
+
+    private String extractOidFromUrl(String url) {
+        try {
+            String path = new URI(url).getPath();
+            Matcher m = Pattern.compile("/article/(\\d{3})/").matcher(path);
+            return m.find() ? m.group(1) : null;
+        } catch (URISyntaxException e) {
+            return null;
+        }
     }
 }

@@ -17,7 +17,9 @@ import umc.snack.service.feed.CategoryService;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import org.springframework.transaction.annotation.Transactional;
 
+@Transactional
 @Slf4j
 @Service
 @RequiredArgsConstructor
