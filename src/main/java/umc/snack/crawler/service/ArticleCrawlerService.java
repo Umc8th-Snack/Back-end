@@ -17,6 +17,8 @@ import umc.snack.service.feed.CategoryService;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
@@ -54,11 +56,12 @@ public class ArticleCrawlerService {
 
                 log.info("[크롤링 결과] link: {}\ncontent: {}", link, content);
 
-                // 기자/특파원 이름 추출
-                String author = "";
-                Element journalistElement = doc.selectFirst(".media_end_head_journalist_name, .byline_s");
-                if (journalistElement != null) {
-                    String text = journalistElement.text();
+                // 기자/특파원 이름 추출 (여러 명 지원)
+                List<String> authorList = new java.util.ArrayList<>();
+                // 화면에 보이는 기자명 요소 모두 수집
+                org.jsoup.select.Elements journalistElements = doc.select(".media_end_head_journalist_name");
+                for (Element el : journalistElements) {
+                    String text = el.text();
                     // 이메일 주소 제거
                     text = text.replaceAll("\\s*\\S+@\\S+", "");
                     // "파리=유근형 특파원" 처럼 접두부 "=" 뒤만 취하도록
@@ -67,8 +70,29 @@ public class ArticleCrawlerService {
                         text = text.substring(eqIndex + 1);
                     }
                     // "기자" 또는 "특파원" 단어 제거
-                    author = text.replaceAll("(기자|특파원)", "").trim();
+                    text = text.replaceAll("(기자|특파원)$", "").trim();
+                    if (!text.isEmpty()) {
+                        authorList.add(text);
+                    }
                 }
+                // 만약 기자명이 하나도 없다면 특파원 클래스도 검사
+                if (authorList.isEmpty()) {
+                    org.jsoup.select.Elements bylineElements = doc.select(".byline_s");
+                    for (Element el : bylineElements) {
+                        String text = el.text();
+                        text = text.replaceAll("\\s*\\S+@\\S+", "");
+                        int eqIndex = text.indexOf("=");
+                        if (eqIndex >= 0) {
+                            text = text.substring(eqIndex + 1);
+                        }
+                        text = text.replaceAll("(기자|특파원)$", "").trim();
+                        if (!text.isEmpty()) {
+                            authorList.add(text);
+                        }
+                    }
+                }
+                // 리스트로 모인 이름을 comma로 연결
+                String author = authorList.isEmpty() ? "" : String.join(", ", authorList);
                 log.info("👤 기자/특파원: {}", author);
 
 
