@@ -18,10 +18,10 @@ import java.util.stream.Collectors;
 @Service
 public class ArticleCollectorService {
 
-    // ✅ 주요 언론사 OID 목록 (한겨레 포함 8개)
+    // 주요 언론사 OID 목록 (한겨레 포함 8개)
     private static final List<String> NEWS_OIDS = List.of("028", "025", "023", "020", "032", "469", "022", "081");
 
-    // ✅ 기사 카테고리(섹션) 코드 - 정치~IT/과학 (네이버 기준)
+    // 기사 카테고리(섹션) 코드 - 정치~IT/과학 (네이버 기준)
     private static final List<String> SECTION_CODES = List.of("100", "101", "102", "103", "104", "105");
 
     private static final String NAVER_PREFIX = "https://n.news.naver.com";
@@ -71,7 +71,7 @@ public class ArticleCollectorService {
         return new ArrayList<>(validLinks);
     }
 
-    // ✅ 기사 본문이 50자가 남는지 유효성 검사
+    // 기사 본문이 50자가 남는지 유효성 검사
     private boolean isValidArticle(String url) {
         try {
             Document doc = Jsoup.connect(url).get();

@@ -10,7 +10,6 @@ import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.article.entity.CrawledArticle;
-import umc.snack.repository.article.ArticleCategoryRepository;
 import umc.snack.repository.article.ArticleRepository;
 import umc.snack.repository.article.CrawledArticleRepository;
 import umc.snack.service.feed.CategoryService;

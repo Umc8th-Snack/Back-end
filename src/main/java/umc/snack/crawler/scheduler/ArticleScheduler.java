@@ -10,7 +10,6 @@ import umc.snack.crawler.service.ArticleCrawlerService;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
