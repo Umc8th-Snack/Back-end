@@ -14,8 +14,8 @@ public class GeminiService {
     }
 
     public String getCompletion(String text, String model) {
-        GeminiRequestDto.GeminiRequest geminiRequest = new GeminiRequestDto.GeminiRequest(text);
-        GeminiResponseDto.GeminiResponse response = geminiInterface.getCompletion(model, geminiRequest);
+        GeminiRequestDto geminiRequest = new GeminiRequestDto(text);
+        GeminiResponseDto response = geminiInterface.getCompletion(model, geminiRequest);
 
         return response.getCandidates()
                 .stream()
@@ -23,7 +23,7 @@ public class GeminiService {
                 .flatMap(candidate -> candidate.getContent().getParts()
                         .stream()
                         .findFirst()
-                        .map(GeminiResponseDto.GeminiResponse.TextPart::getText))
+                        .map(GeminiResponseDto.TextPart::getText))
                 .orElse(null);
     }
 }

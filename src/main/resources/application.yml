@@ -26,3 +26,10 @@ logging:
   level:
     root: info
     umc.snack.crawler.service.ArticleCrawlerService: info
+
+gemini:
+  baseurl: https://generativelanguage.googleapis.com/v1
+
+googleai:
+  api:
+    key: ${GOOGLE_API_KEY}

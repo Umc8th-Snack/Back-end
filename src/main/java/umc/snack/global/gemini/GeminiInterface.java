@@ -9,8 +9,8 @@ import org.springframework.web.service.annotation.PostExchange;
 public interface GeminiInterface {
 
     @PostExchange("{model}:generateContent")
-    GeminiResponseDto.GeminiResponse getCompletion(
+    GeminiResponseDto getCompletion(
             @PathVariable String model,
-            @RequestBody GeminiRequestDto.GeminiRequest request
+            @RequestBody GeminiRequestDto request
     );
 }
