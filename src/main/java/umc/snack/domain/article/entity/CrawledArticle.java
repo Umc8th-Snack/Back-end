@@ -28,7 +28,7 @@ public class CrawledArticle extends BaseEntity {
     @Column(name = "article_id")
     private Long articleId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "article_id", insertable = false, updatable = false)
     private Article article;
 
@@ -44,6 +44,7 @@ public class CrawledArticle extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private Status status;
 
+    @Lob
     @Column(columnDefinition = "TEXT")
     private String content;
 
