@@ -111,9 +111,14 @@ public class ArticleCollectorService {
             // 본문이 없거나 너무 짧은 경우 제외
             if (text == null || text.length() < 50) return false;
 
-            // 한글 비율 계산
+            // 한글 비율 계산 (완성형 한글 + 자모음 포함)
             long totalLength = text.length();
-            long koreanCharCount = text.chars().filter(c -> (c >= 0xAC00 && c <= 0xD7A3)).count();
+            long koreanCharCount = text.chars()
+                    .filter(c -> (c >= 0xAC00 && c <= 0xD7A3) || // 완성형 한글
+                            (c >= 0x1100 && c <= 0x11FF) || // 자음
+                            (c >= 0x3130 && c <= 0x318F) || // 호환 자모
+                            (c >= 0xA960 && c <= 0xA97F))   // 확장 자모
+                    .count();
             double ratio = (double) koreanCharCount / totalLength;
 
             // 한글 비율이 60% 이상일 때만 유효하다고 판단
