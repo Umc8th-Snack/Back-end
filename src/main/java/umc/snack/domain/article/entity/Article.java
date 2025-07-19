@@ -32,4 +32,8 @@ public class Article extends BaseEntity {
     private Integer viewCount;
 
     private java.time.LocalDateTime publishedAt;
+
+    public void updateSummary(String summary) {
+        this.summary = summary;
+    }
 }
