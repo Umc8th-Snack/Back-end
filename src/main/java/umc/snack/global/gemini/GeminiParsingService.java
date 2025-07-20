@@ -1,8 +1,10 @@
 package umc.snack.global.gemini;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.quiz.entity.ArticleQuiz;
@@ -17,6 +19,7 @@ import umc.snack.repository.term.TermRepository;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class GeminiParsingService {
@@ -89,8 +92,14 @@ public class GeminiParsingService {
             }
 
             // JPA 변경 감지로 자동 저장 (별도 save 불필요)
+        } catch (JsonProcessingException e) {
+            log.error("Gemini JSON 파싱 실패 - articleId: {}, json: {}", articleId, cleanJson, e);
+            throw new IllegalArgumentException("유효하지 않은 Gemini JSON 형식", e);
+        } catch (IllegalArgumentException e) {
+            log.error("Article을 찾을 수 없음 - articleId: {}", articleId, e);
+            throw e;
         } catch (Exception e) {
-            // 로그 처리 또는 예외 처리
+            log.error("Gemini 데이터 업데이트 실패 - articleId: {}", articleId, e);
             throw new RuntimeException("Gemini JSON 파싱/업데이트 실패: " + e.getMessage(), e);
         }
     }
