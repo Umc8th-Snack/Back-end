@@ -14,16 +14,20 @@ public class GeminiService {
     }
 
     public String getCompletion(String text, String model) {
-        GeminiRequestDto geminiRequest = new GeminiRequestDto(text);
-        GeminiResponseDto response = geminiInterface.getCompletion(model, geminiRequest);
+        try {
+            GeminiRequestDto geminiRequest = new GeminiRequestDto(text);
+            GeminiResponseDto response = geminiInterface.getCompletion(model, geminiRequest);
 
-        return response.getCandidates()
-                .stream()
-                .findFirst()
-                .flatMap(candidate -> candidate.getContent().getParts()
-                        .stream()
-                        .findFirst()
-                        .map(GeminiResponseDto.TextPart::getText))
-                .orElse(null);
+            return response.getCandidates()
+                    .stream()
+                    .findFirst()
+                    .flatMap(candidate -> candidate.getContent().getParts()
+                            .stream()
+                            .findFirst()
+                            .map(GeminiResponseDto.TextPart::getText))
+                    .orElse(null);
+        } catch (Exception e) {
+            throw new RuntimeException("Gemini API 호출 실패: " + e.getMessage(), e);
+        }
     }
 }
