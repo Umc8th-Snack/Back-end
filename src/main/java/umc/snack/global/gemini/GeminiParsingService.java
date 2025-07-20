@@ -34,7 +34,12 @@ public class GeminiParsingService {
     // GeminiService에서 받은 JSON String을 Article의 summary에 반영
     @Transactional
     public void updateArticleSummary(Long articleId, String geminiJson) {
-        // 마크다운 백틱 제거
+        if (articleId == null) {
+            throw new IllegalArgumentException("articleId는 null일 수 없습니다.");
+        }
+        if (geminiJson == null || geminiJson.trim().isEmpty()) {
+            throw new IllegalArgumentException("geminiJson은 null이거나 빈 문자열일 수 없습니다.");
+        }        // 마크다운 백틱 제거
         String cleanJson = geminiJson
                 .replace("```json", "")
                 .replace("```", "")
