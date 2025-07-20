@@ -11,6 +11,7 @@ public class GeminiResponseDto {
     private List<Candidate> candidates;
 
     @Getter
+    @NoArgsConstructor
     public static class Candidate {
         private Content content;
         private String finishReason;
@@ -19,17 +20,20 @@ public class GeminiResponseDto {
     }
 
     @Getter
+    @NoArgsConstructor
     public static class Content {
         private List<TextPart> parts;
         private String role;
     }
 
     @Getter
+    @NoArgsConstructor
     public static class TextPart {
         private String text;
     }
 
     @Getter
+    @NoArgsConstructor
     public static class SafetyRating {
         private String category;
         private String probability;
