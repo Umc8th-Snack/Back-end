@@ -44,13 +44,13 @@ public class GeminiRequestDto {
     @Getter
     @AllArgsConstructor
     private static class TextPart implements Part {
-        public String text;
+        private String text;
     }
 
     @Getter
     @AllArgsConstructor
     private static class InlineDataPart implements Part {
-        public InlineData inlineData;
+        private InlineData inlineData;
     }
 
     @Getter
