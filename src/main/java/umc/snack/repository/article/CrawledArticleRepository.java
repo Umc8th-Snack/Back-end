@@ -1,7 +1,10 @@
 package umc.snack.repository.article;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import umc.snack.domain.article.entity.CrawledArticle;
+
+import java.util.Set;
 
 public interface CrawledArticleRepository extends JpaRepository<CrawledArticle, Long> {
 
@@ -9,6 +12,6 @@ public interface CrawledArticleRepository extends JpaRepository<CrawledArticle, 
 
     long countByStatus(CrawledArticle.Status status); // 상태별 개수 세기용 (PROCESSED, FAILED 등)
 
-
-
+    @Query("SELECT c.articleUrl FROM CrawledArticle c") // 이미 크롤링한 URL을 모두 Set으로 가져오는 쿼리
+    Set<String> findAllArticleUrls();
 }
