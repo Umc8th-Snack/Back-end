@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.user.entity.UserScrap;
 import umc.snack.repository.article.ArticleRepository;
@@ -12,6 +13,7 @@ import umc.snack.repository.scrap.UserScrapRepository;
 import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
 
+@Transactional
 @Service
 @RequiredArgsConstructor
 public class UserScrapServiceImpl implements UserScrapService {
