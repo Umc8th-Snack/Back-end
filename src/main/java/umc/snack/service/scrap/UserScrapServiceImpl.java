@@ -13,7 +13,6 @@ import umc.snack.repository.scrap.UserScrapRepository;
 import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
 
-@Transactional
 @Service
 @RequiredArgsConstructor
 public class UserScrapServiceImpl implements UserScrapService {
@@ -22,6 +21,7 @@ public class UserScrapServiceImpl implements UserScrapService {
     private final ArticleRepository articleRepository;
 
     @Override
+    @Transactional
     public void addScrap(Long userId, Long articleId) {
         if (userScrapRepository.existsByUserIdAndArticleId(userId, articleId)) {
             throw new CustomException(ErrorCode.SCRAP_6101);
@@ -39,9 +39,11 @@ public class UserScrapServiceImpl implements UserScrapService {
     }
 
     @Override
+    @Transactional
     public void cancelScrap(Long userId, Long articleId) {
         UserScrap scrap = userScrapRepository.findByUserIdAndArticleId(userId, articleId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SCRAP_6105));
+        userScrapRepository.delete(scrap);
     }
 
     @Override
