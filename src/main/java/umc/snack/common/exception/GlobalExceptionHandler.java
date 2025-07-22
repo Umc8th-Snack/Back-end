@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import umc.snack.common.response.ApiResponse;
 
 @RestControllerAdvice
@@ -18,6 +19,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(code.name(), code.getMessage(), null));
     }
 
+    // 메모 내용 비어있는 경우
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Object>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
         String errorMessage = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
@@ -27,7 +29,19 @@ public class GlobalExceptionHandler {
                 errorMessage,
                 null
         );
+        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+    }
 
+    // 파라미터 형식 이상한 경우
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Object>> handleTypeMismatchException(MethodArgumentTypeMismatchException ex) {
+        String message = String.format("'%s' 파라미터의 형식이 잘못되었습니다.", ex.getName());
+
+        ApiResponse<Object> apiResponse = ApiResponse.fail(
+                ErrorCode.REQ_3102.name(),
+                message,
+                null
+        );
         return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
     }
 

@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.dto.MemoResponseDto;
-import umc.snack.domain.memo.entity.Memo;
 import umc.snack.domain.user.entity.User;
 import umc.snack.service.memo.MemoCommandService;
 
@@ -41,12 +40,12 @@ public class MemoController {
             @RequestBody @Valid MemoRequestDto.UpdateDto request,
             @AuthenticationPrincipal User user) {
 
-        Memo updatedMemo = memoCommandService.updateMemo(memo_id, request, user.getUserId());
+        MemoResponseDto.UpdateResultDto resultDto = memoCommandService.updateMemo(article_id, memo_id, request);
 
         return ApiResponse.onSuccess(
                 "MEMO_8503",
                 "메모가 성공적으로 수정되었습니다.",
-                MemoConverter.toUpdateResultDto(updatedMemo)
+                resultDto
         );
     }
 
