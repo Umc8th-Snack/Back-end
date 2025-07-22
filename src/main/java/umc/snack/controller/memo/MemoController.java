@@ -3,14 +3,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.dto.ApiResponse;
-import umc.snack.converter.memo.MemoConverter;
 import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.dto.MemoResponseDto;
-import umc.snack.domain.memo.entity.Memo;
 import umc.snack.service.memo.MemoCommandService;
 
 @RestController
@@ -25,11 +22,11 @@ public class MemoController {
             @PathVariable("article_id") Long article_id,
             @RequestBody @Valid MemoRequestDto.CreateDto request) {
 
-        Memo memo = memoCommandService.createMemo(article_id, request);
+        MemoResponseDto.CreateResultDto resultDto = memoCommandService.createMemo(article_id, request);
         return ApiResponse.onSuccess(
                 "MEMO_8502",
                 "메모가 성공적으로 생성되었습니다.",
-                MemoConverter.toCreateResultDto(memo)
+                resultDto
         );
     }
 

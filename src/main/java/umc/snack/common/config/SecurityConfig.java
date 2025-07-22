@@ -37,7 +37,8 @@ public class SecurityConfig {
                                 // 관리자 공개 api -> 개발 단계에서는 전체 공개
                                 "/api/articles/crawl/status",
                                 "/api/articles/*/summarize",
-                                "/api/terms"
+                                "/api/terms",
+                                "/api/articles/**"
                         ).permitAll()
                         // 나머지는 모두 JWT 토큰 인증 필요
                         .anyRequest().authenticated()
