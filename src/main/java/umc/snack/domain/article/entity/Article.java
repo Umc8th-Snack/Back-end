@@ -38,4 +38,8 @@ public class Article extends BaseEntity {
 
     @OneToMany(mappedBy = "article", fetch = FetchType.LAZY)
     private List<ArticleCategory> articleCategories = new ArrayList<>();
+
+    public void updateSummary(String summary) {
+        this.summary = summary;
+    }
 }
