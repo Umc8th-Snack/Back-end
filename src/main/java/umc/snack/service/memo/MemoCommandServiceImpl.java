@@ -5,8 +5,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
+import umc.snack.converter.memo.MemoConverter;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.memo.dto.MemoRequestDto;
+import umc.snack.domain.memo.dto.MemoResponseDto;
 import umc.snack.domain.memo.entity.Memo;
 import umc.snack.domain.user.entity.User;
 import umc.snack.repository.article.ArticleRepository;
@@ -22,7 +24,7 @@ public class MemoCommandServiceImpl implements MemoCommandService {
     private final UserRepository userRepository;
 
     @Override
-    public Memo createMemo(Long articleId, MemoRequestDto.CreateDto request) {
+    public MemoResponseDto.CreateResultDto createMemo(Long articleId, MemoRequestDto.CreateDto request) {
         // JWT 인증 토큰을 발급하는 시스템이 아직 구현되어있지 않아서 구현한 임시코드입니다.
         User currentUser = userRepository.findById(1L)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
@@ -40,6 +42,8 @@ public class MemoCommandServiceImpl implements MemoCommandService {
                 .user(currentUser)
                 .build();
 
-        return memoRepository.save(newMemo);
+        Memo savedMemo = memoRepository.save(newMemo);
+
+        return MemoConverter.toCreateResultDto(savedMemo);
     }
 }
