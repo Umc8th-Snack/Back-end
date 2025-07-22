@@ -25,7 +25,7 @@ public class MemoCommandServiceImpl implements MemoCommandService {
     @Override
     public Memo createMemo(Long articleId, MemoRequestDto.CreateDto request) {
         User currentUser = userRepository.findById(1L)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMO_8605));
         Memo newMemo = Memo.builder()
