@@ -51,10 +51,18 @@ public class MemoController {
 
     @Operation(summary = "특정 기사의 메모 삭제", description = "특정 기사에 작성된 메모를 삭제하는 API입니다.")
     @DeleteMapping("/{memo_id}")
-    public ResponseEntity<?> deleteMemo(
-            @PathVariable Long article_id,
-            @PathVariable Long memo_id) {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("메모 삭제 API - 개발 예정 (articleId: " + article_id + ", memoId: " + memo_id + ")");
+    public ApiResponse<Object> deleteMemo(
+            @PathVariable("article_id") Long article_id,
+            @PathVariable("memo_id") Long memo_id) {
+
+        memoCommandService.deleteMemo(article_id, memo_id);
+
+        return ApiResponse.onSuccess(
+                "MEMO_8501",
+                "메모가 성공적으로 삭제되었습니다.",
+                null
+        );
     }
+
+
 }
