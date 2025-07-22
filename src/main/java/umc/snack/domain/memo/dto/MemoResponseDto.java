@@ -9,4 +9,10 @@ public class MemoResponseDto {
         private Long memoId;
         private String content;
     }
+
+    @Builder @Getter
+    public static class UpdateResultDto {
+        private Long memoId;
+        private String content;
+    }
 }

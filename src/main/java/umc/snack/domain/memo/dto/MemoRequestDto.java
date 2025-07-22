@@ -9,4 +9,10 @@ public class MemoRequestDto {
         @NotBlank(message = "메모 내용이 비어있습니다.")
         private String content;
     }
+
+    @Getter
+    public static class UpdateDto {
+        @NotBlank(message = "메모 내용이 비어있습니다.")
+        private String content;
+    }
 }

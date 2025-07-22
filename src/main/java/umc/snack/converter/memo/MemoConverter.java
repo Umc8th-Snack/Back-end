@@ -10,5 +10,12 @@ public class MemoConverter {
                 .content(memo.getContent())
                 .build();
     }
+
+    public static MemoResponseDto.UpdateResultDto toUpdateResultDto(Memo memo) {
+        return MemoResponseDto.UpdateResultDto.builder()
+                .memoId(memo.getMemoId())
+                .content(memo.getContent())
+                .build();
+    }
 }
 

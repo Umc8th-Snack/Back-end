@@ -4,10 +4,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.dto.MemoResponseDto;
+import umc.snack.domain.memo.entity.Memo;
+import umc.snack.domain.user.entity.User;
 import umc.snack.service.memo.MemoCommandService;
 
 @RestController
@@ -32,12 +35,19 @@ public class MemoController {
 
     @Operation(summary = "특정 기사의 메모 수정", description = "특정 기사에 작성된 메모를 수정하는 API입니다.")
     @PatchMapping("/{memo_id}")
-    public ResponseEntity<?> updateMemo(
-            @PathVariable Long article_id,
-            @PathVariable Long memo_id,
-            @RequestBody Object NoteDto) {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("메모 수정 API - 개발 예정 (articleId: " + article_id + ", memoId: " + memo_id + ")");
+    public ApiResponse<MemoResponseDto.UpdateResultDto> updateMemo(
+            @PathVariable("article_id") Long article_id,
+            @PathVariable("memo_id") Long memo_id,
+            @RequestBody @Valid MemoRequestDto.UpdateDto request,
+            @AuthenticationPrincipal User user) {
+
+        Memo updatedMemo = memoCommandService.updateMemo(memo_id, request, user.getUserId());
+
+        return ApiResponse.onSuccess(
+                "MEMO_8503",
+                "메모가 성공적으로 수정되었습니다.",
+                MemoConverter.toUpdateResultDto(updatedMemo)
+        );
     }
 
     @Operation(summary = "특정 기사의 메모 삭제", description = "특정 기사에 작성된 메모를 삭제하는 API입니다.")

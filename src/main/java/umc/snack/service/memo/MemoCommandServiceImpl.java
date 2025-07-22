@@ -46,4 +46,22 @@ public class MemoCommandServiceImpl implements MemoCommandService {
 
         return MemoConverter.toCreateResultDto(savedMemo);
     }
+
+    @Override
+    public Memo updateMemo(Long memoId, MemoRequestDto.UpdateDto request, Long userId) {
+        Memo memo = memoRepository.findById(memoId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMO_8601));
+
+        if (!memo.getUser().getUserId().equals(userId)) {
+            throw new CustomException(ErrorCode.MEMO_8602);
+        }
+
+        if (memo.getArticle() == null) {
+            throw new CustomException(ErrorCode.MEMO_8603);
+        }
+
+        memo.updateContent(request.getContent());
+
+        return memo;
+    }
 }
