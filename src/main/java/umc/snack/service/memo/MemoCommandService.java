@@ -4,5 +4,5 @@ import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.entity.Memo;
 
 public interface MemoCommandService {
-    Memo createMemo(Long articleId, MemoRequestDto.CreateDto request);
+    MemoResponseDto.CreateResultDto createMemo(Long articleId, MemoRequestDto.CreateDto request);
 }
