@@ -1,5 +1,6 @@
 package umc.snack.service.article;
 
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,6 +88,7 @@ public class ArticleSummarizeService {
         throw new RuntimeException("Gemini model overload로 재시도 실패");
     }
 
+    @Transactional
     void getCompletion() {
         List<Article> articles = articleRepository.findBySummaryIsNull();
 
