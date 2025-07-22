@@ -19,17 +19,22 @@ public class ArticleSummarizeService {
 
     private static final Logger log = LoggerFactory.getLogger(ArticleSummarizeService.class);
 
-    @Autowired
-    private GeminiService geminiService;
+    private final GeminiService geminiService;
+    private final ArticleRepository articleRepository;
+    private final CrawledArticleRepository crawledArticleRepository;
+    private final GeminiParsingService geminiParsingService;
 
-    @Autowired
-    private ArticleRepository articleRepository;
-
-    @Autowired
-    private CrawledArticleRepository crawledArticleRepository;
-
-    @Autowired
-    private GeminiParsingService geminiParsingService;
+    public ArticleSummarizeService(
+            GeminiService geminiService,
+            ArticleRepository articleRepository,
+            CrawledArticleRepository crawledArticleRepository,
+            GeminiParsingService geminiParsingService
+    ) {
+        this.geminiService = geminiService;
+        this.articleRepository = articleRepository;
+        this.crawledArticleRepository = crawledArticleRepository;
+        this.geminiParsingService = geminiParsingService;
+    }
 
     String promptTemplate = """
             아래 뉴스 기사를 700글자 이내로 간결하게 요약해줘.
