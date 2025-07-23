@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import umc.snack.domain.auth.dto.LoginRequestDto;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -15,7 +16,7 @@ public class AuthController {
 
     @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Object request) {
+    public ResponseEntity<?> login(@RequestBody LoginRequestDto request) {
         // TODO: 구현 예정
         return ResponseEntity.ok("구현 예정");
     }
