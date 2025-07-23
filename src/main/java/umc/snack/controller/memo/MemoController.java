@@ -3,14 +3,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.dto.MemoResponseDto;
-import umc.snack.domain.user.entity.User;
 import umc.snack.service.memo.MemoCommandService;
 
 @RestController
@@ -39,8 +35,7 @@ public class MemoController {
     public ApiResponse<MemoResponseDto.UpdateResultDto> updateMemo(
             @PathVariable("article_id") Long article_id,
             @PathVariable("memo_id") Long memo_id,
-            @RequestBody @Valid MemoRequestDto.UpdateDto request,
-            @AuthenticationPrincipal User user) {
+            @RequestBody @Valid MemoRequestDto.UpdateDto request) {
 
         MemoResponseDto.UpdateResultDto resultDto = memoCommandService.updateMemo(article_id, memo_id, request);
 
@@ -53,10 +48,18 @@ public class MemoController {
 
     @Operation(summary = "특정 기사의 메모 삭제", description = "특정 기사에 작성된 메모를 삭제하는 API입니다.")
     @DeleteMapping("/{memo_id}")
-    public ResponseEntity<?> deleteMemo(
-            @PathVariable Long article_id,
-            @PathVariable Long memo_id) {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("메모 삭제 API - 개발 예정 (articleId: " + article_id + ", memoId: " + memo_id + ")");
+    public ApiResponse<Object> deleteMemo(
+            @PathVariable("article_id") Long article_id,
+            @PathVariable("memo_id") Long memo_id) {
+
+        memoCommandService.deleteMemo(article_id, memo_id);
+
+        return ApiResponse.onSuccess(
+                "MEMO_8501",
+                "메모가 성공적으로 삭제되었습니다.",
+                null
+        );
     }
+
+
 }

@@ -8,4 +8,6 @@ public interface MemoCommandService {
     MemoResponseDto.CreateResultDto createMemo(Long articleId, MemoRequestDto.CreateDto request);
 
     MemoResponseDto.UpdateResultDto updateMemo(Long articleId, Long memoId, MemoRequestDto.UpdateDto request);
+
+    void deleteMemo(Long articleId, Long memoID);
 }
