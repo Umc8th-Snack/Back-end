@@ -3,6 +3,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ public class MemoController {
     public ApiResponse<MemoResponseDto.CreateResultDto> createMemo (
             @PathVariable("article_id") Long article_id,
             @RequestBody @Valid MemoRequestDto.CreateDto request) {
+
 
         MemoResponseDto.CreateResultDto resultDto = memoCommandService.createMemo(article_id, request);
         return ApiResponse.onSuccess(
