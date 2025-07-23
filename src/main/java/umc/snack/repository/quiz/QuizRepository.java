@@ -1,6 +1,7 @@
 package umc.snack.repository.quiz;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+
 import org.springframework.stereotype.Repository;
 import umc.snack.domain.quiz.entity.Quiz;
 
