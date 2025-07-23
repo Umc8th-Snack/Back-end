@@ -39,7 +39,8 @@ public class SecurityConfig {
                                 "/api/articles/*/summarize",
                                 "/api/terms",
                                 "/api/articles/**",
-                                "/api/articles/*/memos/**"
+                                //스크랩 테스트용
+                                "/api/scraps/**"
                         ).permitAll()
                         // 나머지는 모두 JWT 토큰 인증 필요
                         .anyRequest().authenticated()

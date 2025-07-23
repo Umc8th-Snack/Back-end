@@ -21,6 +21,7 @@ public class MemoController {
             @PathVariable("article_id") Long article_id,
             @RequestBody @Valid MemoRequestDto.CreateDto request) {
 
+
         MemoResponseDto.CreateResultDto resultDto = memoCommandService.createMemo(article_id, request);
         return ApiResponse.onSuccess(
                 "MEMO_8502",
