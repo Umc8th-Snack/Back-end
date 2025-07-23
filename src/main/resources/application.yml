@@ -16,7 +16,7 @@ spring:
 
   jwt:
     token:
-      secretKey: umceightfightingjwttokenauthentication
+      secretKey: y8hJr3vYFmkCnP7W5EvlzZQ3XcezydQdnOJ8Zm7R5t4=
       expiration:
         access: 14400000
         refresh: 1209600000
