@@ -53,14 +53,14 @@ public class QuizController {
             @PathVariable("articleId") Long articleId,
             @RequestBody QuizGradingRequestDto requestDto,
             @AuthenticationPrincipal String userEmail) {
-        
+
         QuizGradingResponseDto gradingResult = quizService.gradeQuizzes(articleId, requestDto);
-        
+
         // 맞힌 문항 수 계산
         long correctCount = gradingResult.getDetails().stream()
                 .mapToLong(detail -> detail.isCorrect() ? 1 : 0)
                 .sum();
-        
+
         // 응답 객체 구성 (요구사항에 맞는 형식)
         QuizGradingApiResponse response = QuizGradingApiResponse.builder()
                 .isSuccess(true)
@@ -69,7 +69,7 @@ public class QuizController {
                 .correctCount(correctCount)
                 .result(gradingResult)
                 .build();
-        
+
         return ResponseEntity.ok(response);
     }
 }
