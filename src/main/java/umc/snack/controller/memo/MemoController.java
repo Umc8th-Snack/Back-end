@@ -3,7 +3,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.dto.ApiResponse;
@@ -37,8 +36,7 @@ public class MemoController {
     public ApiResponse<MemoResponseDto.UpdateResultDto> updateMemo(
             @PathVariable("article_id") Long article_id,
             @PathVariable("memo_id") Long memo_id,
-            @RequestBody @Valid MemoRequestDto.UpdateDto request,
-            @AuthenticationPrincipal User user) {
+            @RequestBody @Valid MemoRequestDto.UpdateDto request) {
 
         MemoResponseDto.UpdateResultDto resultDto = memoCommandService.updateMemo(article_id, memo_id, request);
 
