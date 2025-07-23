@@ -3,12 +3,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.dto.MemoResponseDto;
-import umc.snack.domain.user.entity.User;
 import umc.snack.service.memo.MemoCommandService;
 
 @RestController
