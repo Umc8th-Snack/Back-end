@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import umc.snack.global.BaseEntity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "articles")
 @Getter
@@ -32,4 +35,11 @@ public class Article extends BaseEntity {
     private Integer viewCount;
 
     private java.time.LocalDateTime publishedAt;
+
+    @OneToMany(mappedBy = "article", fetch = FetchType.LAZY)
+    private List<ArticleCategory> articleCategories = new ArrayList<>();
+
+    public void updateSummary(String summary) {
+        this.summary = summary;
+    }
 }

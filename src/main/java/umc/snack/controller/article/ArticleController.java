@@ -1,22 +1,50 @@
 package umc.snack.controller.article;
 
+import umc.snack.domain.article.dto.ArticleDto;
+import umc.snack.domain.article.entity.CrawledArticle;
+import umc.snack.repository.article.CrawledArticleRepository;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
+import umc.snack.common.response.ApiResponse;
+import umc.snack.service.article.ArticleService;
+
+import java.util.Map;
+
 @RestController
-@RequestMapping("/api/articles")
+@RequestMapping(value = "/api/articles", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Article", description = "기사 관련 API")
 public class ArticleController {
 
+    private final CrawledArticleRepository crawledArticleRepository;
+    private final ArticleService articleService;
+
     @Operation(summary = "기사 크롤링 상태 확인", description = "현재 크롤링 작업이 진행 중인지 확인합니다.")
     @GetMapping("/crawl/status")
-    public ResponseEntity<?> checkCrawlStatus() {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("크롤링 상태 확인 API - 개발 예정");
+    public ResponseEntity<ApiResponse<Map<String, Long>>> checkCrawlStatus() {
+        long total   = crawledArticleRepository.count();
+        long success = crawledArticleRepository.countByStatus(CrawledArticle.Status.PROCESSED);
+        long failed  = crawledArticleRepository.countByStatus(CrawledArticle.Status.FAILED);
+
+        Map<String, Long> result = Map.of(
+                "total",   total,
+                "success", success,
+                "failed",  failed
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "ARTICLE_8001",
+                        "크롤링 상태 조회 성공",
+                        result
+                )
+        );
     }
 
     @Operation(summary = "기사 요약 생성", description = "AI 모델을 통해 기사 요약을 생성합니다.")
@@ -26,11 +54,17 @@ public class ArticleController {
         return ResponseEntity.ok("기사 요약 생성 API - 개발 예정");
     }
 
-    @Operation(summary = "기사 단건 조회", description = "기사 ID로 기사 전체 내용을 조회합니다.")
+    @Operation(summary = "기사 상세 정보 조회", description = "기사 요약내용, 원본 url 등 기사의 상세 정보를 제공합니다.")
     @GetMapping("/{articleId}")
-    public ResponseEntity<?> getArticle(@PathVariable Long articleId) {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("기사 단건 조회 API - 개발 예정");
+    public ResponseEntity<ApiResponse<ArticleDto>> getArticle(@PathVariable Long articleId) {
+        ArticleDto dto = articleService.getArticleById(articleId);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "ARTICLE_9001",
+                        "기사 정보를 성공적으로 불러왔습니다.",
+                        dto
+                )
+        );
     }
 
     @Operation(summary = "주요 용어 추출", description = "기사를 분석하여 주요 용어를 추출합니다.")
