@@ -20,11 +20,22 @@ public class UserService {
 
     @Transactional
     public UserSignupResponseDto signup(UserSignupRequestDto request) {
+
+        // 이메일 중복
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new CustomException(ErrorCode.USER_2601);
         }
+        // 닉네임 중복
         if (userRepository.existsByNickname(request.getNickname())) {
             throw new CustomException(ErrorCode.USER_2602);
+        }
+        // 닉네임 형식 오류
+        if (!isValidNickname(request.getNickname())) {
+            throw new CustomException(ErrorCode.USER_2607);
+        }
+        // 비밀번호 체크
+        if (!isValidPassword(request.getPassword())) {
+            throw new CustomException(ErrorCode.USER_2603);
         }
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
@@ -40,6 +51,18 @@ public class UserService {
         userRepository.save(user);
 
         return UserSignupResponseDto.fromEntity(user);
+    }
+
+    // 비밀번호 정규식 체크 메소드
+    private boolean isValidPassword(String password) {
+        // 최소 8자, 영문/숫자 각각 1개 이상 포함
+        String regex = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$";
+        return password != null && password.matches(regex);
+    }
+    // 닉네임 정규식 체크 메소드
+    private boolean isValidNickname(String nickname) {
+        String regex = "^[가-힣a-zA-Z0-9]{2,12}$";
+        return nickname != null && nickname.matches(regex);
     }
 }
 
