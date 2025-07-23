@@ -1,5 +1,6 @@
 package umc.snack.common.config.security.jwt;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,8 +12,10 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import umc.snack.common.config.security.CustomUserDetails;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 
 public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
@@ -25,21 +28,24 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         setUsernameParameter("email"); // email을 username으로 인식함
+        setFilterProcessesUrl("/api/auth/login"); // 반드시!
 
     }
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            // JSON 바디 파싱
+            var requestMap = objectMapper.readValue(request.getInputStream(), Map.class);
+            String email = (String) requestMap.get("email");
+            String password = (String) requestMap.get("password");
 
-        //클라이언트 요청에서 username, password 추출
-        String email = obtainUsername(request);
-        String password = obtainPassword(request);
-
-        //스프링 시큐리티에서 username과 password를 검증하기 위해서는 token에 담아야 함
-        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(email, password, null);
-
-        //token에 담은 검증을 위한 AuthenticationManager로 전달
-        return authenticationManager.authenticate(authToken);
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(email, password);
+            return authenticationManager.authenticate(authToken);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     //로그인 성공시 실행하는 메소드 (여기서 JWT를 발급하면 됨)
