@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.dto.ApiResponse;
-import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.quiz.dto.QuizResponseDto;
 import umc.snack.domain.quiz.dto.QuizSubmissionRequestDto;
 import umc.snack.service.quiz.QuizService;
