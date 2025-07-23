@@ -31,4 +31,9 @@ public class Memo extends BaseEntity {
 
     @Column(nullable = false, length = 200)
     private String content;
+
+    // 메모 수정 함수
+    public void updateContent(String content) {
+        this.content = content;
+    }
 }
