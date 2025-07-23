@@ -1,4 +1,4 @@
-package umc.snack.jwt;
+package umc.snack.common.config.security.jwt;
 
 import io.jsonwebtoken.Jwts;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +14,7 @@ public class JWTUtil {
 
     private SecretKey secretKey;
 
-    public JWTUtil(@Value("${spring.jwt.secretKey}") String secret) {
+    public JWTUtil(@Value("${spring.jwt.token.secretKey}") String secret) {
         this.secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), Jwts.SIG.HS256.key().build().getAlgorithm());
     }
 
