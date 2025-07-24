@@ -24,7 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         //DB에서 조회
         User userData = userRepository.findByEmail(username);
 
-        if (userData == null) {
+        if (userData == null || userData.getStatus() != User.Status.ACTIVE) {
             throw new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username);
         }
 

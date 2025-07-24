@@ -31,17 +31,21 @@ public class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
-        // 테스트용 유저를 항상 새로 저장(중복 방지)
-        if (userRepository.findByEmail("user1@example.com") == null) {
-            User user = User.builder()
-                    .email("user1@example.com")
-                    .password(passwordEncoder.encode("password123!"))
-                    .role(User.Role.ROLE_USER)
-                    .build();
-            userRepository.save(user);
-        }
-    }
+        userRepository.deleteAll(); // 혹시 중복 데이터 방지
+        String rawPassword = "password123!";
+        String encoded = passwordEncoder.encode(rawPassword);
+        System.out.println("평문: " + rawPassword);
+        System.out.println("암호화: " + encoded);
+        User user = User.builder()
+                .email("user1@example.com")
+                .password(encoded)
+                .nickname("테스트닉네임")
+                .status(User.Status.ACTIVE)
+                .role(User.Role.ROLE_USER)
+                .build();
+        userRepository.save(user);
 
+    }
     @Test
     void 로그인_성공_테스트() throws Exception {
         // given
@@ -68,5 +72,6 @@ public class AuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").exists());
     }
+
 
 }
