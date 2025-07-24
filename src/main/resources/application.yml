@@ -10,13 +10,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
     database-platform: org.hibernate.dialect.MySQL8Dialect
 
   jwt:
     token:
-      secretKey: umceightfightingjwttokenauthentication
+      secretKey: ${JWT_SECRET_KEY}
       expiration:
         access: 14400000
         refresh: 1209600000
