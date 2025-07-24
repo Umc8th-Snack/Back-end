@@ -67,7 +67,8 @@ public class JWTFilter extends OncePerRequestFilter {
             return;
         }
 
-        User user = userRepository.findByEmail(email);
+        User user = userRepository.findByEmail(email)
+                .orElse(null);
 
         if (user == null) {
             logger.debug("User not found for email: {}", email);
