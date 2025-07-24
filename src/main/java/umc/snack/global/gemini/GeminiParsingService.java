@@ -11,7 +11,7 @@ import umc.snack.domain.quiz.entity.ArticleQuiz;
 import umc.snack.domain.quiz.entity.Quiz;
 import umc.snack.domain.term.entity.ArticleTerm;
 import umc.snack.domain.term.entity.Term;
-import umc.snack.repository.article.ArticleQuizRepository;
+import umc.snack.repository.quiz.ArticleQuizRepository;
 import umc.snack.repository.article.ArticleRepository;
 import umc.snack.repository.article.ArticleTermRepository;
 import umc.snack.repository.quiz.QuizRepository;

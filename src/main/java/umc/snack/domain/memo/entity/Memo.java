@@ -7,19 +7,19 @@ import umc.snack.domain.user.entity.User;
 import umc.snack.global.BaseEntity;
 
 @Entity
-@Table(name = "notes", uniqueConstraints = {
+@Table(name = "memos", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"user_id", "article_id"})
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class Note extends BaseEntity {
+public class Memo extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "note_id")
-    private Long noteId;
+    @Column(name = "memo_id")
+    private Long memoId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
@@ -29,6 +29,11 @@ public class Note extends BaseEntity {
     @JoinColumn(name = "article_id")
     private Article article;
 
-    @Column(columnDefinition = "TEXT")
-    private String note;
+    @Column(nullable = false, length = 200)
+    private String content;
+
+    // 메모 수정 함수
+    public void updateContent(String content) {
+        this.content = content;
+    }
 }
