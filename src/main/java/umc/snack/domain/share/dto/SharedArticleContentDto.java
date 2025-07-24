@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -18,5 +19,5 @@ public class SharedArticleContentDto {
     private String summary;
     private LocalDateTime publishedAt;
     private String originalUrl;
-    private String category;
+    private List<String> categoryNames;
 }

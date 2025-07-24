@@ -39,6 +39,7 @@ public class SecurityConfig {
                                 "/api/articles/*/summarize",
                                 "/api/terms",
                                 "/api/articles/**",
+                                "/api/share/**",
                                 //스크랩 테스트용
                                 "/api/scraps/**"
                         ).permitAll()
