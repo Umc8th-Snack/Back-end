@@ -19,5 +19,5 @@ public class SharedArticleContentDto {
     private String summary;
     private LocalDateTime publishedAt;
     private String originalUrl;
-    private List<String> categoryNames;
+    private String category;
 }

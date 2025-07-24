@@ -62,9 +62,9 @@ public class ShareServiceImpl implements ShareService {
             throw new CustomException(ErrorCode.SHARE_6602);
         }
 
-        List<String> categoryNames = article.getArticleCategories().stream()
-                .map(ac -> ac.getCategory().getCategoryName())
-                .collect(Collectors.toList());
+        String categoryName = article.getArticleCategories().isEmpty()
+                ? "미지정"
+                : article.getArticleCategories().get(0).getCategory().getCategoryName();
 
 
         return new SharedArticleContentDto(
@@ -73,7 +73,7 @@ public class ShareServiceImpl implements ShareService {
                 article.getSummary(),
                 article.getPublishedAt(),
                 article.getArticleUrl(),
-                categoryNames
+                categoryName
         );
     }
 
