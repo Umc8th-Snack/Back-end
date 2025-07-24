@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import umc.snack.domain.auth.dto.LoginRequestDto;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -14,13 +13,12 @@ import umc.snack.domain.auth.dto.LoginRequestDto;
 @Tag(name = "Auth", description = "인증/인가 관련 API")
 public class AuthController {
 
-    // LoginFilter가 가로채서 검증하기 때문에 필요 없음
-//    @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
-//    @PostMapping("/login")
-//    public ResponseEntity<?> login(@RequestBody LoginRequestDto request) {
-//        // TODO: 구현 예정
-//        return ResponseEntity.ok("구현 예정");
-//    }
+    @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Object request) {
+        // TODO: 구현 예정
+        return ResponseEntity.ok("구현 예정");
+    }
 
     @Operation(summary = "카카오 소셜 로그인", description = "인가 코드를 전달하여 카카오 소셜 로그인을 시작합니다.")
     @GetMapping("/kakao")
