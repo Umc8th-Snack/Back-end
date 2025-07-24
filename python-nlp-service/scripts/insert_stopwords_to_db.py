@@ -1,11 +1,10 @@
-# scripts/insert_vocab_to_db.py
+# scripts/insert_stopwords_to_db.py
 import csv
 import pymysql
 import os
 from dotenv import load_dotenv
 
 # .env 파일에서 환경 변수를 로드합니다. (스크립트 실행 경로 기준)
-# scripts 디렉토리에서 실행될 때, .env 파일은 상위 디렉토리(python-nlp-service/)에 있습니다.
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 # --- DB 설정 (config.py와 동일하게 설정) ---
@@ -16,24 +15,17 @@ DB_PASSWORD = os.getenv('DB_PASSWORD', 'your_password') # ⭐ .env 파일에서 
 DB_NAME = os.getenv('DB_NAME', 'your_database') # ⭐ .env 파일에서 로드되도록 설정
 
 # --- CSV 파일 경로 (scripts/ 기준 상대 경로) ---
-# 이 파일들은 직접 생성하여 데이터를 채워야 합니다.
-# 예시: python-nlp-service/data_source/easy_words.csv
+# 이 파일은 직접 생성하여 데이터를 채워야 합니다.
+# 예시: python-nlp-service/data_source/stopwords.csv
 DATA_SOURCE_DIR = os.path.join(os.path.dirname(__file__), '..', 'data_source')
-EASY_WORDS_CSV = os.path.join(DATA_SOURCE_DIR, 'easy_words.csv') 
-STOPWORDS_CSV = os.path.join(DATA_SOURCE_DIR, 'stopwords.csv')   
+STOPWORDS_CSV = os.path.join(DATA_SOURCE_DIR, 'stopwords.csv')
 
-# ⭐ CSV 파일 예시:
-# easy_words.csv (헤더: word)
-# word
-# 안녕하세요
-# 감사하다
-# ...
-
-# stopwords.csv (헤더: word)
+# ⭐ stopwords.csv 파일 예시:
 # word
 # 이
 # 그
 # 저
+# 그리고
 # ...
 
 
@@ -41,14 +33,13 @@ def insert_data_to_db(filepath: str, table_name: str, column_name: str):
     """CSV 파일을 읽어 DB 테이블에 데이터를 삽입합니다."""
     print(f"테이블 '{table_name}'에 '{filepath}' 파일의 데이터 삽입 시도 중...")
     if not os.path.exists(filepath):
-        print(f"오류: 파일이 존재하지 않습니다: '{filepath}'. '{table_name}' 삽입을 건너웁니다.")
+        print(f"오류: 파일이 존재하지 않습니다: '{filepath}'. '{table_name}' 삽입을 건너뜁니다.")
         return
 
     conn = None
     try:
         conn = pymysql.connect(
             host=DB_HOST,
-            port=DB_PORT,
             user=DB_USER,
             password=DB_PASSWORD,
             db=DB_NAME,
@@ -85,17 +76,13 @@ def insert_data_to_db(filepath: str, table_name: str, column_name: str):
             conn.close()
 
 if __name__ == "__main__":
-    print("--- 어휘 삽입 스크립트 실행 ---")
+    print("--- 불용어 삽입 스크립트 실행 ---")
 
     # data_source 디렉토리가 없으면 생성 (CSV 파일들을 여기에 둡니다)
     os.makedirs(DATA_SOURCE_DIR, exist_ok=True)
-
-    # 'easy_words' 테이블에 데이터 삽입
-    # 'easy_words' 테이블에 'word' 컬럼이 있다고 가정합니다.
-    insert_data_to_db(EASY_WORDS_CSV, 'easy_words', 'word')
 
     # 'stopwords' 테이블에 데이터 삽입
     # 'stopwords' 테이블에 'word' 컬럼이 있다고 가정합니다.
     insert_data_to_db(STOPWORDS_CSV, 'stopwords', 'word')
 
-    print("--- 어휘 삽입 스크립트 완료 ---")
+    print("--- 불용어 삽입 스크립트 완료 ---")

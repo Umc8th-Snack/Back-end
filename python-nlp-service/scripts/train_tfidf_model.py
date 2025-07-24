@@ -8,11 +8,9 @@ import os
 from dotenv import load_dotenv
 
 # .env 파일에서 환경 변수를 로드합니다. (스크립트 실행 경로 기준)
-# scripts 디렉토리에서 실행될 때, .env 파일은 상위 디렉토리(python-nlp-service/)에 있습니다.
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 # --- 설정 파일 경로 (config.py와 동일하게 설정) ---
-# 이 스크립트가 config.py를 직접 임포트해도 되지만, 여기서는 상대 경로를 명시
 TFIDF_MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'tfidf_vectorizer.pkl')
 
 # --- DB 설정 (실제 프로젝트 config.py와 동일하게 설정) ---
@@ -25,13 +23,32 @@ DB_NAME = os.getenv('DB_NAME', 'your_database') # ⭐ .env 파일에서 로드�
 # --- 형태소 분석기 초기화 (학습 스크립트용) ---
 okt = Okt()
 
+# --- 불용어 로드 (TF-IDF 학습 시에도 사용) ---
+# 이 스크립트가 실행될 때 DB에서 불용어를 로드합니다.
+stopwords_set = set()
+try:
+    conn = pymysql.connect(host=DB_HOST, port=DB_PORT, user=DB_USER, password=DB_PASSWORD, db=DB_NAME, charset='utf8mb4')
+    cursor = conn.cursor()
+    cursor.execute("SELECT word FROM stopwords")
+    stopwords_set = {row[0] for row in cursor.fetchall()}
+    cursor.close()
+    conn.close()
+    print(f"학습 스크립트에서 불용어 로드 완료. 개수: {len(stopwords_set)}")
+except pymysql.Error as e:
+    print(f"경고: TF-IDF 학습 스크립트에서 불용어 DB 로드 실패: {e}. 불용어 제거 없이 학습을 진행합니다.")
+    stopwords_set = set() # 실패 시 빈 셋으로 초기화
+
 def tokenize_korean_text_for_tfidf(text: str) -> list[str]:
-    """TF-IDF 벡터화를 위한 텍스트 전처리 및 명사 추출"""
+    """TF-IDF 벡터화를 위한 텍스트 전처리 및 명사 추출 (불용어 제거 포함)"""
     text = re.sub(r'[^가-힣a-zA-Z0-9\s]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
-    
+
     tokens = okt.pos(text, norm=True, stem=True)
-    return [word for word, pos in tokens if pos.startswith('N')] # 명사만 추출
+    # 명사만 추출하고, 불용어 목록에 없는 단어만 필터링합니다.
+    return [
+        word for word, pos in tokens
+        if pos.startswith('N') and word not in stopwords_set and len(word) > 1
+    ]
 
 
 def dummy_tokenizer(text: str) -> list[str]:

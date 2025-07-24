@@ -8,16 +8,13 @@ import nlp_processor # 핵심 NLP 로직 모듈 임포트
 # --- FastAPI 애플리케이션 인스턴스 생성 ---
 app = FastAPI(
     title="기사 NLP 마이크로서비스",
-    description="기사 분석 및 추천을 위한 한국어 자연어 처리 마이크로서비스 (형태소 분석, 어려운 단어 추출, TF-IDF 벡터화)",
+    description="기사 분석 및 추천을 위한 한국어 자연어 처리 마이크로서비스 (TF-IDF 벡터화)",
     version="1.0.0",
     docs_url="/docs",     # Swagger UI URL (http://localhost:5000/docs)
     redoc_url="/redoc"    # ReDoc UI URL (http://localhost:5000/redoc)
 )
 
 # --- 애플리케이션 시작 시 실행되는 이벤트 핸들러 ---
-# 서버가 시작될 때 nlp_processor.load_models_and_data() 함수를 호출하여
-# 필요한 모든 NLP 리소스(모델, 사전)를 메모리에 로드합니다.
-# 이 과정이 완료되어야 API 요청을 처리할 수 있습니다.
 @app.on_event("startup")
 async def startup_event():
     print("NLP 모델 및 데이터 로딩 시작...")
@@ -33,14 +30,6 @@ async def startup_event():
 
 # --- Pydantic 모델 정의: API 요청/응답 데이터 구조 및 유효성 검사 ---
 
-# 어려운 단어 추출 요청을 위한 데이터 모델
-class ContentRequest(BaseModel):
-    content: str # 분석할 기사의 요약본 텍스트
-
-# 어려운 단어 추출 응답을 위한 데이터 모델
-class DifficultWordsResponse(BaseModel):
-    difficult_words: list[str] # 추출된 어려운 단어 리스트
-
 # TF-IDF 벡터화 요청을 위한 데이터 모델
 class TextVectorRequest(BaseModel):
     text: str # 벡터화할 텍스트 (기사 본문 또는 검색어)
@@ -48,26 +37,6 @@ class TextVectorRequest(BaseModel):
 # TF-IDF 벡터화 응답을 위한 데이터 모델
 class VectorResponse(BaseModel):
     vector: list[float] # TF-IDF 벡터 (float 값의 리스트)
-
-# --- API 엔드포인트: 어려운 단어 추출 ---
-@app.post("/analyze-vocab", response_model=DifficultWordsResponse, status_code=status.HTTP_200_OK, summary="기사 요약본에서 어려운 단어 추출")
-async def analyze_vocab_api(request_data: ContentRequest):
-    """
-    제공된 기사 요약본에서 형태소 분석 기반으로 '어려운 단어'를 추출합니다.
-    - **content**: 분석할 기사의 요약본 텍스트 (필수)
-    - 반환: 추출된 어려운 단어들의 리스트
-    """
-    content = request_data.content
-    if not content:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'content' 필드는 필수입니다.")
-
-    try:
-        difficult_words = nlp_processor.extract_difficult_words(content)
-        return {"difficult_words": difficult_words}
-    except RuntimeError as e: # nlp_processor에서 발생시킨 초기화 오류
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"NLP 서비스 준비 안됨: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"어려운 단어 처리 중 오류 발생: {e}")
 
 # --- API 엔드포인트: TF-IDF 벡터화 ---
 @app.post("/vectorize-tfidf", response_model=VectorResponse, status_code=status.HTTP_200_OK, summary="텍스트 TF-IDF 벡터화")
