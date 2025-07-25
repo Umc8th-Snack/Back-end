@@ -37,16 +37,6 @@ public class QuizController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "퀴즈 제출", description = "퀴즈를 푼 뒤 정답 및 점수를 반환받는 API입니다.")
-    @PostMapping("/quizzes/submit")
-    public ResponseEntity<?> submitQuiz(
-            @PathVariable Long quiz_id,
-            @RequestBody QuizSubmissionRequestDto requestDto,
-            @RequestBody Object submitDto) {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("퀴즈 제출 API - 개발 예정 (quizId: " + quiz_id + ")");
-    }
-
     @Operation(summary = "퀴즈 채점", description = "사용자가 제출한 퀴즈 답안을 채점하고 결과를 반환하는 API입니다.")
     @PostMapping("/articles/{articleId}/quizzes/grade")
     public ResponseEntity<QuizGradingApiResponse> gradeQuizzes(
