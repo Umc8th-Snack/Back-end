@@ -21,6 +21,18 @@ public class UserService {
     @Transactional
     public UserSignupResponseDto signup(UserSignupRequestDto request) {
 
+        // 닉네임 형식 오류
+        if (!isValidNickname(request.getNickname())) {
+            throw new CustomException(ErrorCode.USER_2607);
+        }
+        // 비밀번호 형식 오류
+        if (!isValidPassword(request.getPassword())) {
+            throw new CustomException(ErrorCode.USER_2603);
+        }
+        // 이메일 형식 오류
+        if (!isValidEmail(request.getEmail())) {
+            throw new CustomException(ErrorCode.USER_2604);
+        }
         // 이메일 중복
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new CustomException(ErrorCode.USER_2601);
@@ -28,18 +40,6 @@ public class UserService {
         // 닉네임 중복
         if (userRepository.existsByNickname(request.getNickname())) {
             throw new CustomException(ErrorCode.USER_2602);
-        }
-        // 닉네임 형식 오류
-        if (!isValidNickname(request.getNickname())) {
-            throw new CustomException(ErrorCode.USER_2607);
-        }
-        // 비밀번호 체크
-        if (!isValidPassword(request.getPassword())) {
-            throw new CustomException(ErrorCode.USER_2603);
-        }
-        // 이메일 형식 오류
-        if (!isValidEmail(request.getEmail())) {
-            throw new CustomException(ErrorCode.USER_2604); // 에러코드 적절히
         }
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());

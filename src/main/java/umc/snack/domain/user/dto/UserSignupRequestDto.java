@@ -13,7 +13,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class UserSignupRequestDto {
 
-    @Email(message = "이메일 형식이 올바르지 않습니다.")
+//    @Email(message = "이메일 형식이 올바르지 않습니다.") // GlobalExceptionHandler 코드 변경하면 주석 풀어도 됨.
     @NotBlank
     private String email;
 
