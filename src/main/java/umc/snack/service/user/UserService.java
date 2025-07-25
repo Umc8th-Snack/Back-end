@@ -65,6 +65,7 @@ public class UserService {
     }
     // 닉네임 정규식 체크 메소드
     private boolean isValidNickname(String nickname) {
+        // 한글, 영문, 숫자로만 이루어진 2~12자의 문자열
         String regex = "^[가-힣a-zA-Z0-9]{2,12}$";
         return nickname != null && nickname.matches(regex);
     }
