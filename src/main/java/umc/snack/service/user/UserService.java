@@ -37,6 +37,10 @@ public class UserService {
         if (!isValidPassword(request.getPassword())) {
             throw new CustomException(ErrorCode.USER_2603);
         }
+        // 이메일 형식 오류
+        if (!isValidEmail(request.getEmail())) {
+            throw new CustomException(ErrorCode.USER_2604); // 에러코드 적절히
+        }
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
 
@@ -63,6 +67,11 @@ public class UserService {
     private boolean isValidNickname(String nickname) {
         String regex = "^[가-힣a-zA-Z0-9]{2,12}$";
         return nickname != null && nickname.matches(regex);
+    }
+    // 이메일 정규식 체크 메소드
+    private boolean isValidEmail(String email) {
+        String regex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+        return email != null && email.matches(regex);
     }
 }
 

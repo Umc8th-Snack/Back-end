@@ -39,7 +39,7 @@ class UserControllerTest {
     @BeforeEach
     void cleanUp() {
         userRepository.deleteAll();
-        entityManager.flush(); // 강제 flush!
+        entityManager.flush();
     }
 
     @Test
