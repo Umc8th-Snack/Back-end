@@ -57,6 +57,8 @@ async def vectorize_tfidf_api(request_data: TextVectorRequest):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"NLP 서비스 준비 안됨: {e}")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"텍스트 벡터화 중 오류 발생: {e}")
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="입력된 텍스트에서 유의미한 단어를 찾을 수 없습니다.")
 
 
 # --- FastAPI 애플리케이션 실행 명령어 ---
