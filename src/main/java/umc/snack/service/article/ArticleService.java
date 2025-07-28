@@ -6,12 +6,20 @@ import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.article.dto.ArticleDto;
 import umc.snack.domain.article.entity.Article;
+import umc.snack.domain.term.dto.TermResponseDto;
+import umc.snack.domain.term.entity.ArticleTerm;
+import umc.snack.domain.term.entity.Term;
 import umc.snack.repository.article.ArticleRepository;
+import umc.snack.repository.article.ArticleTermRepository;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ArticleService {
     private final ArticleRepository articleRepository;
+    private final ArticleTermRepository articleTermRepository;
 
     public ArticleDto getArticleById(Long articleId) {
         Article a = articleRepository.findById(articleId)
@@ -32,5 +40,18 @@ public class ArticleService {
                 .snackUrl("/articles/" + a.getArticleId())
                 .category(categoryName)                 // 단일 카테고리
                 .build();
+    }
+
+    public List<TermResponseDto> getTermsByArticleId(Long articleId) {
+        List<ArticleTerm> articleTerms = articleTermRepository.findAllByArticleId(articleId);
+
+        return articleTerms.stream().map(at -> {
+            Term term = at.getTerm();
+            return new TermResponseDto(
+                    term.getWord(),
+                    List.of(term.getDefinition()),
+                    term.getCreatedAt()
+            );
+        }).collect(Collectors.toList());
     }
 }
