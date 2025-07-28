@@ -1,0 +1,68 @@
+package umc.snack.service.auth;
+
+import io.jsonwebtoken.ExpiredJwtException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import umc.snack.common.config.security.jwt.JWTUtil;
+
+@Service
+public class ReissueService {
+
+    private final JWTUtil jwtUtil;
+
+    public ReissueService(JWTUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    public ResponseEntity<?> reissue(HttpServletRequest request, HttpServletResponse response) {
+        //get refresh token
+        String refreshToken = null;
+        Cookie[] cookies = request.getCookies();
+        for (Cookie cookie : cookies) {
+
+            if (cookie.getName().equals("refresh")) {
+
+                refreshToken = cookie.getValue();
+            }
+        }
+
+        if (refreshToken == null) {
+
+            //response status code
+            return new ResponseEntity<>("refresh token null", HttpStatus.BAD_REQUEST);
+        }
+
+        //expired check
+        try {
+            jwtUtil.isExpired(refreshToken);
+        } catch (ExpiredJwtException e) {
+
+            //response status code
+            return new ResponseEntity<>("refresh token expired", HttpStatus.BAD_REQUEST);
+        }
+
+        // 토큰이 refresh인지 확인 (발급시 페이로드에 명시)
+        String category = jwtUtil.getCategory(refreshToken);
+
+        if (!category.equals("refresh")) {
+
+            //response status code
+            return new ResponseEntity<>("invalid refresh token", HttpStatus.BAD_REQUEST);
+        }
+
+        String username = jwtUtil.getEmail(refreshToken);
+        String role = jwtUtil.getRole(refreshToken);
+
+        //make new JWT
+        String newAccess = jwtUtil.createJwt("access", username, role, 600000L);
+
+        //response
+        response.setHeader("access", newAccess);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+}

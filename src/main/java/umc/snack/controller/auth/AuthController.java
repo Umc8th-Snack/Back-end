@@ -10,10 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.domain.auth.dto.LoginRequestDto;
+import umc.snack.service.auth.ReissueService;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 @Tag(name = "Auth", description = "인증/인가 관련 API")
 public class AuthController {
 
@@ -23,7 +23,6 @@ public class AuthController {
     public AuthController(JWTUtil jwtUtil, ReissueService reissueService) {
         this.jwtUtil = jwtUtil;
         this.reissueService = reissueService;
-        // ...생략...
     }
 
     // LoginFilter가 가로채서 검증하기 때문에 필요 없음
