@@ -102,7 +102,7 @@ public class ReissueService {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "AUTH_2060",
-                        "Access 토큰이 재발급되었습니다.",
+                        "Access 토큰과 Refresh 토큰이 재발급되었습니다.",
                         dto
                 )
         );
