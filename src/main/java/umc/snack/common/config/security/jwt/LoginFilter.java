@@ -59,6 +59,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authentication) {
         CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
         Long userId = customUserDetails.getUserId(); // userId 추출
+        String email = customUserDetails.getUsername();
 
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
         String role = authorities.iterator().next().getAuthority();
@@ -68,7 +69,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String refreshToken = jwtUtil.createJwt("refresh", userId, role, 86_400_000L);
 
         // RefreshToken DB에 저장 (userId 기준)
-        saveRefreshToken(userId, refreshToken, 86_400_000L);
+        saveRefreshToken(userId, email, refreshToken, 86_400_000L);
 
         // 응답 설정
         response.setHeader("access", accessToken);
@@ -100,14 +101,14 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     }
 
     // RefreshToken 저장 메서드
-    private void saveRefreshToken(Long userId, String refreshToken, Long expiredMs) {
+    private void saveRefreshToken(Long userId, String email, String refreshToken, Long expiredMs) {
         LocalDateTime expirationDate = LocalDateTime.now().plusSeconds(expiredMs / 1000);
         RefreshToken entity = new RefreshToken();
         entity.setUserId(userId);
+        entity.setEmail(email);
         entity.setRefreshToken(refreshToken);
         entity.setExpiration(expirationDate);
 
-        // userId 중복 저장 방지 (선택)
         refreshTokenRepository.deleteByUserId(userId);
 
         refreshTokenRepository.save(entity);
