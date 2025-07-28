@@ -8,14 +8,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import umc.snack.common.config.security.jwt.JWTUtil;
+import umc.snack.domain.auth.entity.RefreshToken;
+import umc.snack.repository.auth.RefreshTokenRepository;
 
 @Service
 public class ReissueService {
 
     private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
-    public ReissueService(JWTUtil jwtUtil) {
+    public ReissueService(JWTUtil jwtUtil, RefreshTokenRepository refreshTokenRepository) {
         this.jwtUtil = jwtUtil;
+        this.refreshTokenRepository = refreshTokenRepository;
+
     }
 
     public ResponseEntity<?> reissue(HttpServletRequest request, HttpServletResponse response) {
@@ -23,12 +28,11 @@ public class ReissueService {
         String refreshToken = null;
         Cookie[] cookies = request.getCookies();
 
-
-        for (Cookie cookie : cookies) {
-
-            if (cookie.getName().equals("refresh")) {
-
-                refreshToken = cookie.getValue();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals("refresh")) {
+                    refreshToken = cookie.getValue();
+                }
             }
         }
 
@@ -37,6 +41,12 @@ public class ReissueService {
             //response status code
             return new ResponseEntity<>("refresh token null", HttpStatus.BAD_REQUEST);
         }
+
+        // DB에 refreshToken 존재하는지 확인
+        if (refreshTokenRepository.findByRefreshToken(refreshToken).isEmpty()) {
+            return new ResponseEntity<>("refresh token not in DB", HttpStatus.BAD_REQUEST);
+        }
+
 
         //expired check
         try {
