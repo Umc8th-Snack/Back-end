@@ -64,4 +64,4 @@ async def vectorize_tfidf_api(request_data: TextVectorRequest):
 # 이 파일을 직접 실행할 때 (예: python main.py) Uvicorn 서버를 시작합니다.
 # 개발 중에는 --reload 옵션을 사용하여 코드 변경 시 자동 재시작하게 할 수 있습니다.
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=9000, reload=True)
