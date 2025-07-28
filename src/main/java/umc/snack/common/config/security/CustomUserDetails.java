@@ -31,7 +31,12 @@ public class CustomUserDetails implements UserDetails {
             }
         });
 
-        return collection;    }
+        return collection;
+    }
+
+    public User getUser() {
+        return this.user;
+    }
 
     @Override
     public String getPassword() {
