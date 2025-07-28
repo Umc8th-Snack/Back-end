@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import umc.snack.common.config.security.jwt.JWTFilter;
 import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.common.config.security.jwt.LoginFilter;
+import umc.snack.repository.auth.RefreshTokenRepository;
 import umc.snack.repository.user.UserRepository;
 
 @Configuration
@@ -24,11 +25,13 @@ public class SecurityConfig {
     private final AuthenticationConfiguration authenticationConfiguration;
     //JWTUtil 주입
     private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
-    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil) {
+    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil, RefreshTokenRepository refreshTokenRepository) {
 
         this.authenticationConfiguration = authenticationConfiguration;
         this.jwtUtil = jwtUtil;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
 
     @Bean
@@ -87,10 +90,8 @@ public class SecurityConfig {
 
         http
                 .addFilterBefore(new JWTFilter(jwtUtil, userRepository), LoginFilter.class);
-
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil), UsernamePasswordAuthenticationFilter.class);
-
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, refreshTokenRepository), UsernamePasswordAuthenticationFilter.class);
 
         //세션 설정
         http

@@ -22,6 +22,8 @@ public class ReissueService {
         //get refresh token
         String refreshToken = null;
         Cookie[] cookies = request.getCookies();
+
+
         for (Cookie cookie : cookies) {
 
             if (cookie.getName().equals("refresh")) {
@@ -56,13 +58,27 @@ public class ReissueService {
 
         String username = jwtUtil.getEmail(refreshToken);
         String role = jwtUtil.getRole(refreshToken);
+        Long userId = jwtUtil.getUserId(refreshToken);
 
         //make new JWT
-        String newAccess = jwtUtil.createJwt("access", username, role, 600000L);
+        String newAccess = jwtUtil.createJwt("access", userId, role, 600_000L);
+        String newRefresh = jwtUtil.createJwt("refresh", userId, role, 86_400_000L);
 
         //response
         response.setHeader("access", newAccess);
+        response.addCookie(createCookie("refresh", newRefresh));
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private Cookie createCookie(String key, String value) {
+
+        Cookie cookie = new Cookie(key, value);
+        cookie.setMaxAge(24*60*60);
+        //cookie.setSecure(true);
+        //cookie.setPath("/");
+        cookie.setHttpOnly(true);
+
+        return cookie;
     }
 }

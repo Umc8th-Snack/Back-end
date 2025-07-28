@@ -18,6 +18,9 @@ public class RefreshToken {
     @Column(nullable = false)
     private Long userId;
 
+    @Column(nullable = false, length = 255)
+    private String email;
+
     @Column(nullable = false, length = 512)
     private String refreshToken;
 
