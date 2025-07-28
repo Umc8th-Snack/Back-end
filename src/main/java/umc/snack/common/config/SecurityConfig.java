@@ -67,11 +67,13 @@ public class SecurityConfig {
                                 "/api/users/signup",
                                 "/api/auth/login",
                                 "/api/auth/kakao",
+                                "/api/auth/reissue",
                                 "/auth/kakao/callback",
                                 "/api/articles/*/related-articles",
                                 "/api/articles/search",
                                 "/api/articles/main",
-                                // 관리자 공개 api -> 개발 단계에서는 전체 공개
+
+                        // 관리자 공개 api -> 개발 단계에서는 전체 공개
                                 "/api/articles/crawl/status",
                                 "/api/articles/*/summarize",
                                 "/api/terms",
