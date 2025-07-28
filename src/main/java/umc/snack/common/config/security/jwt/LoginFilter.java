@@ -13,8 +13,11 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import umc.snack.common.config.security.CustomUserDetails;
+import umc.snack.common.response.ApiResponse;
+import umc.snack.domain.auth.dto.LoginResponseDto;
 import umc.snack.domain.auth.entity.RefreshToken;
 import umc.snack.repository.auth.RefreshTokenRepository;
+import umc.snack.service.auth.ReissueService;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -28,12 +31,14 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JWTUtil jwtUtil;
+    private final ReissueService reissueService;
 
-    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil, RefreshTokenRepository refreshTokenRepository) {
+    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil, ReissueService reissueService ,RefreshTokenRepository refreshTokenRepository) {
 
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.reissueService = reissueService;
         setUsernameParameter("email"); // email을 username으로 인식함
         setFilterProcessesUrl("/api/auth/login");
 
@@ -60,21 +65,46 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
         Long userId = customUserDetails.getUserId(); // userId 추출
         String email = customUserDetails.getUsername();
+        String nickname = customUserDetails.getUser().getNickname();
 
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
         String role = authorities.iterator().next().getAuthority();
 
-        // 토큰 생성 (userId 포함)
+        // 토큰 생성
         String accessToken = jwtUtil.createJwt("access", userId, role, 600_000L);
         String refreshToken = jwtUtil.createJwt("refresh", userId, role, 86_400_000L);
 
-        // RefreshToken DB에 저장 (userId 기준)
-        saveRefreshToken(userId, email, refreshToken, 86_400_000L);
+        // refresh 토큰 저장
+        LocalDateTime expirationDate = LocalDateTime.now().plusSeconds(86_400_000L / 1000); // 1일
+        reissueService.replaceRefreshToken(userId, email, refreshToken, expirationDate);
 
-        // 응답 설정
+        // 응답 DTO
+        LoginResponseDto resultDto = LoginResponseDto.builder()
+                .userId(userId)
+                .email(email)
+                .nickname(nickname)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+
+        ApiResponse<LoginResponseDto> apiResponse = ApiResponse.success(
+                "AUTH_2000",
+                "로그인에 성공하였습니다.",
+                resultDto
+        );
+
+        response.setContentType("application/json; charset=UTF-8");
+        response.setStatus(HttpStatus.OK.value());
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            response.getWriter().write(mapper.writeValueAsString(apiResponse));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        // 헤더/쿠키 유지
         response.setHeader("access", accessToken);
         response.addCookie(createCookie("refresh", refreshToken));
-        response.setStatus(HttpStatus.OK.value());
     }
 
     //로그인 실패시 실행하는 메소드
