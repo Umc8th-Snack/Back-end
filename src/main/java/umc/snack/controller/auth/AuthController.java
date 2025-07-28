@@ -3,9 +3,12 @@ package umc.snack.controller.auth;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.domain.auth.dto.LoginRequestDto;
 
 @RestController
@@ -14,6 +17,15 @@ import umc.snack.domain.auth.dto.LoginRequestDto;
 @Tag(name = "Auth", description = "인증/인가 관련 API")
 public class AuthController {
 
+    private final JWTUtil jwtUtil;
+    private final ReissueService reissueService;
+
+    public AuthController(JWTUtil jwtUtil, ReissueService reissueService) {
+        this.jwtUtil = jwtUtil;
+        this.reissueService = reissueService;
+        // ...생략...
+    }
+
     // LoginFilter가 가로채서 검증하기 때문에 필요 없음
 //    @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
 //    @PostMapping("/login")
@@ -21,6 +33,11 @@ public class AuthController {
 //        // TODO: 구현 예정
 //        return ResponseEntity.ok("구현 예정");
 //    }
+
+    @PostMapping("/reissue")
+    public ResponseEntity<?> reissue(HttpServletRequest request, HttpServletResponse response) {
+        return reissueService.reissue(request, response);
+    }
 
     @Operation(summary = "카카오 소셜 로그인", description = "인가 코드를 전달하여 카카오 소셜 로그인을 시작합니다.")
     @GetMapping("/kakao")
