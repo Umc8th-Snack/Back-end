@@ -41,9 +41,10 @@ public class User extends BaseEntity {
     @Column(name = "delete_at")
     private java.time.LocalDateTime deleteAt;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role;
+    private Role role = Role.ROLE_USER;
 
     public enum Status {
         ACTIVE,
