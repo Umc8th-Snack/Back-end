@@ -76,11 +76,11 @@ public class JWTFilter extends OncePerRequestFilter {
         }
 
         // username, role 값을 획득
-        String username = jwtUtil.getEmail(accessToken);
+        Long userId = jwtUtil.getUserId(accessToken);
         String role = jwtUtil.getRole(accessToken);
 
         // email로 실제 DB에서 User 조회
-        User user = userRepository.findByEmail(username)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
         CustomUserDetails customUserDetails = new CustomUserDetails(user);
 
