@@ -72,8 +72,8 @@ public class ReissueService {
 
         // 6. 토큰 재발급 (access + refresh)
         String role = jwtUtil.getRole(refreshToken);
-        String newAccess = jwtUtil.createJwt("access", userId, role, 1_800_000L);         // 30분
-        String newRefresh = jwtUtil.createJwt("refresh", userId, role, 86_400_000L);    // 1일
+        String newAccess = jwtUtil.createJwt("access", userId, user.getEmail(), role, 1_800_000L);         // 30분
+        String newRefresh = jwtUtil.createJwt("refresh", userId, user.getEmail(), role, 86_400_000L);    // 1일
 
         // 기존 refreshToken 폐기, 새로운 refreshToken 저장 (화이트리스트 정책)
         refreshTokenRepository.delete(found);
@@ -82,7 +82,7 @@ public class ReissueService {
                         .userId(userId)
                         .email(user.getEmail())
                         .refreshToken(newRefresh)
-                        .expiration(found.getExpiration().plusDays(1))
+                        .expiration(LocalDateTime.now().plusSeconds(86_400_000L / 1000))
                         .build()
         );
 
