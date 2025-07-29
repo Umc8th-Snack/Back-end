@@ -69,7 +69,7 @@ class AuthControllerReissueTest {
         mockMvc.perform(post("/api/auth/reissue")
                         .cookie(new Cookie("refresh", validRefreshToken)))
                 .andExpect(status().isOk())
-                .andExpect(header().exists("access"))
+                .andExpect(header().exists("Authorization"))
                 .andExpect(cookie().exists("refresh"))
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("AUTH_2060"))

@@ -37,8 +37,11 @@ public class JWTFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         // 헤더에서 access키에 담긴 토큰을 꺼냄
-        String accessToken = request.getHeader("access");
-
+        String authorizationHeader = request.getHeader("Authorization");
+        String accessToken = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            accessToken = authorizationHeader.substring(7); // "Bearer " 다음부터가 실제 토큰
+        }
         // 토큰이 없다면 다음 필터로 넘김
         if (accessToken == null) {
 
@@ -51,27 +54,23 @@ public class JWTFilter extends OncePerRequestFilter {
         try {
             jwtUtil.isExpired(accessToken);
         } catch (ExpiredJwtException e) {
-
-            //response body
-            PrintWriter writer = response.getWriter();
-            writer.print("access token expired");
-
-            //response status code
+            response.setContentType("application/json; charset=UTF-8");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            PrintWriter writer = response.getWriter();
+            writer.print("{\"error\": \"access token expired\"}");
+            writer.flush();
             return;
         }
 
         // 토큰이 access인지 확인 (발급시 페이로드에 명시)
         String category = jwtUtil.getCategory(accessToken);
 
-        if (!category.equals("access")) {
-
-            //response body
-            PrintWriter writer = response.getWriter();
-            writer.print("invalid access token");
-
-            //response status code
+        if (!"access".equals(category)) {
+            response.setContentType("application/json; charset=UTF-8");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            PrintWriter writer = response.getWriter();
+            writer.print("{\"error\": \"invalid access token\"}");
+            writer.flush();
             return;
         }
 
