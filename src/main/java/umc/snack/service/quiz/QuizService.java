@@ -66,8 +66,14 @@ public class QuizService {
             Map<String, Object> quizData = objectMapper.readValue(quiz.getQuizContent(), Map.class);
             
             String question = (String) quizData.get("question");
+
+            // options가 객체 배열 형태이므로 text 필드만 추출
             @SuppressWarnings("unchecked")
-            List<String> options = (List<String>) quizData.get("options");
+            List<Map<String, Object>> optionObjects = (List<Map<String, Object>>) quizData.get("options");
+
+            List<String> options = optionObjects.stream()
+                    .map(option -> (String) option.get("text"))
+                    .collect(Collectors.toList());
             
             return QuizResponseDto.QuizContentDto.builder()
                     .quizId(quiz.getQuizId())
@@ -76,6 +82,9 @@ public class QuizService {
                     .build();
         } catch (JsonProcessingException e) {
             log.error("퀴즈 내용 파싱 오류: {}", e.getMessage());
+            throw new CustomException(ErrorCode.SERVER_5101);
+        } catch (ClassCastException e) {
+            log.error("퀴즈 JSON 구조 파싱 오류: {}", e.getMessage());
             throw new CustomException(ErrorCode.SERVER_5101);
         }
     }
