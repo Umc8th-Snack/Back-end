@@ -71,8 +71,8 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String role = authorities.iterator().next().getAuthority();
 
         // 토큰 생성
-        String accessToken = jwtUtil.createJwt("access", userId, role, 600_000L);
-        String refreshToken = jwtUtil.createJwt("refresh", userId, role, 86_400_000L);
+        String accessToken = jwtUtil.createJwt("access", userId, email, role, 600_000L);
+        String refreshToken = jwtUtil.createJwt("refresh", userId, email, role, 86_400_000L);
 
         // refresh 토큰 저장
         LocalDateTime expirationDate = LocalDateTime.now().plusSeconds(86_400_000L / 1000); // 1일
@@ -130,17 +130,4 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         return cookie;
     }
 
-    // RefreshToken 저장 메서드
-    private void saveRefreshToken(Long userId, String email, String refreshToken, Long expiredMs) {
-        LocalDateTime expirationDate = LocalDateTime.now().plusSeconds(expiredMs / 1000);
-        RefreshToken entity = new RefreshToken();
-        entity.setUserId(userId);
-        entity.setEmail(email);
-        entity.setRefreshToken(refreshToken);
-        entity.setExpiration(expirationDate);
-
-        refreshTokenRepository.deleteByUserId(userId);
-
-        refreshTokenRepository.save(entity);
-    }
 }

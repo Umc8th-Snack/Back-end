@@ -53,7 +53,7 @@ class AuthControllerReissueTest {
         );
         Long userId = user.getUserId();
         String role = "ROLE_USER";
-        String validRefreshToken = jwtUtil.createJwt("refresh", userId, role, 86_400_000L);
+        String validRefreshToken = jwtUtil.createJwt("refresh", userId, user.getEmail(), role, 86_400_000L);
 
         // refresh 토큰 DB 저장(화이트리스트)
         refreshTokenRepository.save(
@@ -105,7 +105,7 @@ class AuthControllerReissueTest {
         );
         Long userId = user.getUserId();
         String role = "ROLE_USER";
-        String expiredToken = jwtUtil.createJwt("refresh", userId, role, -1L);
+        String expiredToken = jwtUtil.createJwt("refresh", userId, user.getEmail(), role, -1L);
 
         refreshTokenRepository.save(
                 RefreshToken.builder()
@@ -137,7 +137,7 @@ class AuthControllerReissueTest {
         );
         Long userId = user.getUserId();
         String role = "ROLE_USER";
-        String fakeToken = jwtUtil.createJwt("refresh", userId, role, 86_400_000L);
+        String fakeToken = jwtUtil.createJwt("refresh", userId, user.getEmail(), role, 86_400_000L);
 
         // 일부러 DB에 저장하지 않음
 
