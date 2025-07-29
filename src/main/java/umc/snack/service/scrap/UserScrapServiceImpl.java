@@ -42,6 +42,8 @@ public class UserScrapServiceImpl implements UserScrapService {
 
             // UserScrap 객체 생성 및 저장
             UserScrap scrap = UserScrap.builder()
+                    .userId(user.getUserId())
+                    .articleId(article.getArticleId())
                     .user(user)
                     .article(article)
                     .build();
@@ -98,6 +100,7 @@ public class UserScrapServiceImpl implements UserScrapService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String getArticleUrlByScrapIdAndUserId(Long scrapId, Long userId) {
         try {
             UserScrap userScrap = userScrapRepository.findById(scrapId)
