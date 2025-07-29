@@ -2,7 +2,6 @@ package umc.snack.controller.scrap;
 
 import io.swagger.v3.oas.annotations.Operation;
 import umc.snack.common.config.security.jwt.JWTUtil;
-import umc.snack.repository.user.UserRepository;
 import umc.snack.domain.user.dto.UserScrapDto;
 import umc.snack.domain.user.entity.UserScrap;
 import umc.snack.service.scrap.UserScrapService;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import umc.snack.common.dto.ApiResponse;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,40 +24,31 @@ import java.util.Map;
 public class ScrapController {
 
     private final UserScrapService userScrapService;
-    private final UserRepository userRepository;
     private final JWTUtil jwtUtil;
 
     // 스크랩 추가
     @PostMapping("/{article_id}")
     @Operation(summary = "스크랩 추가")
-    public ResponseEntity<?> addScrap(@PathVariable Long article_id, @RequestHeader("access") String authHeader) {
+    public ResponseEntity<?> addScrap(@PathVariable Long article_id, @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.replace("Bearer ", "");
         Long userId = jwtUtil.getUserId(token);
 
         userScrapService.addScrap(userId, article_id);
         return ResponseEntity.ok(
-                Map.of(
-                        "isSuccess", true,
-                        "code", "SCRAP_6001",
-                        "message", "스크랩 추가 완료"
-                )
+                ApiResponse.onSuccess("SCRAP_6001", "스크랩 추가 성공")
         );
     }
 
     // 스크랩 취소
     @DeleteMapping("/{article_id}")
     @Operation(summary = "스크랩 취소")
-    public ResponseEntity<?> cancelScrap(@PathVariable Long article_id, @RequestHeader("access") String authHeader) {
+    public ResponseEntity<?> cancelScrap(@PathVariable Long article_id, @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.replace("Bearer ", "");
         Long userId = jwtUtil.getUserId(token);
 
         userScrapService.cancelScrap(userId, article_id);
         return ResponseEntity.ok(
-                Map.of(
-                        "isSuccess", true,
-                        "code", "SCRAP_6002",
-                        "message", "스크랩 취소 완료"
-                )
+                ApiResponse.onSuccess("SCRAP_6002", "스크랩 취소 성공")
         );
     }
 
@@ -66,8 +57,8 @@ public class ScrapController {
     @Operation(summary = "스크랩 목록 조회 (페이지네이션 처리)")
     public ResponseEntity<?> getScrapList(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestHeader("access") String authHeader
+            @RequestParam(defaultValue = "5") int size,
+            @RequestHeader("Authorization") String authHeader
     ) {
         String token = authHeader.replace("Bearer ", "");
         Long userId = jwtUtil.getUserId(token);
@@ -87,38 +78,34 @@ public class ScrapController {
         );
 
         return ResponseEntity.ok(
-                Map.of(
-                        "isSuccess", true,
-                        "code", "SCRAP_6003",
-                        "message", "스크랩 목록 조회 성공",
-                        "result", responseData
-                )
+                ApiResponse.onSuccess("SCRAP_6003", "스크랩 목록 조회 성공", responseData)
         );
     }
 
     // 스크랩 여부 확인
     @Operation(summary = "스크랩 여부 확인")
     @GetMapping("/{article_id}/exists")
-    public ResponseEntity<?> checkScrapExists(@PathVariable Long article_id, @RequestHeader("access") String authHeader) {
+    public ResponseEntity<?> checkScrapExists(@PathVariable Long article_id, @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.replace("Bearer ", "");
         Long userId = jwtUtil.getUserId(token);
 
         boolean exists = userScrapService.isScrapped(userId, article_id);
         return ResponseEntity.ok(
-                Map.of(
-                        "isSuccess", true,
-                        "code", "SCRAP_6004",
-                        "message", "스크랩 여부 확인 성공",
-                        "result", Map.of("scrapped", exists)
-                )
+                ApiResponse.onSuccess("SCRAP_6004", "스크랩 여부 확인 성공", Map.of("scrapped", exists))
         );
     }
 
     // 특정 스크랩 ID를 통해 해당 기사 상세 페이지로 리다이렉트
     @GetMapping("/{scrap_id}/redirect")
     @Operation(summary = "특정 스크랩 → 기사 리다이렉트")
-    public ResponseEntity<Void> redirectToArticle(@PathVariable Long scrap_id) {
-        String articleUrl = userScrapService.getArticleUrlByScrapId(scrap_id);
+    public ResponseEntity<Void> redirectToArticle(
+            @PathVariable Long scrap_id,
+            @RequestHeader("Authorization") String authHeader
+    ) {
+        String token = authHeader.replace("Bearer ", "");
+        Long userId = jwtUtil.getUserId(token);
+
+        String articleUrl = userScrapService.getArticleUrlByScrapIdAndUserId(scrap_id, userId);
         return ResponseEntity
                 .status(302) // HTTP 302 Found
                 .header("Location", articleUrl)

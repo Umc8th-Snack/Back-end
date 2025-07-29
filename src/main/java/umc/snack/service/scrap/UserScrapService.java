@@ -9,5 +9,5 @@ public interface UserScrapService {
     void cancelScrap(Long userId, Long articleId);
     Page<UserScrap> getScrapList(Long userId, Pageable pageable);
     boolean isScrapped(Long userId, Long articleId);
-    String getArticleUrlByScrapId(Long scrapId);
+    String getArticleUrlByScrapIdAndUserId(Long scrapId, Long userId);
 }
