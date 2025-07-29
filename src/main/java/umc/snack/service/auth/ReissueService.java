@@ -87,7 +87,7 @@ public class ReissueService {
         );
 
         // access 토큰은 header, refresh 토큰은 쿠키
-        response.setHeader("access", newAccess);
+        response.setHeader("Authorization", "Bearer " + newAccess);
         response.addCookie(createCookie("refresh", newRefresh));
 
         // 응답 Dto 만들기
@@ -124,6 +124,7 @@ public class ReissueService {
         Cookie cookie = new Cookie(key, value);
         cookie.setMaxAge(24 * 60 * 60);
         cookie.setHttpOnly(true);
+        cookie.setPath("/");
         return cookie;
     }
 
