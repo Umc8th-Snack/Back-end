@@ -129,7 +129,8 @@ public class ArticleSummarizeTest {
         }
 
         int batchSize = 5;
-        int total = articles.size();
+        //int total = articles.size();
+        int total = Math.min(articles.size(), 5); // 최신 기사 5개까지만 실행(테스트용)
 
         for (int i = 0; i < total; i += batchSize) {
             int end = Math.min(i + batchSize, total);
