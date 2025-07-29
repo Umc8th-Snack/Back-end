@@ -73,7 +73,7 @@ class AuthControllerReissueTest {
                 .andExpect(cookie().exists("refresh"))
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("AUTH_2060"))
-                .andExpect(jsonPath("$.message").value("Access 토큰이 재발급되었습니다."))
+                .andExpect(jsonPath("$.message").value("Access 토큰과 Refresh 토큰이 재발급되었습니다."))
                 .andExpect(jsonPath("$.result.userId").value(userId))
                 .andExpect(jsonPath("$.result.email").value(user.getEmail()))
                 .andExpect(jsonPath("$.result.nickname").value(user.getNickname()))
