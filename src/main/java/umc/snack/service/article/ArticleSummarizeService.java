@@ -36,7 +36,6 @@ public class ArticleSummarizeService {
         this.crawledArticleRepository = crawledArticleRepository;
         this.geminiParsingService = geminiParsingService;
     }
-
     String promptTemplate = """
             다음 지시를 정확히 따르세요.
                         
@@ -51,6 +50,8 @@ public class ArticleSummarizeService {
                 - 각 항목에 word, meaning.
                 - word는 한자를 포함하지 말 것.
              4. 출력은 아래 JSON 스키마와 동일해야 하며, 추가 키/텍스트/주석/마크다운 금지.
+                - "answer"는 반드시 {"id": 번호, "text": 보기내용}의 object로 작성할 것.
+                - "answer": "4. 보기내용"과 같이 문자열로 출력하지 말 것.
             
              [출력 JSON 스키마]
              {
@@ -75,7 +76,7 @@ public class ArticleSummarizeService {
                      { "id": 3, "text": "…" },
                      { "id": 4, "text": "…" }
                    ],
-                   "answer": "…",
+                   "answer": { "id": "…", "text": "…" },
                    "explanation": "…"
                  }
                ],
@@ -123,7 +124,7 @@ public class ArticleSummarizeService {
     }
 
     @Transactional
-    void getCompletion() {
+    public void getCompletion() {
         List<Article> articles = articleRepository.findBySummaryIsNull();
 
         if (articles.isEmpty()) {

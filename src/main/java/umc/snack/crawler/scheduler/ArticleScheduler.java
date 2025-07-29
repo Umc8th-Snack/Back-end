@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import umc.snack.crawler.service.ArticleCollectorService;
 import umc.snack.crawler.service.ArticleCrawlerService;
+import umc.snack.service.article.ArticleSummarizeService;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ public class ArticleScheduler {
 
     private final ArticleCollectorService articleCollectorService;
     private final ArticleCrawlerService articleCrawlerService;
+    private final ArticleSummarizeService articleSummarizeService;
 
     // 오전 기사와 오후 기사를 모두 크롤링하기 위해 하루에 10&18시 2번 크롤링
     // 초(*/30), 분(*), 시(*), 일(*), 월(*), 요일(*)
@@ -33,6 +35,20 @@ public class ArticleScheduler {
             articleCrawlerService.crawlFromJson(json);                                   // 크롤링 실행
         } catch (IOException e) {
             System.err.println("❌ 자동 크롤링 중 오류 발생: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 오전 10시 30분, 오후 6시 30분에 Gemini 요약 실행
+     * cron: "0 30 10,18 * * *"
+     */
+    @Scheduled(cron = "0 30 10,18 * * *", zone = "Asia/Seoul")
+    public void autoSummarize() {
+        log.info("✅ 스케쥴러 Gemini 기사 요약 시작: {}", LocalDateTime.now());
+        try {
+            articleSummarizeService.getCompletion();
+        } catch (Exception e) {
+            log.error("❌ Gemini 기사 요약 중 에러 발생: {}", e.getMessage(), e);
         }
     }
 
