@@ -83,9 +83,9 @@ public class JWTFilter extends OncePerRequestFilter {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
         CustomUserDetails customUserDetails = new CustomUserDetails(user);
 
-        Authentication authToken = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(authToken);
-
+        //SecurityContextHolder 설정 추가(채원)
+        Authentication authentication = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         filterChain.doFilter(request, response);
     }
 

@@ -31,7 +31,7 @@ public class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
-        userRepository.deleteAll(); // 혹시 중복 데이터 방지
+        //userRepository.deleteAll(); // 혹시 중복 데이터 방지
         String rawPassword = "password123!";
         String encoded = passwordEncoder.encode(rawPassword);
         System.out.println("평문: " + rawPassword);

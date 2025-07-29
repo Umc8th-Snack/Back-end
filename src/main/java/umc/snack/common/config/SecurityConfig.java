@@ -82,9 +82,7 @@ public class SecurityConfig {
                                 "/api/articles/crawl/status",
                                 "/api/articles/*/summarize",
                                 "/api/terms",
-                                "/api/articles/**",
-                                //스크랩 테스트용
-                                "/api/scraps/**"
+                                "/api/articles/**"
                         ).permitAll()
                         // 나머지는 모두 JWT 토큰 인증 필요
                         .anyRequest().authenticated()
