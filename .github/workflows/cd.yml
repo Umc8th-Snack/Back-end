@@ -1,0 +1,97 @@
+# cd.yml 
+
+name: CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  AWS_REGION: ap-northeast-2
+  S3_BUCKET_NAME: fixlogsmwubucket
+  CODE_DEPLOY_APPLICATION_NAME: fixlog-code-deploy
+  CODE_DEPLOY_DEPLOYMENT_GROUP_NAME: fixlog-server
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Grant execute permission for gradlew
+      run: |
+        chmod +x ./gradlew
+        chmod +x ./scripts/deploy.sh
+
+    - name: Replace application.properties secrets
+      run: |
+        sed -i "s|\${MYSQL_URL}|${{ secrets.MYSQL_URL }}|g" src/main/resources/application.properties
+        sed -i "s|\${MYSQL_USERNAME}|${{ secrets.MYSQL_USERNAME }}|g" src/main/resources/application.properties
+        sed -i "s|\${MYSQL_PASSWORD}|${{ secrets.MYSQL_PASSWORD }}|g" src/main/resources/application.properties
+        sed -i "s|\${JWT_KEY}|${{ secrets.JWT_KEY }}|g" src/main/resources/application.properties
+        sed -i "s|\${AWS_ACCESS_KEY_ID}|${{ secrets.AWS_ACCESS_KEY_ID }}|g" src/main/resources/application.properties
+        sed -i "s|\${AWS_SECRET_ACCESS_KEY}|${{ secrets.AWS_SECRET_ACCESS_KEY }}|g" src/main/resources/application.properties
+        sed -i "s|\${AWS_REGION}|${{ env.AWS_REGION }}|g" src/main/resources/application.properties
+        sed -i "s|\${AWS_S3_BUCKET}|${{ env.S3_BUCKET_NAME }}|g" src/main/resources/application.properties
+        
+    - name: Build with Gradle
+      run: ./gradlew clean build -x test
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Create .env file from GitHub secrets
+      run: |
+        echo "MYSQL_URL=${{ secrets.MYSQL_URL }}" >> .env
+        echo "MYSQL_USERNAME=${{ secrets.MYSQL_USERNAME }}" >> .env
+        echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
+        echo "JWT_KEY=${{ secrets.JWT_KEY }}" >> .env
+        echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+        echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
+        echo "AWS_REGION=${{ env.AWS_REGION }}" >> .env
+        echo "AWS_S3_BUCKET=${{ env.S3_BUCKET_NAME }}" >> .env
+
+    - name: Prepare deployment package
+      run: |
+        mkdir -p deploy
+        cp ./build/libs/*.jar ./deploy/
+        cp -r ./scripts ./deploy/
+        cp .env ./deploy/
+        cp appspec.yml ./deploy/
+        chmod +x ./deploy/scripts/deploy.sh
+        cd deploy
+        zip -r ../${{ github.sha }}.zip .
+
+    - name: Upload to S3
+      run: |
+        aws deploy push \
+          --application-name ${{ env.CODE_DEPLOY_APPLICATION_NAME }} \
+          --s3-location s3://${{ env.S3_BUCKET_NAME }}/${{ github.sha }}.zip \
+          --source ./deploy \
+          --region ${{ env.AWS_REGION }}
+
+    - name: Deploy with CodeDeploy
+      run: |
+        aws deploy create-deployment \
+          --deployment-config-name CodeDeployDefault.AllAtOnce \
+          --application-name ${{ env.CODE_DEPLOY_APPLICATION_NAME }} \
+          --deployment-group-name ${{ env.CODE_DEPLOY_DEPLOYMENT_GROUP_NAME }} \
+          --s3-location bucket=${{ env.S3_BUCKET_NAME }},key=${{ github.sha }}.zip,bundleType=zip \
+          --region ${{ env.AWS_REGION }}
