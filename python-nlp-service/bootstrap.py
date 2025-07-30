@@ -10,5 +10,6 @@ print("TF-IDF 모델 학습 중...")
 subprocess.run(["python", "scripts/train_tfidf_model.py"], check=True)
 
 # 서버 실행
+# --reload는 dev 환경에서만 쓰는 거니까 프로덕션 배포면 제거
 print("FastAPI 서버 실행 중...")
-subprocess.run(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"])
+subprocess.run(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"])
