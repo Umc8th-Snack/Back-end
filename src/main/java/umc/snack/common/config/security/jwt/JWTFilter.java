@@ -1,5 +1,6 @@
 package umc.snack.common.config.security.jwt;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +16,7 @@ import umc.snack.domain.user.entity.User;
 import umc.snack.repository.user.UserRepository;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 
 public class JWTFilter extends OncePerRequestFilter {
 
@@ -34,54 +36,56 @@ public class JWTFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String authorization = request.getHeader("Authorization");
+        // 헤더에서 access키에 담긴 토큰을 꺼냄
+        String authorizationHeader = request.getHeader("Authorization");
+        String accessToken = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            accessToken = authorizationHeader.substring(7); // "Bearer " 다음부터가 실제 토큰
+        }
+        // 토큰이 없다면 다음 필터로 넘김
+        if (accessToken == null) {
 
-        // Authorization 헤더 검증
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            logger.debug("Authorization header is missing or invalid");
             filterChain.doFilter(request, response);
+
             return;
         }
 
-        String token = authorization.split(" ")[1];
-
-        String email = null;
-        String role = null;
-
+        // 토큰 만료 여부 확인, 만료시 다음 필터로 넘기지 않음
         try {
-            // 토큰 만료 검증
-            if (jwtUtil.isExpired(token)) {
-                logger.debug("JWT token is expired");
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            // 토큰에서 username과 role 획득
-            email = jwtUtil.getEmail(token);
-            role = jwtUtil.getRole(token);
-
-        } catch (Exception e) {
-            // 여기서 JWT 파싱 관련 모든 예외 처리 (만료/변조/서명오류 등)
-            System.out.println("invalid token: " + e.getMessage());
-            filterChain.doFilter(request, response);
+            jwtUtil.isExpired(accessToken);
+        } catch (ExpiredJwtException e) {
+            response.setContentType("application/json; charset=UTF-8");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            PrintWriter writer = response.getWriter();
+            writer.print("{\"error\": \"access token expired\"}");
+            writer.flush();
             return;
         }
 
-        User user = userRepository.findByEmail(email)
-                .orElse(null);
+        // 토큰이 access인지 확인 (발급시 페이로드에 명시)
+        String category = jwtUtil.getCategory(accessToken);
 
-        if (user == null) {
-            logger.debug("User not found for email: {}", email);
-            filterChain.doFilter(request, response);
+        if (!"access".equals(category)) {
+            response.setContentType("application/json; charset=UTF-8");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            PrintWriter writer = response.getWriter();
+            writer.print("{\"error\": \"invalid access token\"}");
+            writer.flush();
             return;
         }
 
+        // username, role 값을 획득
+        Long userId = jwtUtil.getUserId(accessToken);
+        String role = jwtUtil.getRole(accessToken);
+
+        // email로 실제 DB에서 User 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
         CustomUserDetails customUserDetails = new CustomUserDetails(user);
 
-        Authentication authToken = new UsernamePasswordAuthenticationToken(
-                customUserDetails, null, customUserDetails.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(authToken);
-
+        //SecurityContextHolder 설정 추가(채원)
+        Authentication authentication = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         filterChain.doFilter(request, response);
     }
 

@@ -15,20 +15,25 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import umc.snack.common.config.security.jwt.JWTFilter;
 import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.common.config.security.jwt.LoginFilter;
+import umc.snack.repository.auth.RefreshTokenRepository;
 import umc.snack.repository.user.UserRepository;
+import umc.snack.service.auth.ReissueService;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final AuthenticationConfiguration authenticationConfiguration;
-    //JWTUtil 주입
     private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final ReissueService reissueService;
 
-    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil) {
+    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil, ReissueService reissueService ,RefreshTokenRepository refreshTokenRepository) {
 
         this.authenticationConfiguration = authenticationConfiguration;
         this.jwtUtil = jwtUtil;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.reissueService = reissueService;
     }
 
     @Bean
@@ -67,17 +72,17 @@ public class SecurityConfig {
                                 "/api/users/signup",
                                 "/api/auth/login",
                                 "/api/auth/kakao",
+                                "/api/auth/reissue",
                                 "/auth/kakao/callback",
                                 "/api/articles/*/related-articles",
                                 "/api/articles/search",
                                 "/api/articles/main",
-                                // 관리자 공개 api -> 개발 단계에서는 전체 공개
+
+                        // 관리자 공개 api -> 개발 단계에서는 전체 공개
                                 "/api/articles/crawl/status",
                                 "/api/articles/*/summarize",
                                 "/api/terms",
-                                "/api/articles/**",
-                                //스크랩 테스트용
-                                "/api/scraps/**"
+                                "/api/articles/**"
                         ).permitAll()
                         // 나머지는 모두 JWT 토큰 인증 필요
                         .anyRequest().authenticated()
@@ -85,10 +90,8 @@ public class SecurityConfig {
 
         http
                 .addFilterBefore(new JWTFilter(jwtUtil, userRepository), LoginFilter.class);
-
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil), UsernamePasswordAuthenticationFilter.class);
-
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, reissueService, refreshTokenRepository), UsernamePasswordAuthenticationFilter.class);
 
         //세션 설정
         http

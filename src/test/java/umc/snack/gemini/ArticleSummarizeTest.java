@@ -95,7 +95,8 @@ public class ArticleSummarizeTest {
         }
 
         int batchSize = 5;
-        int total = articles.size();
+        //int total = articles.size();
+        int total = Math.min(articles.size(), 5); // 최신 기사 5개까지만 실행(테스트용)
 
         for (int i = 0; i < total; i += batchSize) {
             int end = Math.min(i + batchSize, total);
@@ -113,7 +114,9 @@ public class ArticleSummarizeTest {
                 log.info("Gemini 결과: {}", result);
                 log.info("=========================================================");
 
-                geminiParsingService.updateArticleSummary(article.getArticleId(), result);
+                /*articles에 전에 저장했던 기사들이 남아 있어서 crawled_articles와 articles에서 article_id가 같은 것을 확인하고
+                 해당 article_id를 가진 summary 에 요약을 저장하게 할 수 있을까요?*/
+                geminiParsingService.updateArticleSummary(crawled.getArticleId(), result);
 
                 // 1개 처리 후 10초 대기 (overload 방지)
                 try {
