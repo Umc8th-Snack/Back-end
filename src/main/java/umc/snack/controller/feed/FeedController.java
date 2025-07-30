@@ -25,7 +25,7 @@ public class FeedController {
             @Parameter(name = "category", description = "조회할 카테고리 이름 (예: IT/과학)", required = true),
             @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
     })
-    @GetMapping("/main/{category}")
+    @GetMapping("/main")
     public ApiResponse<ArticleInFeedDto> getMainFeedArticles(
             @RequestParam String category,
             @RequestParam(required = false) Long lastArticleId,

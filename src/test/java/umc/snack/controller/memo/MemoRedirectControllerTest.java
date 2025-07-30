@@ -16,6 +16,8 @@ import umc.snack.repository.article.ArticleRepository;
 import umc.snack.repository.memo.MemoRepository;
 import umc.snack.repository.user.UserRepository;
 
+import java.time.LocalDateTime;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -58,9 +60,9 @@ public class MemoRedirectControllerTest {
         // 테스트 기사 생성
         testArticle = Article.builder()
                 .title("테스트 기사")
-                .content("테스트 기사 내용")
-                .url("https://test.com/article")
-                .publishedAt("2024-01-01T00:00:00")
+                .summary("테스트 기사 내용")
+                .articleUrl("https://test.com/article")
+                .publishedAt(LocalDateTime.parse("2024-01-01T00:00:00"))
                 .build();
         testArticle = articleRepository.save(testArticle);
 
