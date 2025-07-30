@@ -83,8 +83,6 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
                 .userId(userId)
                 .email(email)
                 .nickname(nickname)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
                 .build();
 
         ApiResponse<LoginResponseDto> apiResponse = ApiResponse.success(
@@ -103,7 +101,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         }
 
         // 헤더/쿠키 유지
-        response.setHeader("access", accessToken);
+        response.setHeader("Authorization", "Bearer " + accessToken);
         response.addCookie(createCookie("refresh", refreshToken));
     }
 
@@ -125,8 +123,8 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         Cookie cookie = new Cookie(key, value);
         cookie.setMaxAge(24 * 60 * 60);
         cookie.setHttpOnly(true);
-        // cookie.setSecure(true);
-        // cookie.setPath("/");
+        cookie.setSecure(true);
+        cookie.setPath("/");
         return cookie;
     }
 

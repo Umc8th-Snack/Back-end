@@ -49,7 +49,8 @@ public class JWTUtil {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getExpiration().before(new Date());
     }
 
-    public String createJwt(String category, Long userId,String email, String role, Long expiredMs) {
+    public String createJwt(String category, Long userId, String email, String role, Long expiredMs) {
+
 
         return Jwts.builder()
                 .claim("category", category)
