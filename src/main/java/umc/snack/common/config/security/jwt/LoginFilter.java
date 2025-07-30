@@ -71,8 +71,8 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String role = authorities.iterator().next().getAuthority();
 
         // 토큰 생성
-        String accessToken = jwtUtil.createJwt("access", userId, email, role, 600_000L);
-        String refreshToken = jwtUtil.createJwt("refresh", userId, email, role, 86_400_000L);
+        String accessToken = jwtUtil.createJwt("access", userId, email, role, 1_800_000L); // 30분
+        String refreshToken = jwtUtil.createJwt("refresh", userId, email, role, 86_400_000L); // 1일
 
         // refresh 토큰 저장
         LocalDateTime expirationDate = LocalDateTime.now().plusSeconds(86_400_000L / 1000); // 1일
