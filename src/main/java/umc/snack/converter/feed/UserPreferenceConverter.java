@@ -10,6 +10,7 @@ public class UserPreferenceConverter {
     private static final double WEIGHT_CLICK = 0.3;
     private static final double WEIGHT_SEARCH = 0.2;
 
+
     public UserCategoryScoreDto toUserCategoryScoreDto(Long userId, Category category,
                                                        int[] counts, double totalScraps,
                                                        double totalClicks, double totalSearches) {
