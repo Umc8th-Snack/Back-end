@@ -126,7 +126,6 @@ public class ArticleSummarizeService {
         throw new RuntimeException("Gemini model overload로 재시도 실패");
     }
 
-    @Transactional
     public void getCompletion() {
         List<Article> articles = articleRepository.findBySummaryIsNull();
 

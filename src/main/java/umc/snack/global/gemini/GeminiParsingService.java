@@ -2,10 +2,11 @@ package umc.snack.global.gemini;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.quiz.entity.ArticleQuiz;
 import umc.snack.domain.quiz.entity.Quiz;
@@ -32,7 +33,7 @@ public class GeminiParsingService {
     private final ArticleTermRepository articleTermRepository;
 
     // GeminiService에서 받은 JSON String을 Article의 summary에 반영
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateArticleSummary(Long articleId, String geminiJson) {
         if (articleId == null) {
             throw new IllegalArgumentException("articleId는 null일 수 없습니다.");
