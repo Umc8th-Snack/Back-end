@@ -10,4 +10,6 @@ public interface MemoCommandService {
     MemoResponseDto.UpdateResultDto updateMemo(Long articleId, Long memoId, MemoRequestDto.UpdateDto request);
 
     void deleteMemo(Long articleId, Long memoID);
+
+    MemoResponseDto.RedirectResultDto redirectToArticle(Long memoId);
 }
