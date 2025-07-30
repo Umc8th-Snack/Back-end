@@ -1,6 +1,7 @@
 package umc.snack.service.memo;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.snack.common.exception.CustomException;
@@ -42,9 +43,12 @@ public class MemoCommandServiceImpl implements MemoCommandService {
                 .user(currentUser)
                 .build();
 
-        Memo savedMemo = memoRepository.save(newMemo);
-
-        return MemoConverter.toCreateResultDto(savedMemo);
+        try {
+            Memo savedMemo = memoRepository.save(newMemo);
+            return MemoConverter.toCreateResultDto(savedMemo);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.MEMO_8607);
+        }
     }
 
     @Override
