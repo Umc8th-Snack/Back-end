@@ -71,6 +71,7 @@ public class SecurityConfig {
                                 "/api/articles/*/related-articles",
                                 "/api/articles/search",
                                 "/api/articles/main",
+                                "/api/feeds/main/**",
                                 // 관리자 공개 api -> 개발 단계에서는 전체 공개
                                 "/api/articles/crawl/status",
                                 "/api/articles/*/summarize",
