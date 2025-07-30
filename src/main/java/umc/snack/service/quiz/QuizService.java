@@ -66,8 +66,14 @@ public class QuizService {
             Map<String, Object> quizData = objectMapper.readValue(quiz.getQuizContent(), Map.class);
             
             String question = (String) quizData.get("question");
+
+            // options가 객체 배열 형태이므로 text 필드만 추출
             @SuppressWarnings("unchecked")
-            List<String> options = (List<String>) quizData.get("options");
+            List<Map<String, Object>> optionObjects = (List<Map<String, Object>>) quizData.get("options");
+
+            List<String> options = optionObjects.stream()
+                    .map(option -> (String) option.get("text"))
+                    .collect(Collectors.toList());
             
             return QuizResponseDto.QuizContentDto.builder()
                     .quizId(quiz.getQuizId())
@@ -76,6 +82,9 @@ public class QuizService {
                     .build();
         } catch (JsonProcessingException e) {
             log.error("퀴즈 내용 파싱 오류: {}", e.getMessage());
+            throw new CustomException(ErrorCode.SERVER_5101);
+        } catch (ClassCastException e) {
+            log.error("퀴즈 JSON 구조 파싱 오류: {}", e.getMessage());
             throw new CustomException(ErrorCode.SERVER_5101);
         }
     }
@@ -99,15 +108,20 @@ public class QuizService {
                 .map(ArticleQuiz::getQuizId)
                 .collect(Collectors.toSet());
         
+        log.info("ArticleId: {}, 기사에 속한 유효한 퀴즈 ID들: {}", articleId, validQuizIds);
+        
         // 4. 제출된 퀴즈 ID들이 모두 해당 기사에 속하는지 검증
 
         List<Long> submittedQuizIds = requestDto.getSubmittedAnswers().stream()
                 .map(QuizGradingRequestDto.SubmittedAnswer::getQuizId)
                 .collect(Collectors.toList());
 
+        log.info("사용자가 제출한 퀴즈 ID들: {}", submittedQuizIds);
+
         // 없으면 에러 반환
         for (Long submittedQuizId : submittedQuizIds) {
             if (!validQuizIds.contains(submittedQuizId)) {
+                log.error("유효하지 않은 퀴즈 ID 발견: {}. 유효한 ID들: {}", submittedQuizId, validQuizIds);
                 throw new CustomException(ErrorCode.QUIZ_7603);
             }
         }
@@ -136,9 +150,45 @@ public class QuizService {
             // JSON 문자열을 Map으로 파싱
             Map<String, Object> quizData = objectMapper.readValue(quiz.getQuizContent(), Map.class);
             
-            // 정답 인덱스와 설명 추출
-            int correctAnswerIndex = (Integer) quizData.get("answer_index");
-            String description = (String) quizData.get("description");
+            log.info("퀴즈 ID: {}, JSON 구조: {}", quiz.getQuizId(), quizData);
+            
+            // 정답 텍스트 추출
+            String answerText = (String) quizData.get("answer");
+            if (answerText == null) {
+                log.error("퀴즈 ID {}의 JSON에 answer 필드가 없습니다. 사용 가능한 키들: {}", 
+                         quiz.getQuizId(), quizData.keySet());
+                throw new CustomException(ErrorCode.SERVER_5101);
+            }
+            
+            // options에서 정답 텍스트와 일치하는 인덱스 찾기
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> options = (List<Map<String, Object>>) quizData.get("options");
+            if (options == null) {
+                log.error("퀴즈 ID {}의 JSON에 options 필드가 없습니다.", quiz.getQuizId());
+                throw new CustomException(ErrorCode.SERVER_5101);
+            }
+            
+            int correctAnswerIndex = -1;
+            for (Map<String, Object> option : options) {
+                String optionText = (String) option.get("text");
+                if (answerText.equals(optionText)) {
+                    correctAnswerIndex = (Integer) option.get("id");
+                    break;
+                }
+            }
+            
+            if (correctAnswerIndex == -1) {
+                log.error("퀴즈 ID {}에서 정답 텍스트 '{}'와 일치하는 옵션을 찾을 수 없습니다. 옵션들: {}", 
+                         quiz.getQuizId(), answerText, options);
+                throw new CustomException(ErrorCode.SERVER_5101);
+            }
+            
+            // 설명 추출
+            String description = (String) quizData.get("explanation");
+            if (description == null) {
+                log.warn("퀴즈 ID {}의 JSON에 explanation 필드가 없습니다. 기본값 사용", quiz.getQuizId());
+                description = "정답 해설이 없습니다.";
+            }
             
             // 채점 결과 계산
             boolean isCorrect = submittedAnswer.getSubmitted_answer_index() == correctAnswerIndex;
