@@ -7,11 +7,14 @@ import umc.snack.global.BaseEntity;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "crawled_articles")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
+@Table(
+        name = "crawled_articles",
+        indexes = @Index(name = "idx_crawled_articles_article_id", columnList = "article_id")
+)
 public class CrawledArticle extends BaseEntity {
 
     public enum Status {

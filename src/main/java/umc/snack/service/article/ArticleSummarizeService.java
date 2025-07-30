@@ -1,5 +1,6 @@
 package umc.snack.service.article;
 
+import io.jsonwebtoken.lang.Assert;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -186,8 +187,7 @@ public class ArticleSummarizeService {
                 }
 
                 Article updatedArticle = articleRepository.findById(article.getArticleId()).orElse(null);
-                assertNotNull(updatedArticle.getSummary(), "요약이 생성되어야 합니다.");
-            }
+                Assert.notNull(updatedArticle.getSummary(), "요약이 생성되어야 합니다.");            }
 
             // 5개마다 추가 대기
             try {
