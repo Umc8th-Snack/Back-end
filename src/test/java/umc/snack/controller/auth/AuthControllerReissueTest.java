@@ -76,9 +76,7 @@ class AuthControllerReissueTest {
                 .andExpect(jsonPath("$.message").value("Access 토큰과 Refresh 토큰이 재발급되었습니다."))
                 .andExpect(jsonPath("$.result.userId").value(userId))
                 .andExpect(jsonPath("$.result.email").value(user.getEmail()))
-                .andExpect(jsonPath("$.result.nickname").value(user.getNickname()))
-                .andExpect(jsonPath("$.result.accessToken").exists())
-                .andExpect(jsonPath("$.result.refreshToken").exists());
+                .andExpect(jsonPath("$.result.nickname").value(user.getNickname()));
     }
 
     @DisplayName("refreshToken이 없는 경우 401 에러")

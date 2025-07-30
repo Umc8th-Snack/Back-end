@@ -11,8 +11,6 @@ public class TokenReissueResponseDto {
     private Long userId;
     private String email;
     private String nickname;
-    private String accessToken;
-    private String refreshToken;
 
     public String getNickname() { return nickname; }
 
