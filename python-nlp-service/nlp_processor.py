@@ -104,7 +104,10 @@ def vectorize_tfidf(text: str) -> list[float]:
     text_for_vectorizer = ' '.join(processed_tokens)
 
     if not text_for_vectorizer: # 처리할 유효한 토큰이 없으면 빈 벡터 반환
-        return []
+        # return []
+        # 아예 빈 벡터를 반환하면 IndexError가 발생할 수 있어서, 0.0으로만 구성된 벡터 반환핟도록 수정
+        vocab_size = len(tfidf_vectorizer.vocabulary_)
+        return [0.0] * vocab_size
 
     # 학습된 TfidfVectorizer를 사용하여 벡터화 수행
     vector = tfidf_vectorizer.transform([text_for_vectorizer])
