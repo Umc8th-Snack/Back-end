@@ -29,7 +29,7 @@ public class ShareController {
     @PostMapping("/articles/{articleId}/share")
     public ResponseEntity<ApiResponse<ShareResultDto>> createShare(@PathVariable Long articleId,
                                                                    @AuthenticationPrincipal CustomUserDetails userDetails){
-        // Todo : jwt 토큰 로직 완성 되면.. Long userId = userDetails.getUser().getUserId();
+        Long userId = userDetails.getUser().getUserId();
         ShareResultDto result = shareService.createShareLink(articleId, userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.onSuccess("SHARE_6501", "공유 링크 생성 성공", result));
