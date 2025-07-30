@@ -5,11 +5,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # 3. 의존성 설치
-COPY requirements.txt .
+COPY python-nlp-service/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 4. 전체 소스 복사
-COPY . .
+# 4. 전체 소스 복사 (서브 디렉토리만)
+COPY python-nlp-service/ .
 
 # 5. bootstrap.py 실행 (초기화 + uvicorn 실행)
 CMD ["python", "bootstrap.py"]
