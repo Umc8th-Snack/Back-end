@@ -20,7 +20,7 @@ public class GeminiResultDto {
     public static class QuizDto {
         private String question;
         private List<QuizOptionDto> options;
-        private String answer;
+        private Answer answer;
         private String explanation;
     }
 
@@ -36,6 +36,13 @@ public class GeminiResultDto {
     public static class TermDto {
         private String word;
         private String meaning;
+    }
+
+    @NoArgsConstructor
+    @Getter @Setter
+    public static class Answer {
+        private int id;
+        private String text;
     }
 
 }

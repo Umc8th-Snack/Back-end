@@ -84,17 +84,27 @@ class QuizServiceTest {
         when(articleRepository.existsById(articleId)).thenReturn(true);
         when(articleQuizRepository.findByArticleIdWithQuiz(articleId)).thenReturn(articleQuizzes);
         
-        // JSON 파싱 Mock 설정
+        // JSON 파싱 Mock 설정 - 실제 JSON 구조에 맞게 수정
         when(objectMapper.readValue(quiz1.getQuizContent(), java.util.Map.class))
                 .thenReturn(java.util.Map.of(
                         "question", "이 기사의 핵심 주제는 무엇인가요?",
-                        "options", Arrays.asList("경제", "사회", "기술", "정치")
+                        "options", Arrays.asList(
+                                java.util.Map.of("id", 1, "text", "경제"),
+                                java.util.Map.of("id", 2, "text", "사회"),
+                                java.util.Map.of("id", 3, "text", "기술"),
+                                java.util.Map.of("id", 4, "text", "정치")
+                        )
                 ));
         
         when(objectMapper.readValue(quiz2.getQuizContent(), java.util.Map.class))
                 .thenReturn(java.util.Map.of(
                         "question", "기사에서 언급된 주요 기술의 이름은 무엇인가요?",
-                        "options", Arrays.asList("블록체인", "인공지능", "양자컴퓨팅", "사물인터넷")
+                        "options", Arrays.asList(
+                                java.util.Map.of("id", 1, "text", "블록체인"),
+                                java.util.Map.of("id", 2, "text", "인공지능"),
+                                java.util.Map.of("id", 3, "text", "양자컴퓨팅"),
+                                java.util.Map.of("id", 4, "text", "사물인터넷")
+                        )
                 ));
         
         // when
@@ -194,7 +204,12 @@ class QuizServiceTest {
         when(objectMapper.readValue(quiz1.getQuizContent(), java.util.Map.class))
                 .thenReturn(java.util.Map.of(
                         "question", "이 기사의 핵심 주제는 무엇인가요?",
-                        "options", Arrays.asList("경제", "사회", "기술", "정치")
+                        "options", Arrays.asList(
+                                java.util.Map.of("id", 1, "text", "경제"),
+                                java.util.Map.of("id", 2, "text", "사회"),
+                                java.util.Map.of("id", 3, "text", "기술"),
+                                java.util.Map.of("id", 4, "text", "정치")
+                        )
                 ));
         
         // when
@@ -241,15 +256,35 @@ class QuizServiceTest {
         when(articleRepository.existsById(articleId)).thenReturn(true);
         when(articleQuizRepository.findByArticleIdWithQuiz(articleId)).thenReturn(articleQuizzes);
         
-        // 각 퀴즈에 대한 JSON 파싱 Mock 설정
+        // 각 퀴즈에 대한 JSON 파싱 Mock 설정 - 실제 JSON 구조에 맞게 수정
         when(objectMapper.readValue(quiz1.getQuizContent(), java.util.Map.class))
-                .thenReturn(java.util.Map.of("question", "질문1", "options", Arrays.asList("옵션1", "옵션2", "옵션3", "옵션4")));
+                .thenReturn(java.util.Map.of("question", "질문1", "options", Arrays.asList(
+                        java.util.Map.of("id", 1, "text", "옵션1"),
+                        java.util.Map.of("id", 2, "text", "옵션2"),
+                        java.util.Map.of("id", 3, "text", "옵션3"),
+                        java.util.Map.of("id", 4, "text", "옵션4")
+                )));
         when(objectMapper.readValue(quiz2.getQuizContent(), java.util.Map.class))
-                .thenReturn(java.util.Map.of("question", "질문2", "options", Arrays.asList("옵션1", "옵션2", "옵션3", "옵션4")));
+                .thenReturn(java.util.Map.of("question", "질문2", "options", Arrays.asList(
+                        java.util.Map.of("id", 1, "text", "옵션1"),
+                        java.util.Map.of("id", 2, "text", "옵션2"),
+                        java.util.Map.of("id", 3, "text", "옵션3"),
+                        java.util.Map.of("id", 4, "text", "옵션4")
+                )));
         when(objectMapper.readValue(quiz3.getQuizContent(), java.util.Map.class))
-                .thenReturn(java.util.Map.of("question", "세 번째 질문", "options", Arrays.asList("옵션1", "옵션2", "옵션3", "옵션4")));
+                .thenReturn(java.util.Map.of("question", "세 번째 질문", "options", Arrays.asList(
+                        java.util.Map.of("id", 1, "text", "옵션1"),
+                        java.util.Map.of("id", 2, "text", "옵션2"),
+                        java.util.Map.of("id", 3, "text", "옵션3"),
+                        java.util.Map.of("id", 4, "text", "옵션4")
+                )));
         when(objectMapper.readValue(quiz4.getQuizContent(), java.util.Map.class))
-                .thenReturn(java.util.Map.of("question", "네 번째 질문", "options", Arrays.asList("답1", "답2", "답3", "답4")));
+                .thenReturn(java.util.Map.of("question", "네 번째 질문", "options", Arrays.asList(
+                        java.util.Map.of("id", 1, "text", "답1"),
+                        java.util.Map.of("id", 2, "text", "답2"),
+                        java.util.Map.of("id", 3, "text", "답3"),
+                        java.util.Map.of("id", 4, "text", "답4")
+                )));
         
         // when
         QuizResponseDto result = quizService.getQuizzesByArticleId(articleId);

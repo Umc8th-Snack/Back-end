@@ -44,9 +44,17 @@ public class JWTUtil {
                 .get("userId", Long.class);
     }
 
+//    public Boolean isExpired(String token) {
+//
+//        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getExpiration().before(new Date());
+//    }
+    // 디버깅 용
     public Boolean isExpired(String token) {
-
-        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getExpiration().before(new Date());
+        Date exp = Jwts.parser().verifyWith(secretKey)
+                .build().parseSignedClaims(token)
+                .getPayload().getExpiration();
+        System.out.println("JWT exp = " + exp + ", now = " + new Date());
+        return exp.before(new Date());
     }
 
     public String createJwt(String category, Long userId, String email, String role, Long expiredMs) {

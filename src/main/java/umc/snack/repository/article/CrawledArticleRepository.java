@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import umc.snack.domain.article.entity.CrawledArticle;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public interface CrawledArticleRepository extends JpaRepository<CrawledArticle, Long> {
@@ -17,4 +18,6 @@ public interface CrawledArticleRepository extends JpaRepository<CrawledArticle, 
 
     @Query("SELECT c.articleUrl FROM CrawledArticle c") // 이미 크롤링한 URL을 모두 Set으로 가져오는 쿼리
     Set<String> findAllArticleUrls();
+    Optional<CrawledArticle> findByArticleId(Long articleId);
+
 }
