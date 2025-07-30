@@ -21,10 +21,10 @@ public class ArticleScheduler {
     private final ArticleCollectorService articleCollectorService;
     private final ArticleCrawlerService articleCrawlerService;
 
-    // 가장 많은 기사를 수집하기 위해 23시 30분에 자동 크롤링
+    // 오전 기사와 오후 기사를 모두 크롤링하기 위해 하루에 10&18시 2번 크롤링
     // 초(*/30), 분(*), 시(*), 일(*), 월(*), 요일(*)
     //@Scheduled(cron = "*/30 * * * * *", zone = "Asia/Seoul") (테스트용)
-    @Scheduled(cron = "0 30 8,14,23 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 10,18 * * *", zone = "Asia/Seoul")
     public void autoCrawl() {
         log.info("✅ 스케쥴러 실행 확인 > {}", LocalDateTime.now());
         try {

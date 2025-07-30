@@ -31,15 +31,38 @@ public class JWTUtil {
 
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("role", String.class);
     }
-
-    public Boolean isExpired(String token) {
-
-        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getExpiration().before(new Date());
+    public String getCategory(String token) {
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("category", String.class);
     }
 
-    public String createJwt(String email, String role, Long expiredMs) {
+    public Long getUserId(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("userId", Long.class);
+    }
+
+//    public Boolean isExpired(String token) {
+//
+//        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getExpiration().before(new Date());
+//    }
+    // 디버깅 용
+    public Boolean isExpired(String token) {
+        Date exp = Jwts.parser().verifyWith(secretKey)
+                .build().parseSignedClaims(token)
+                .getPayload().getExpiration();
+        System.out.println("JWT exp = " + exp + ", now = " + new Date());
+        return exp.before(new Date());
+    }
+
+    public String createJwt(String category, Long userId, String email, String role, Long expiredMs) {
+
 
         return Jwts.builder()
+                .claim("category", category)
+                .claim("userId", userId)
                 .claim("email", email)
                 .claim("role", role)
                 .issuedAt(new Date(System.currentTimeMillis()))

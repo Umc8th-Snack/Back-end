@@ -1,5 +1,7 @@
 package umc.snack.common.config.security.jwt;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,10 +13,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 import umc.snack.common.config.security.CustomUserDetails;
+import umc.snack.common.exception.ErrorCode;
+import umc.snack.common.response.ApiResponse;
 import umc.snack.domain.user.entity.User;
 import umc.snack.repository.user.UserRepository;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 
 public class JWTFilter extends OncePerRequestFilter {
 
@@ -34,55 +39,86 @@ public class JWTFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String authorization = request.getHeader("Authorization");
+        // 헤더에서 access키에 담긴 토큰을 꺼냄
+        String authorizationHeader = request.getHeader("Authorization");
+        String accessToken = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            accessToken = authorizationHeader.substring(7); // "Bearer " 다음부터가 실제 토큰
+        }
+        // 토큰이 없다면 다음 필터로 넘김
+        if (accessToken == null) {
 
-        // Authorization 헤더 검증
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            logger.debug("Authorization header is missing or invalid");
             filterChain.doFilter(request, response);
+
             return;
         }
 
-        String token = authorization.split(" ")[1];
+        ObjectMapper objectMapper = new ObjectMapper();
 
-        String email = null;
-        String role = null;
 
+        // 토큰 만료 여부 확인
         try {
-            // 토큰 만료 검증
-            if (jwtUtil.isExpired(token)) {
-                logger.debug("JWT token is expired");
-                filterChain.doFilter(request, response);
+            if (jwtUtil.isExpired(accessToken)) {
+                setErrorResponse(response, objectMapper, ErrorCode.AUTH_2161); // 유효하지 않은 Access 토큰
                 return;
             }
-
-            // 토큰에서 username과 role 획득
-            email = jwtUtil.getEmail(token);
-            role = jwtUtil.getRole(token);
-
+        } catch (ExpiredJwtException e) {
+            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2161); // 유효하지 않은 Access 토큰
+            return;
         } catch (Exception e) {
-            // 여기서 JWT 파싱 관련 모든 예외 처리 (만료/변조/서명오류 등)
-            System.out.println("invalid token: " + e.getMessage());
-            filterChain.doFilter(request, response);
+            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2122); // 유효하지 않은 토큰입니다.
             return;
         }
 
-        User user = userRepository.findByEmail(email)
+        // category 체크 (access인지)
+        String category;
+        try {
+            category = jwtUtil.getCategory(accessToken);
+        } catch (Exception e) {
+            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2161); // 유효하지 않은 Access 토큰
+            return;
+        }
+        if (!"access".equals(category)) {
+            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2161); // 유효하지 않은 Access 토큰
+            return;
+        }
+
+        // userId, role 추출 및 User 조회
+        Long userId;
+        String role;
+        try {
+            userId = jwtUtil.getUserId(accessToken);
+            role = jwtUtil.getRole(accessToken);
+        } catch (Exception e) {
+            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2161); // 유효하지 않은 Access 토큰
+            return;
+        }
+
+        User user = userRepository.findById(userId)
                 .orElse(null);
-
         if (user == null) {
-            logger.debug("User not found for email: {}", email);
-            filterChain.doFilter(request, response);
+            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2141); // 등록되지 않은 이메일입니다.
             return;
         }
-
         CustomUserDetails customUserDetails = new CustomUserDetails(user);
 
-        Authentication authToken = new UsernamePasswordAuthenticationToken(
-                customUserDetails, null, customUserDetails.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(authToken);
-
+        //SecurityContextHolder 설정 추가(채원)
+        Authentication authentication = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         filterChain.doFilter(request, response);
+    }
+
+    private void setErrorResponse(HttpServletResponse response, ObjectMapper objectMapper, ErrorCode errorCode) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        response.setStatus(errorCode.getStatus());
+        ApiResponse<?> apiResponse = ApiResponse.fail(
+                errorCode.name(),
+                errorCode.getMessage(),
+                null
+        );
+        String json = objectMapper.writeValueAsString(apiResponse);
+        response.getWriter().print(json);
+        response.getWriter().flush();
     }
 
 }

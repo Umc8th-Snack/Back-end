@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import umc.snack.domain.auth.dto.LoginRequestDto;
 import umc.snack.domain.user.entity.User;
 import umc.snack.repository.user.UserRepository;
+import umc.snack.repository.scrap.UserScrapRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -28,10 +29,14 @@ public class AuthControllerTest {
     private UserRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private UserScrapRepository userScrapRepository;
 
     @BeforeEach
     void setUp() {
-        userRepository.deleteAll(); // 혹시 중복 데이터 방지
+        userScrapRepository.deleteAll(); // 연관된 스크랩 먼저 삭제
+        userRepository.deleteAll(); // 이후 사용자 삭제
+
         String rawPassword = "password123!";
         String encoded = passwordEncoder.encode(rawPassword);
         System.out.println("평문: " + rawPassword);
