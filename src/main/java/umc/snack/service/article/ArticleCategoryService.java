@@ -1,5 +1,8 @@
 package umc.snack.service.article;
 
+import umc.snack.common.exception.CustomException;
+import umc.snack.common.exception.ErrorCode;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import umc.snack.domain.article.entity.Article;
@@ -16,8 +19,9 @@ public class ArticleCategoryService {
     private final ArticleCategoryRepository articleCategoryRepository;
 
     public void assignCategoryToArticle(Article article, String categoryName) {
+        // 유효하지 않은 카테고리 이름인 경우 예외 발생
         Category category = categoryRepository.findByCategoryName(categoryName)
-                .orElseThrow(() -> new RuntimeException("해당 이름의 카테고리를 찾을 수 없습니다: " + categoryName));
+                .orElseThrow(() -> new CustomException(ErrorCode.FEED_9601));
 
         ArticleCategory articleCategory = ArticleCategory.builder()
                 .articleId(article.getArticleId())
