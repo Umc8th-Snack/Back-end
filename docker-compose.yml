@@ -21,11 +21,11 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    command: certonly --webroot --webroot-path=/var/www/certbot --email your-email@example.com --agree-tos --no-eff-email -d snacknews.site -d www.snacknews.site
+    command: certonly --webroot --webroot-path=/var/www/certbot --email liz0824@naver.com --agree-tos --no-eff-email -d snacknews.site -d www.snacknews.site
 
   spring:
     build:
-      context: ../..  # 루트 기준
+      context: .
       dockerfile: src/Dockerfile
     container_name: spring
     expose:
@@ -33,7 +33,7 @@ services:
 
   python:
     build:
-      context: ../..  # 루트 기준
+      context: .
       dockerfile: python-nlp-service/Dockerfile
     container_name: python
     expose:
