@@ -23,7 +23,7 @@ spring:
 
 # 프론트엔드 URL 설정
 frontend:
-  url: ${FRONTEND_URL:https://your-frontend.com}
+  url: ${FRONTEND_URL:http://localhost:3000}
 
 server:
   port: 8080
