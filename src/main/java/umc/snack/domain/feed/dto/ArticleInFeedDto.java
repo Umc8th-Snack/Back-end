@@ -9,9 +9,9 @@ import java.util.List;
 public class ArticleInFeedDto {
     private final Long articleId;
     private final String title;
-    private LocalDateTime publishedAt;
-    private String imageUrl;
-    private String category;  // 카테고리 이름
+    private final LocalDateTime publishedAt;
+    private final String imageUrl;
+    private final String category;  // 카테고리 이름
     private final boolean hasNext;
     private final List<IndividualArticleDto> articles;
     private final List<String> categories;
