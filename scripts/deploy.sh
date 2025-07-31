@@ -7,6 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -42,6 +43,8 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
+          timeout: 60
+          command_timeout: 600
           script: |
             cd /home/ubuntu/snack
             git pull origin main
@@ -56,5 +59,5 @@ jobs:
             echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
             echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
 
-            ./gradlew build -x test
+            ./gradlew build --no-daemon -x test
             sudo systemctl restart snack.service
