@@ -98,46 +98,6 @@ public class JWTFilter extends OncePerRequestFilter {
             return;
         }
 
-        String refreshToken = extractRefreshTokenFromCookies(request); // 쿠키, 헤더 등에서 추출
-
-        if (refreshToken == null || refreshToken.isEmpty()) {
-            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2163); // Refresh 토큰이 존재하지 않습니다.
-            return;
-        }
-
-        try {
-            if (jwtUtil.isExpired(refreshToken)) {
-                setErrorResponse(response, objectMapper, ErrorCode.AUTH_2164); // Refresh 토큰이 만료되었습니다.
-                return;
-            }
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
-            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2164); // Refresh 토큰이 만료되었습니다.
-            return;
-        } catch (Exception e) {
-            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2162); // 유효하지 않은 Refresh 토큰입니다.
-            return;
-        }
-
-// category 체크
-        try {
-            category = jwtUtil.getCategory(refreshToken);
-        } catch (Exception e) {
-            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2162); // 유효하지 않은 Refresh 토큰입니다.
-            return;
-        }
-        if (!"refresh".equals(category)) {
-            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2162); // 유효하지 않은 Refresh 토큰입니다.
-            return;
-        }
-
-// DB에 Refresh 토큰이 존재하는지
-        boolean exists = refreshTokenRepository.existsByRefreshToken(refreshToken);
-        if (!exists) {
-            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2165); // 서버에 해당 Refresh 토큰이 존재하지 않습니다.
-            return;
-        }
-
-
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             setErrorResponse(response, objectMapper, ErrorCode.AUTH_2141); // 등록되지 않은 이메일입니다.
@@ -164,17 +124,5 @@ public class JWTFilter extends OncePerRequestFilter {
         response.getWriter().flush();
     }
 
-    // 쿠키에서 refresh token 추출
-    private String extractRefreshTokenFromCookies(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("refresh".equals(cookie.getName())) {
-                    return cookie.getValue();
-                }
-            }
-        }
-        return null;
-    }
 
 }
