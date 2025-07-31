@@ -12,6 +12,7 @@ import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.common.response.ApiResponse;
 import umc.snack.domain.auth.dto.LoginRequestDto;
 import umc.snack.domain.auth.dto.LoginResponseDto;
+import umc.snack.domain.auth.dto.TokenReissueResponseDto;
 import umc.snack.service.auth.LogoutService;
 import umc.snack.service.auth.ReissueService;
 
@@ -40,7 +41,7 @@ public class AuthController {
     @Operation(summary = "Access Token, Refresh Token 재발급", description = "만료된 access token(혹은 토큰이 없는 상태)에서 refresh token을 이용해 새로운 access token과 refresh token을 모두 재발급합니다. " +
             "기존 refresh token은 폐기되고, 새 refresh token만 사용됩니다. access token은 response header, refresh token은 쿠키로 전달됩니다.")
     @PostMapping("/reissue")
-    public ResponseEntity<?> reissue(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<ApiResponse<TokenReissueResponseDto>> reissue(HttpServletRequest request, HttpServletResponse response) {
         return reissueService.reissue(request, response);
     }
 
