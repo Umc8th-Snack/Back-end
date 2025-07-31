@@ -103,7 +103,13 @@ public class SecurityConfig {
                             CorsConfiguration config = new CorsConfiguration();
                             config.setAllowCredentials(true);
                             config.setAllowedOriginPatterns(List.of("http://localhost:5173", "https://snack-front-end.vercel.app"));
-                            config.setAllowedHeaders(List.of("*"));
+                            config.setAllowedHeaders(List.of(
+                                    "Authorization",
+                                    "Content-Type",
+                                    "Accept",
+                                    "Origin",
+                                    "X-Requested-With"
+                            ));
                             config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                             config.setExposedHeaders(List.of("Authorization"));
                             return config;
