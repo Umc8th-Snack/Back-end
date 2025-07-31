@@ -1,16 +1,18 @@
+#deploy.yml
+
 name: Deploy to EC2
 
 on:
   push:
-    branches:
-      - main  # 원하는 브랜치
+    branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up SSH key
@@ -18,16 +20,34 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github_key
           chmod 600 ~/.ssh/github_key
+          echo "Host ec2" >> ~/.ssh/config
+          echo "  HostName ${{ secrets.EC2_HOST }}" >> ~/.ssh/config
+          echo "  User ${{ secrets.EC2_USERNAME }}" >> ~/.ssh/config
+          echo "  IdentityFile ~/.ssh/github_key" >> ~/.ssh/config
+          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
 
-      - name: Deploy via SSH
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
+          username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
+          timeout: 60
+          command_timeout: 600
           script: |
-            cd /home/ubuntu/snack  # 프로젝트 폴더
+            cd /home/ubuntu/snack
             git pull origin main
-            ./gradlew build
-            sudo systemctl restart snack.service  # systemd
+
+            echo "SPRING_PROFILES_ACTIVE=${{ secrets.SPRING_PROFILES_ACTIVE }}" > .env
+            echo "RDS_URL=${{ secrets.RDS_URL }}" >> .env
+            echo "RDS_USERNAME=${{ secrets.RDS_USERNAME }}" >> .env
+            echo "RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
+            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
+            echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> .env
+            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
+            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+
+            ./gradlew build -x test --no-daemon
+            sudo systemctl restart snack.service
