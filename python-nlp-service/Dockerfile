@@ -1,13 +1,13 @@
 # 1. 베이스 이미지
 FROM python:3.11-slim
 
-# 2. 시스템 패키지 업데이트 및 Java 설치
-RUN apt update && apt install -y openjdk-11-jdk && \
+# 2. Java 설치
+RUN apt update && apt install -y default-jdk && \
     apt clean && rm -rf /var/lib/apt/lists/*
 
-# 3. JAVA_HOME 환경 변수 설정
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-ENV PATH="${JAVA_HOME}/bin:${PATH}"
+# 3. JVM 경로 설정
+ENV JAVA_HOME=/usr/lib/jvm/default-java
+ENV PATH="$JAVA_HOME/bin:$PATH"
 
 # 4. 작업 디렉토리 설정
 WORKDIR /app
