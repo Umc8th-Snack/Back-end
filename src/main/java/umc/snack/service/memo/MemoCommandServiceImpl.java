@@ -29,16 +29,10 @@ public class MemoCommandServiceImpl implements MemoCommandService {
     private String frontendUrl;
 
     @Override
-    public MemoResponseDto.CreateResultDto createMemo(Long articleId, MemoRequestDto.CreateDto request) {
-        // JWT 인증 토큰을 발급하는 시스템이 아직 구현되어있지 않아서 구현한 임시코드입니다.
-        User currentUser = userRepository.findById(1L)
+    public MemoResponseDto.CreateResultDto createMemo(Long articleId, MemoRequestDto.CreateDto request, Long userId) {
+        User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
-        /* 인증 시스템 구현 완료 되면 아래 코드로 수정 예정입니다.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long currentUserId = ((UserPrincipal) authentication.getPrincipal()).getId();
-        User currentUser = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
-        */
+
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMO_8605));
         Memo newMemo = Memo.builder()
@@ -56,9 +50,8 @@ public class MemoCommandServiceImpl implements MemoCommandService {
     }
 
     @Override
-    public MemoResponseDto.UpdateResultDto updateMemo(Long articleId, Long memoId, MemoRequestDto.UpdateDto request) {
-        // JWT 인증 토큰을 발급하는 시스템이 아직 구현되어있지 않아서 구현한 임시코드입니다.
-        User currentUser = userRepository.findById(1L)
+    public MemoResponseDto.UpdateResultDto updateMemo(Long articleId, Long memoId, MemoRequestDto.UpdateDto request, Long userId) {
+        User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
 
         Memo memo = memoRepository.findById(memoId)
@@ -68,13 +61,6 @@ public class MemoCommandServiceImpl implements MemoCommandService {
             throw new CustomException(ErrorCode.MEMO_8602);
         }
 
-        /* 인증 시스템 구현 완료 되면 아래 코드로 수정 예정입니다.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long currentUserId = ((UserPrincipal) authentication.getPrincipal()).getId();
-        if (!memo.getUser().getId().equals(currentUser.getId())) {
-            throw new CustomException(ErrorCode.MEMO_8602);
-        }
-        */
         // 1. 메모에 연결된 기사 있는지 확인
         if (memo.getArticle() == null) {
             throw new CustomException(ErrorCode.MEMO_8603);
@@ -87,13 +73,18 @@ public class MemoCommandServiceImpl implements MemoCommandService {
 
         memo.updateContent(request.getContent());
 
-        return MemoConverter.toUpdateResultDto(memo);
+        try {
+            memo.updateContent(request.getContent());
+            memoRepository.save(memo);
+            return MemoConverter.toUpdateResultDto(memo);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.MEMO_8607);
+        }
     }
 
     @Override
-    public void deleteMemo(Long articleId, Long memoId) {
-        // JWT 인증 토큰을 발급하는 시스템이 아직 구현되어있지 않아서 구현한 임시코드입니다.
-        User currentUser = userRepository.findById(1L)
+    public void deleteMemo(Long articleId, Long memoId, Long userId) {
+        User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
 
         // 삭제할 메모 조회
@@ -109,28 +100,23 @@ public class MemoCommandServiceImpl implements MemoCommandService {
         if (memo.getArticle() == null) {
             throw new CustomException(ErrorCode.MEMO_8603);
         }
-        // 2. 경로로 받은 article_id와 메모의 article_id 가 일치하는지 확인
+        // 2. 경로로 받은 article_id와 메모의 articleId 가 일치하는지 확인
         //    (해당 코드 없으면 연결된 기사가 있기만 하면 메모 마구잡이로 수정됨)
         if(!memo.getArticle().getArticleId().equals(articleId)) {
             throw new CustomException(ErrorCode.MEMO_8606);
         }
 
-        memoRepository.delete(memo);
-
-        /* 인증 시스템 구현 완료 되면 아래 코드로 수정 예정입니다.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long currentUserId = ((UserPrincipal) authentication.getPrincipal()).getId();
-        if (!memo.getUser().getId().equals(currentUser.getId())) {
-            throw new CustomException(ErrorCode.MEMO_8602);
+        try {
+            memoRepository.delete(memo);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.MEMO_8609);
         }
-        */
     }
 
     @Override
     @Transactional(readOnly = true)
-    public MemoResponseDto.RedirectResultDto redirectToArticle(Long memoId) {
-        // JWT 인증 토큰을 발급하는 시스템이 아직 구현되어있지 않아서 구현한 임시코드입니다.
-        User currentUser = userRepository.findById(1L)
+    public MemoResponseDto.RedirectResultDto redirectToArticle(Long memoId, Long userId) {
+        User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
 
         // 메모 조회
@@ -154,11 +140,5 @@ public class MemoCommandServiceImpl implements MemoCommandService {
                 .redirectUrl(redirectUrl)
                 .build();
 
-        /* 인증 시스템 구현 완료 되면 아래 코드로 수정 예정입니다.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long currentUserId = ((UserPrincipal) authentication.getPrincipal()).getId();
-        User currentUser = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
-        */
     }
 }
