@@ -1,10 +1,12 @@
 package umc.snack.converter.memo;
 
 import org.springframework.data.domain.Page;
+import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.memo.dto.MemoResponseDto;
 import umc.snack.domain.memo.entity.Memo;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class MemoConverter {
@@ -23,6 +25,11 @@ public class MemoConverter {
     }
 
     public static MemoResponseDto.MemoInfo toMemoInfo(Memo memo) {
+
+        String articleUrl = Optional.ofNullable(memo.getArticle())
+                .map(Article::getArticleUrl)
+                .orElse(null); // 기사가 없는 메모는 articleUrl을 null로 설정
+
         return MemoResponseDto.MemoInfo.builder()
                 .memoId(memo.getMemoId())
                 .content(memo.getContent())
