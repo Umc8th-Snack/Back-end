@@ -73,7 +73,13 @@ public class MemoCommandServiceImpl implements MemoCommandService {
 
         memo.updateContent(request.getContent());
 
-        return MemoConverter.toUpdateResultDto(memo);
+        try {
+            memo.updateContent(request.getContent());
+            memoRepository.save(memo);
+            return MemoConverter.toUpdateResultDto(memo);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.MEMO_8607);
+        }
     }
 
     @Override
@@ -94,13 +100,17 @@ public class MemoCommandServiceImpl implements MemoCommandService {
         if (memo.getArticle() == null) {
             throw new CustomException(ErrorCode.MEMO_8603);
         }
-        // 2. 경로로 받은 article_id와 메모의 article_id 가 일치하는지 확인
+        // 2. 경로로 받은 article_id와 메모의 articleId 가 일치하는지 확인
         //    (해당 코드 없으면 연결된 기사가 있기만 하면 메모 마구잡이로 수정됨)
         if(!memo.getArticle().getArticleId().equals(articleId)) {
             throw new CustomException(ErrorCode.MEMO_8606);
         }
 
-        memoRepository.delete(memo);
+        try {
+            memoRepository.delete(memo);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.MEMO_8609);
+        }
     }
 
     @Override
