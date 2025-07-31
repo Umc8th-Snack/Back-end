@@ -33,8 +33,8 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          timeout: 60
-          command_timeout: 600
+          timeout: 60s
+          command_timeout: 600s
           script: |
             cd /home/ubuntu/snack
             git pull origin main
