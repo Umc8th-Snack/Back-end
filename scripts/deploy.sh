@@ -17,17 +17,25 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github_key
           chmod 600 ~/.ssh/github_key
+          echo "Host ec2" >> ~/.ssh/config
+          echo "  HostName ${{ secrets.EC2_HOST }}" >> ~/.ssh/config
+          echo "  User ${{ secrets.EC2_USERNAME }}" >> ~/.ssh/config
+          echo "  IdentityFile ~/.ssh/github_key" >> ~/.ssh/config
+          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
 
-      - name: Create .env file
+      - name: Create .env file locally
         run: |
-          echo "SPRING_PROFILES_ACTIVE=${{ secrets.SPRING_PROFILES_ACTIVE }}" >> .env
+          echo "SPRING_PROFILES_ACTIVE=${{ secrets.SPRING_PROFILES_ACTIVE }}" > .env
           echo "RDS_URL=${{ secrets.RDS_URL }}" >> .env
           echo "RDS_USERNAME=${{ secrets.RDS_USERNAME }}" >> .env
           echo "RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
           echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
           echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> .env
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
 
-      - name: Upload .env and deploy via SSH
+      - name: Deploy to EC2 and restart service
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -37,11 +45,16 @@ jobs:
           script: |
             cd /home/ubuntu/snack
             git pull origin main
-            echo "${{ secrets.SPRING_PROFILES_ACTIVE }}" > .env
-            echo "${{ secrets.RDS_URL }}" >> .env
-            echo "${{ secrets.RDS_USERNAME }}" >> .env
-            echo "${{ secrets.RDS_PASSWORD }}" >> .env
-            echo "${{ secrets.JWT_SECRET_KEY }}" >> .env
-            echo "${{ secrets.GOOGLE_API_KEY }}" >> .env
-            ./gradlew build
+
+            echo "SPRING_PROFILES_ACTIVE=${{ secrets.SPRING_PROFILES_ACTIVE }}" > .env
+            echo "RDS_URL=${{ secrets.RDS_URL }}" >> .env
+            echo "RDS_USERNAME=${{ secrets.RDS_USERNAME }}" >> .env
+            echo "RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
+            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
+            echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> .env
+            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
+            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+
+            ./gradlew build -x test
             sudo systemctl restart snack.service

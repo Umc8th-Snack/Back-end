@@ -1,12 +1,28 @@
 spring:
+  config:
+    activate:
+      on-profile: prod
+
   datasource:
-    url: jdbc:mysql://${RDS_URL}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    url: ${RDS_URL}
     username: ${RDS_USERNAME}
     password: ${RDS_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 jwt:
-  secret: ${JWT_SECRET_KEY}
+  secret-key: ${JWT_SECRET_KEY}
+
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
+    region:
+      static: ${AWS_REGION}
+    s3:
+      bucket: snacknewsbuck
+    stack:
+      auto: false
 
 google:
   api-key: ${GOOGLE_API_KEY}
