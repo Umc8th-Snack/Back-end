@@ -5,19 +5,19 @@ FROM python:3.11-slim
 RUN apt update && apt install -y default-jdk && \
     apt clean && rm -rf /var/lib/apt/lists/*
 
-# 3. JVM 경로 설정
+# 3. JAVA 환경변수 설정
 ENV JAVA_HOME=/usr/lib/jvm/default-java
 ENV PATH="$JAVA_HOME/bin:$PATH"
 
 # 4. 작업 디렉토리 설정
 WORKDIR /app
 
-# 5. 파이썬 의존성 설치
-COPY python-nlp-service/requirements.txt ./requirements.txt
+# 5. requirements 설치
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 6. 전체 소스 복사
-COPY python-nlp-service/ .
+COPY . .
 
-# 7. 부트스트랩 실행
+# 7. FastAPI + 전처리 실행
 CMD ["python", "bootstrap.py"]
