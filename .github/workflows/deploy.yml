@@ -37,7 +37,7 @@ jobs:
           command_timeout: 600s
           script: |
             cd /home/ubuntu/snack
-            git pull origin main
+            git pull origin main --rebase
 
             echo "SPRING_PROFILES_ACTIVE=${{ secrets.SPRING_PROFILES_ACTIVE }}" > .env
             echo "RDS_URL=${{ secrets.RDS_URL }}" >> .env
