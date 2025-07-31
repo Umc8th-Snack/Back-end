@@ -170,9 +170,6 @@ public class ArticleSummarizeService {
                 log.info("Gemini 호출 직전 - articleId: {}", article.getArticleId()); // 디버깅용 추가
                 String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
                 log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), result); // 디버깅용
-
-                log.info("기사 ID: {}", article.getArticleId());
-                log.info("Gemini 결과: {}", result);
                 log.info("=========================================================");
 
                 geminiParsingService.updateArticleSummary(article.getArticleId(), result);
