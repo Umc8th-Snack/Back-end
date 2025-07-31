@@ -54,7 +54,7 @@ public class LogoutService {
         refreshTokenRepository.deleteByRefreshToken(refreshToken);
         expireRefreshCookie(response);
 
-// 5. 성공 응답
+        // 5. 성공 응답
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "USER_2031",
@@ -83,6 +83,8 @@ public class LogoutService {
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         cookie.setMaxAge(0);
+        cookie.setSecure(true);
+        cookie.setAttribute("SameSite", "Strict");
         response.addCookie(cookie);
     }
 
