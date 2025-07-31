@@ -1,27 +1,47 @@
-#!/bin/bash
+name: Deploy to EC2
 
-export $(grep -v '^#' /home/ec2-user/app/.env | xargs)
+on:
+  push:
+    branches: [main]
 
-BUILD_JAR=$(ls /home/ec2-user/app/*.jar)
-JAR_NAME=$(basename $BUILD_JAR)
-echo "> build 파일명: $JAR_NAME" >> /home/ec2-user/app/deploy.log
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-echo "> build 파일 복사" >> /home/ec2-user/app/deploy.log
-DEPLOY_PATH=/home/ec2-user/app/
-cp $BUILD_JAR $DEPLOY_PATH
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-echo "> 현재 실행중인 애플리케이션 pid 확인" >> /home/ec2-user/app/deploy.log
-CURRENT_PID=$(pgrep -f $JAR_NAME)
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github_key
+          chmod 600 ~/.ssh/github_key
 
-if [ -z "$CURRENT_PID" ]
-then
-  echo "> 현재 구동중인 애플리케이션이 없으므로 종료하지 않습니다." >> /home/ec2-user/app/deploy.log
-else
-  echo "> 현재 구동중인 애플리케이션 종료: $CURRENT_PID" >> /home/ec2-user/app/deploy.log
-  kill -15 $CURRENT_PID
-  sleep 5
-fi
+      - name: Create .env file
+        run: |
+          echo "SPRING_PROFILES_ACTIVE=${{ secrets.SPRING_PROFILES_ACTIVE }}" >> .env
+          echo "RDS_URL=${{ secrets.RDS_URL }}" >> .env
+          echo "RDS_USERNAME=${{ secrets.RDS_USERNAME }}" >> .env
+          echo "RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
+          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
+          echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> .env
 
-DEPLOY_JAR=$DEPLOY_PATH$JAR_NAME
-echo "> 애플리케이션 배포: $DEPLOY_JAR" >> /home/ec2-user/app/deploy.log
-nohup java -jar $DEPLOY_JAR >> /home/ec2-user/app/deploy.log 2>/home/ec2-user/app/deploy_err.log &
+      - name: Upload .env and deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd /home/ubuntu/snack
+            git pull origin main
+            echo "${{ secrets.SPRING_PROFILES_ACTIVE }}" > .env
+            echo "${{ secrets.RDS_URL }}" >> .env
+            echo "${{ secrets.RDS_USERNAME }}" >> .env
+            echo "${{ secrets.RDS_PASSWORD }}" >> .env
+            echo "${{ secrets.JWT_SECRET_KEY }}" >> .env
+            echo "${{ secrets.GOOGLE_API_KEY }}" >> .env
+            ./gradlew build
+            sudo systemctl restart snack.service
