@@ -3,7 +3,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.dto.MemoResponseDto;
@@ -19,10 +21,12 @@ public class MemoController {
     @PostMapping
     public ApiResponse<MemoResponseDto.CreateResultDto> createMemo (
             @PathVariable("article_id") Long article_id,
-            @RequestBody @Valid MemoRequestDto.CreateDto request) {
+            @RequestBody @Valid MemoRequestDto.CreateDto request,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
+        Long userID = customUserDetails.getUserId();
 
-        MemoResponseDto.CreateResultDto resultDto = memoCommandService.createMemo(article_id, request);
+        MemoResponseDto.CreateResultDto resultDto = memoCommandService.createMemo(article_id, request, userID);
         return ApiResponse.onSuccess(
                 "MEMO_8502",
                 "메모가 성공적으로 생성되었습니다.",
@@ -35,9 +39,12 @@ public class MemoController {
     public ApiResponse<MemoResponseDto.UpdateResultDto> updateMemo(
             @PathVariable("article_id") Long article_id,
             @PathVariable("memo_id") Long memo_id,
-            @RequestBody @Valid MemoRequestDto.UpdateDto request) {
+            @RequestBody @Valid MemoRequestDto.UpdateDto request,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
-        MemoResponseDto.UpdateResultDto resultDto = memoCommandService.updateMemo(article_id, memo_id, request);
+        Long userID = customUserDetails.getUserId();
+
+        MemoResponseDto.UpdateResultDto resultDto = memoCommandService.updateMemo(article_id, memo_id, request, userID);
 
         return ApiResponse.onSuccess(
                 "MEMO_8503",
@@ -50,9 +57,11 @@ public class MemoController {
     @DeleteMapping("/{memo_id}")
     public ApiResponse<Object> deleteMemo(
             @PathVariable("article_id") Long article_id,
-            @PathVariable("memo_id") Long memo_id) {
+            @PathVariable("memo_id") Long memo_id,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
-        memoCommandService.deleteMemo(article_id, memo_id);
+        Long userID = customUserDetails.getUserId();
+        memoCommandService.deleteMemo(article_id, memo_id, userID);
 
         return ApiResponse.onSuccess(
                 "MEMO_8501",

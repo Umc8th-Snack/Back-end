@@ -20,9 +20,9 @@ public class MemoRedirectController {
     @Operation(summary = "특정 메모의 기사로 리다이렉트", description = "마이 페이지에서 특정 메모를 클릭하면 해당 기사로 리다이렉션하는 API입니다.")
     @GetMapping("/{memo_id}/redirect")
     @ResponseStatus(HttpStatus.FOUND)
-    public ApiResponse<String> redirectToArticle(@PathVariable("memo_id") Long memoId) {
+    public ApiResponse<String> redirectToArticle(@PathVariable("memo_id") Long memoId, Long userId) {
         
-        MemoResponseDto.RedirectResultDto resultDto = memoCommandService.redirectToArticle(memoId);
+        MemoResponseDto.RedirectResultDto resultDto = memoCommandService.redirectToArticle(memoId, userId);
         
         return ApiResponse.onSuccess(
                 "MEMO_8501",
