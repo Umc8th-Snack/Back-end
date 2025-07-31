@@ -12,9 +12,10 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /opt
 
 # mecab 설치
-RUN git clone --depth 1 https://github.com/Samsara00/mecab-ko-docker.git && \
+RUN git clone --depth 1 https://github.com/konlpy/mecab-ko-docker.git && \
     cd mecab-ko-docker && ./install_mecab-ko.sh && \
     cd .. && rm -rf mecab-ko-docker
+
 
 # konlpy, mecab-python 설치
 WORKDIR /app
