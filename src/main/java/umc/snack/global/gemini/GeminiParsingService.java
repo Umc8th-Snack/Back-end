@@ -75,13 +75,18 @@ public class GeminiParsingService {
             if (terms != null) {
                 for (GeminiResultDto.TermDto termDto : terms) {
                     // term 존재 여부 확인
-                    Term term = termRepository.findByWord(termDto.getWord())
-                            .orElseGet(() -> termRepository.save(
-                                    Term.builder()
-                                            .word(termDto.getWord())
-                                            .definition(termDto.getMeaning())
-                                            .build()
-                            ));
+                    List<Term> existingTerms = termRepository.findAllByWordAndDefinition(termDto.getWord(), termDto.getMeaning());
+                    Term term;
+                    if (!existingTerms.isEmpty()) {
+                        term = existingTerms.get(0); // 이미 존재하는 term
+                    } else {
+                        term = termRepository.save(
+                                Term.builder()
+                                        .word(termDto.getWord())
+                                        .definition(termDto.getMeaning())
+                                        .build()
+                        );
+                    }
                     // article-term 관계 중복 확인 후 저장
                     boolean exists = articleTermRepository.findByArticleIdAndTermId(article.getArticleId(), term.getTermId())
                             .isPresent();
