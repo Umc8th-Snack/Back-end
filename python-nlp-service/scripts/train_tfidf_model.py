@@ -2,16 +2,14 @@
 import pickle
 import re
 import pymysql
+from konlpy.tag import Okt
 from sklearn.feature_extraction.text import TfidfVectorizer
 import os
 from dotenv import load_dotenv
-from .tokenizer_utils import dummy_tokenizer
+from tokenizer_utils import dummy_tokenizer
 
-# Mecab 사용
-from konlpy.tag import Mecab
-mecab = Mecab()
 
-# .env 파일에서 환경 변수 로드
+# .env 파일에서 환경 변수를 로드
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 # --- 설정 ---
@@ -22,6 +20,9 @@ DB_PORT = int(os.getenv('DB_PORT', 3306))
 DB_USER = os.getenv('DB_USER', 'root')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'your_password')
 DB_NAME = os.getenv('DB_NAME', 'your_database')
+
+# --- 형태소 분석기 초기화 ---
+okt = Okt()
 
 # --- 불용어 로딩 ---
 stopwords_set = set()
@@ -43,11 +44,13 @@ except pymysql.Error as e:
 def tokenize_korean_text_for_tfidf(text: str) -> list[str]:
     text = re.sub(r'[^가-힣a-zA-Z0-9\s]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
-    tokens = mecab.pos(text)
+    tokens = okt.pos(text, norm=True, stem=True)
     return [
         word for word, pos in tokens
         if pos.startswith('N') and word not in stopwords_set and len(word) > 1
     ]
+
+
 
 # --- 모델 학습 함수 ---
 def train_and_save_tfidf_model(article_contents: list[str]):
@@ -57,8 +60,8 @@ def train_and_save_tfidf_model(article_contents: list[str]):
 
     print("TF-IDF 모델 학습 시작...")
     tfidf_vectorizer = TfidfVectorizer(
-        tokenizer=tokenize_korean_text_for_tfidf,
-        min_df=2,
+        tokenizer=dummy_tokenizer,
+        min_df=2, #일단 두 개로..
         max_df=0.8
     )
     tfidf_vectorizer.fit(article_contents)
@@ -81,6 +84,7 @@ if __name__ == "__main__":
         cursor = conn.cursor()
         cursor.execute("SELECT summary FROM articles")
         rows = cursor.fetchall()
+        # 🔥 None 제거 + 공백 제거
         article_contents_from_db = [
             row[0].strip() for row in rows if row[0] and isinstance(row[0], str) and row[0].strip()
         ]
