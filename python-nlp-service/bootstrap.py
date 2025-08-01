@@ -1,7 +1,18 @@
 import os
 import subprocess
+import sys
+
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+print("--- DEBUG INFO START ---")
+print(f"Current Working Directory: {os.getcwd()}")
+print(f"sys.path:")
+for path in sys.path:
+    print(f"  - {path}")
+print("--- DEBUG INFO END ---")
 
 # 불용어 DB 삽입
 print("불용어 DB에 삽입 중...")
