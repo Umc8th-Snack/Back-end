@@ -147,41 +147,37 @@ public class QuizService {
     private QuizGradingResponseDto.QuizGradingDetail gradeIndividualQuiz(
             QuizGradingRequestDto.SubmittedAnswer submittedAnswer, Quiz quiz) {
         try {
+            log.info("퀴즈 채점 시작 - 퀴즈 ID: {}, 제출 답안: {}", quiz.getQuizId(), submittedAnswer.getSubmitted_answer_index());
+            log.info("퀴즈 JSON 원본: {}", quiz.getQuizContent());
+            
             // JSON 문자열을 Map으로 파싱
             Map<String, Object> quizData = objectMapper.readValue(quiz.getQuizContent(), Map.class);
             
-            log.info("퀴즈 ID: {}, JSON 구조: {}", quiz.getQuizId(), quizData);
+            log.info("파싱된 퀴즈 데이터: {}", quizData);
             
-            // 정답 텍스트 추출
-            String answerText = (String) quizData.get("answer");
-            if (answerText == null) {
+            // 정답 객체 추출
+            @SuppressWarnings("unchecked")
+            Map<String, Object> answerObj = (Map<String, Object>) quizData.get("answer");
+            if (answerObj == null) {
                 log.error("퀴즈 ID {}의 JSON에 answer 필드가 없습니다. 사용 가능한 키들: {}", 
                          quiz.getQuizId(), quizData.keySet());
                 throw new CustomException(ErrorCode.SERVER_5101);
             }
             
-            // options에서 정답 텍스트와 일치하는 인덱스 찾기
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> options = (List<Map<String, Object>>) quizData.get("options");
-            if (options == null) {
-                log.error("퀴즈 ID {}의 JSON에 options 필드가 없습니다.", quiz.getQuizId());
+            // answer 객체에서 id와 text 추출
+            Integer answerId = (Integer) answerObj.get("id");
+            String answerText = (String) answerObj.get("text");
+            
+            if (answerId == null) {
+                log.error("퀴즈 ID {}의 answer 객체에 id 필드가 없습니다. answer: {}", 
+                         quiz.getQuizId(), answerObj);
                 throw new CustomException(ErrorCode.SERVER_5101);
             }
             
-            int correctAnswerIndex = -1;
-            for (Map<String, Object> option : options) {
-                String optionText = (String) option.get("text");
-                if (answerText.equals(optionText)) {
-                    correctAnswerIndex = (Integer) option.get("id");
-                    break;
-                }
-            }
+            // answer 객체의 id를 직접 사용 (더 간단하고 정확함)
+            int correctAnswerIndex = answerId;
             
-            if (correctAnswerIndex == -1) {
-                log.error("퀴즈 ID {}에서 정답 텍스트 '{}'와 일치하는 옵션을 찾을 수 없습니다. 옵션들: {}", 
-                         quiz.getQuizId(), answerText, options);
-                throw new CustomException(ErrorCode.SERVER_5101);
-            }
+            log.info("퀴즈 ID: {}, 정답 ID: {}, 정답 텍스트: {}", quiz.getQuizId(), correctAnswerIndex, answerText);
             
             // 설명 추출
             String description = (String) quizData.get("explanation");
@@ -203,7 +199,16 @@ public class QuizService {
                     .build();
                     
         } catch (JsonProcessingException e) {
-            log.error("퀴즈 채점 중 JSON 파싱 오류: {}", e.getMessage());
+            log.error("퀴즈 채점 중 JSON 파싱 오류 - 퀴즈 ID: {}, 에러: {}", quiz.getQuizId(), e.getMessage());
+            log.error("문제가 된 JSON: {}", quiz.getQuizContent());
+            throw new CustomException(ErrorCode.SERVER_5101);
+        } catch (ClassCastException e) {
+            log.error("퀴즈 채점 중 타입 캐스팅 오류 - 퀴즈 ID: {}, 에러: {}", quiz.getQuizId(), e.getMessage());
+            log.error("문제가 된 JSON: {}", quiz.getQuizContent());
+            throw new CustomException(ErrorCode.SERVER_5101);
+        } catch (Exception e) {
+            log.error("퀴즈 채점 중 예상치 못한 오류 - 퀴즈 ID: {}, 에러: {}", quiz.getQuizId(), e.getMessage(), e);
+            log.error("문제가 된 JSON: {}", quiz.getQuizContent());
             throw new CustomException(ErrorCode.SERVER_5101);
         }
     }
