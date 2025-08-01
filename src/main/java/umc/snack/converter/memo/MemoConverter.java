@@ -1,7 +1,13 @@
 package umc.snack.converter.memo;
 
+import org.springframework.data.domain.Page;
+import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.memo.dto.MemoResponseDto;
 import umc.snack.domain.memo.entity.Memo;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class MemoConverter {
     public static MemoResponseDto.CreateResultDto toCreateResultDto(Memo memo) {
@@ -15,6 +21,34 @@ public class MemoConverter {
         return MemoResponseDto.UpdateResultDto.builder()
                 .memoId(memo.getMemoId())
                 .content(memo.getContent())
+                .build();
+    }
+
+    public static MemoResponseDto.MemoInfo toMemoInfo(Memo memo) {
+
+        String articleUrl = Optional.ofNullable(memo.getArticle())
+                .map(Article::getArticleUrl)
+                .orElse(null); // 기사가 없는 메모는 articleUrl을 null로 설정
+
+        return MemoResponseDto.MemoInfo.builder()
+                .memoId(memo.getMemoId())
+                .content(memo.getContent())
+                .createdAt(memo.getCreatedAt())
+                .articleUrl(memo.getArticle().getArticleUrl())
+                .build();
+    }
+
+    public static MemoResponseDto.MemoListDto toMemoListDto(Page<Memo> memoPage) {
+        List<MemoResponseDto.MemoInfo> memoInfos = memoPage.getContent().stream()
+                .map(MemoConverter::toMemoInfo)
+                .collect(Collectors.toList());
+
+        return MemoResponseDto.MemoListDto.builder()
+                .memos(memoInfos)
+                .page(memoPage.getNumber())
+                .size(memoPage.getSize())
+                .totalPages(memoPage.getTotalPages())
+                .totalElements(memoPage.getTotalElements())
                 .build();
     }
 }

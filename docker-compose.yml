@@ -35,10 +35,10 @@ services:
 
   python:
     build:
-      context: .
-      dockerfile: python-nlp-service/Dockerfile
+      context: ./python-nlp-service
+      dockerfile: Dockerfile
     container_name: python
     expose:
       - "5000"
     env_file:
-      - .env
+      - python-nlp-service/.env

@@ -6,7 +6,7 @@ from konlpy.tag import Okt
 from sklearn.feature_extraction.text import TfidfVectorizer
 import os
 from dotenv import load_dotenv
-from .tokenizer_utils import dummy_tokenizer
+from scripts.tokenizer_utils import dummy_tokenizer
 
 
 # .env 파일에서 환경 변수를 로드

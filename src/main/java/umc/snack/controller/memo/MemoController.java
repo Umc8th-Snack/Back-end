@@ -1,13 +1,18 @@
 package umc.snack.controller.memo;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.dto.MemoResponseDto;
 import umc.snack.service.memo.MemoCommandService;
+import umc.snack.service.memo.MemoQueryService;
+import umc.snack.service.memo.MemoQueryServiceImpl;
 
 @RestController
 @RequestMapping("/api/articles/{article_id}/memos")
@@ -15,14 +20,18 @@ import umc.snack.service.memo.MemoCommandService;
 @Tag(name = "Memo", description = "기사 메모 관련 API")
 public class MemoController {
     private final MemoCommandService memoCommandService;
+    private final MemoQueryService memoQueryService;
+
     @Operation(summary = "특정 기사에 메모 작성", description = "현재 보고 있는 기사에 대한 메모를 작성하는 API입니다.")
     @PostMapping
     public ApiResponse<MemoResponseDto.CreateResultDto> createMemo (
             @PathVariable("article_id") Long article_id,
-            @RequestBody @Valid MemoRequestDto.CreateDto request) {
+            @RequestBody @Valid MemoRequestDto.CreateDto request,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
+        Long userID = customUserDetails.getUserId();
 
-        MemoResponseDto.CreateResultDto resultDto = memoCommandService.createMemo(article_id, request);
+        MemoResponseDto.CreateResultDto resultDto = memoCommandService.createMemo(article_id, request, userID);
         return ApiResponse.onSuccess(
                 "MEMO_8502",
                 "메모가 성공적으로 생성되었습니다.",
@@ -35,9 +44,12 @@ public class MemoController {
     public ApiResponse<MemoResponseDto.UpdateResultDto> updateMemo(
             @PathVariable("article_id") Long article_id,
             @PathVariable("memo_id") Long memo_id,
-            @RequestBody @Valid MemoRequestDto.UpdateDto request) {
+            @RequestBody @Valid MemoRequestDto.UpdateDto request,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
-        MemoResponseDto.UpdateResultDto resultDto = memoCommandService.updateMemo(article_id, memo_id, request);
+        Long userID = customUserDetails.getUserId();
+
+        MemoResponseDto.UpdateResultDto resultDto = memoCommandService.updateMemo(article_id, memo_id, request, userID);
 
         return ApiResponse.onSuccess(
                 "MEMO_8503",
@@ -50,9 +62,11 @@ public class MemoController {
     @DeleteMapping("/{memo_id}")
     public ApiResponse<Object> deleteMemo(
             @PathVariable("article_id") Long article_id,
-            @PathVariable("memo_id") Long memo_id) {
+            @PathVariable("memo_id") Long memo_id,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
-        memoCommandService.deleteMemo(article_id, memo_id);
+        Long userID = customUserDetails.getUserId();
+        memoCommandService.deleteMemo(article_id, memo_id, userID);
 
         return ApiResponse.onSuccess(
                 "MEMO_8501",
@@ -61,5 +75,16 @@ public class MemoController {
         );
     }
 
+    @Operation(summary = "사용자 작성 메모 목록 조회", description = "로그인한 사용자가 작성한 모든 메모 목록을 최신순으로 페이징하여 조회합니다.")
+    @GetMapping("/memos")
+    public ApiResponse<MemoResponseDto.MemoListDto> getMemoByUser(
+            @RequestParam(defaultValue = "0") @Parameter(description = "조회할 페이지 번호", example = "0") int page,
+            @RequestParam(defaultValue = "10") @Parameter(description = "한 페이지에 보여줄 메모 개수", example = "10") int size,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        Long userId = customUserDetails.getUserId();
 
+        MemoResponseDto.MemoListDto resultDto = memoQueryService.getMemosByUser(userId, page, size);
+
+        return ApiResponse.onSuccess("MEMO_8504", "메모 목록을 조회했습니다.", resultDto);
+    }
 }
