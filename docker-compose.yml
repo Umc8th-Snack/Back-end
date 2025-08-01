@@ -28,8 +28,8 @@ services:
       context: .
       dockerfile: src/Dockerfile
     container_name: spring
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     env_file:
       - .env
 
@@ -38,7 +38,7 @@ services:
       context: ./python-nlp-service
       dockerfile: Dockerfile
     container_name: python
-    ports:
-      - "5000:5000"
+    expose:
+      - "5000"
     env_file:
       - python-nlp-service/.env
