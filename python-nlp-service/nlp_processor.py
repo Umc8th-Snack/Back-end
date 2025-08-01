@@ -2,7 +2,7 @@ import pickle
 import re
 import os
 from sklearn.feature_extraction.text import TfidfVectorizer
-from tokenizer_utils import dummy_tokenizer
+from scripts.tokenizer_utils import dummy_tokenizer
 from dotenv import load_dotenv
 import pymysql
 import csv
