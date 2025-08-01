@@ -9,7 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.config.security.jwt.JWTUtil;
-import umc.snack.common.response.ApiResponse;
+
+import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.auth.dto.LoginRequestDto;
 import umc.snack.domain.auth.dto.LoginResponseDto;
 import umc.snack.domain.auth.dto.TokenReissueResponseDto;
@@ -35,7 +36,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponseDto>> login(@RequestBody LoginRequestDto request) {
         // 실제로는 LoginFilter가 가로챔
-        return ResponseEntity.ok(ApiResponse.success("AUTH_2000", "로그인에 성공하였습니다.", null));
+        return ResponseEntity.ok(ApiResponse.onSuccess("AUTH_2000", "로그인에 성공하였습니다.", null));
     }
 
     @Operation(summary = "Access Token, Refresh Token 재발급", description = "만료된 access token(혹은 토큰이 없는 상태)에서 refresh token을 이용해 새로운 access token과 refresh token을 모두 재발급합니다. " +

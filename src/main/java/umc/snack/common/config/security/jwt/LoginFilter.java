@@ -7,13 +7,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import umc.snack.common.config.security.CustomUserDetails;
-import umc.snack.common.response.ApiResponse;
+import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.auth.dto.LoginResponseDto;
 import umc.snack.domain.auth.entity.RefreshToken;
 import umc.snack.repository.auth.RefreshTokenRepository;
@@ -85,7 +87,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
                 .nickname(nickname)
                 .build();
 
-        ApiResponse<LoginResponseDto> apiResponse = ApiResponse.success(
+        ApiResponse<LoginResponseDto> apiResponse = ApiResponse.onSuccess(
                 "AUTH_2000",
                 "로그인에 성공하였습니다.",
                 resultDto
@@ -105,14 +107,32 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         response.addCookie(createCookie("refresh", refreshToken));
     }
 
-    //로그인 실패시 실행하는 메소드
     @Override
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) {
         response.setContentType("application/json; charset=UTF-8");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json");
+
+        String code;
+        String message;
+
+        // 예외 종류별로 코드/메시지 세팅 (실제 메시지는 예외 구현체에 따라 다를 수 있음)
+        if (failed instanceof UsernameNotFoundException) {
+            code = "AUTH_2101";
+            message = "등록되지 않은 이메일입니다.";
+        } else if (failed instanceof BadCredentialsException) {
+            code = "AUTH_2102";
+            message = "비밀번호가 올바르지 않습니다.";
+        } else {
+            code = "AUTH_2103";
+            message = "로그인에 실패하였습니다.";
+        }
+
+        // ApiResponse 생성 (에러 상세 정보 필요 없으면 result만 null)
+        ApiResponse<Object> apiResponse = ApiResponse.onFailure(code, message, null);
+
         try {
-            response.getWriter().write("{\"error\": \"로그인 실패: " + failed.getMessage() + "\"}");
+            String json = new ObjectMapper().writeValueAsString(apiResponse);
+            response.getWriter().write(json);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

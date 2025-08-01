@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.common.exception.ErrorCode;
-import umc.snack.common.response.ApiResponse;
+import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.auth.dto.TokenReissueResponseDto;
 import umc.snack.domain.auth.entity.RefreshToken;
 import umc.snack.domain.user.entity.User;
@@ -98,7 +98,7 @@ public class ReissueService {
                 .build();
 
         return ResponseEntity.ok(
-                ApiResponse.success(
+                ApiResponse.onSuccess(
                         "AUTH_2060",
                         "Access 토큰과 Refresh 토큰이 재발급되었습니다.",
                         dto
@@ -129,7 +129,7 @@ public class ReissueService {
     private ResponseEntity<ApiResponse<TokenReissueResponseDto>> buildFail(ErrorCode errorCode, String code) {
         return ResponseEntity
                 .status(errorCode.getStatus())
-                .body(ApiResponse.fail(
+                .body(ApiResponse.onFailure(
                         code,
                         errorCode.getMessage(),
                         null

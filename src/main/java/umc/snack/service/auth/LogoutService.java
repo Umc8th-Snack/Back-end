@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.common.exception.ErrorCode;
-import umc.snack.common.response.ApiResponse;
+import umc.snack.common.dto.ApiResponse;
 import umc.snack.repository.auth.RefreshTokenRepository;
 
 @Service
@@ -56,7 +56,7 @@ public class LogoutService {
 
         // 5. 성공 응답
         return ResponseEntity.ok(
-                ApiResponse.success(
+                ApiResponse.onSuccess(
                         "USER_2031",
                         "성공적으로 로그아웃 되었습니다.",
                         null
@@ -92,7 +92,7 @@ public class LogoutService {
     private ResponseEntity<ApiResponse<Object>> buildFail(ErrorCode errorCode) {
         return ResponseEntity
                 .status(errorCode.getStatus())
-                .body(ApiResponse.fail(
+                .body(ApiResponse.onFailure(
                         errorCode.name(),
                         errorCode.getMessage(),
                         null
