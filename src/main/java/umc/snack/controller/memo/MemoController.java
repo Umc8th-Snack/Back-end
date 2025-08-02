@@ -12,7 +12,6 @@ import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.dto.MemoResponseDto;
 import umc.snack.service.memo.MemoCommandService;
 import umc.snack.service.memo.MemoQueryService;
-import umc.snack.service.memo.MemoQueryServiceImpl;
 
 @RestController
 @RequestMapping("/api/articles/{article_id}/memos")
@@ -75,8 +74,9 @@ public class MemoController {
         );
     }
 
+    /*
     @Operation(summary = "사용자 작성 메모 목록 조회", description = "로그인한 사용자가 작성한 모든 메모 목록을 최신순으로 페이징하여 조회합니다.")
-    @GetMapping("/memos")
+    @GetMapping("")
     public ApiResponse<MemoResponseDto.MemoListDto> getMemoByUser(
             @RequestParam(defaultValue = "0") @Parameter(description = "조회할 페이지 번호", example = "0") int page,
             @RequestParam(defaultValue = "10") @Parameter(description = "한 페이지에 보여줄 메모 개수", example = "10") int size,
@@ -87,4 +87,5 @@ public class MemoController {
 
         return ApiResponse.onSuccess("MEMO_8504", "메모 목록을 조회했습니다.", resultDto);
     }
+    */
 }

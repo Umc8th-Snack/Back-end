@@ -12,10 +12,12 @@ import umc.snack.common.exception.ErrorCode;
 import umc.snack.converter.feed.FeedConverter;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.feed.dto.ArticleInFeedDto;
+import umc.snack.domain.user.dto.UserCategoryScoreDto;
 import umc.snack.repository.feed.CategoryRepository;
 import umc.snack.repository.feed.FeedRepository;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +26,7 @@ public class FeedServiceImpl implements FeedService{
     private final FeedRepository feedRepository;
     private final CategoryRepository categoryRepository;
     private final FeedConverter feedConverter;
+    private final UserPreferenceService userPreferenceService;
     private static final int PAGE_SIZE = 16;
 
     @Override
@@ -63,20 +66,36 @@ public class FeedServiceImpl implements FeedService{
         List<Article> articles = articleSlice.getContent();
         Long nextCursorId = articleSlice.hasNext() ? articles.get(articles.size() - 1).getArticleId() : null;
 
-        /*
-        List<IndividualArticleDto> individualArticles = articles.stream()
-                .map(feedConverter::toIndividualArticleDto)
-                .toList();
-
-        return ArticleInFeedDto.builder()
-                .category(categoryName)
-                .hasNext(articleSlice.hasNext())
-                .nextCursorId(nextCursorId)
-                .articles(individualArticles)
-                .build();
-
-         */
-
         return feedConverter.toArticleInFeedDto(categoryName, articleSlice.hasNext(), nextCursorId, articles);
+    }
+
+    // 맞춤피드 구현
+    @Override
+    public ArticleInFeedDto getPersonalizedFeed(Long lastArticleId, Long userID) {
+        // 사용자의 상위 3개 선호 카테고리 조회 -> 카테고리 ID 로 저장
+        List<Long> preferredCategories = userPreferenceService.calculateCategoryScores(userID)
+                .stream()
+                .map(UserCategoryScoreDto::getCategoryId)
+                .collect(Collectors.toList());
+
+        if (preferredCategories.isEmpty()) {
+            throw new CustomException(ErrorCode.FEED_9504);
+        }
+
+        if (lastArticleId != null && lastArticleId <= 0) {
+            throw new CustomException(ErrorCode.FEED_9603);
+        }
+
+
+        Pageable pageable = PageRequest.of(0, PAGE_SIZE, Sort.by("publishedAt").descending().and(Sort.by("articleId").descending()));
+        Slice<Article> articleSlice;
+
+        if (lastArticleId == null) {
+            articleSlice = feedRepository.findByPersonalizedCategories(preferredCategories, pageable);
+        } else {
+            articleSlice = feedRepository.findByPersonalizedCategoriesWithCursor(preferredCategories, lastArticleId, pageable);
+        }
+
+        return buildFeedResponse("맞춤", articleSlice);
     }
 }
