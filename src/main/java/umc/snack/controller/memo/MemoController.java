@@ -74,7 +74,7 @@ public class MemoController {
                 null
         );
     }
-
+/*
     @Operation(summary = "사용자 작성 메모 목록 조회", description = "로그인한 사용자가 작성한 모든 메모 목록을 최신순으로 페이징하여 조회합니다.")
     @GetMapping("/memos")
     public ApiResponse<MemoResponseDto.MemoListDto> getMemoByUser(
@@ -87,4 +87,6 @@ public class MemoController {
 
         return ApiResponse.onSuccess("MEMO_8504", "메모 목록을 조회했습니다.", resultDto);
     }
+
+ */
 }
