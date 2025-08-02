@@ -7,11 +7,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.dto.ApiResponse;
+import umc.snack.common.exception.CustomException;
 import umc.snack.domain.quiz.dto.QuizGradingApiResponse;
 import umc.snack.domain.quiz.dto.QuizGradingRequestDto;
 import umc.snack.domain.quiz.dto.QuizGradingResponseDto;
 import umc.snack.domain.quiz.dto.QuizResponseDto;
-import umc.snack.domain.quiz.dto.QuizSubmissionRequestDto;
 import umc.snack.service.quiz.QuizService;
 
 @RestController
@@ -38,28 +38,45 @@ public class QuizController {
     }
 
     @Operation(summary = "퀴즈 채점", description = "사용자가 제출한 퀴즈 답안을 채점하고 결과를 반환하는 API입니다.")
-    @PostMapping("/articles/{articleId}/quizzes/grade")
+    @PostMapping("/articles/{articleId}/submit")
     public ResponseEntity<QuizGradingApiResponse> gradeQuizzes(
             @PathVariable("articleId") Long articleId,
             @RequestBody QuizGradingRequestDto requestDto,
             @AuthenticationPrincipal String userEmail) {
 
-        QuizGradingResponseDto gradingResult = quizService.gradeQuizzes(articleId, requestDto);
+        try {
+            QuizGradingResponseDto gradingResult = quizService.gradeQuizzes(articleId, requestDto);
 
-        // 맞힌 문항 수 계산
-        long correctCount = gradingResult.getDetails().stream()
-                .mapToLong(detail -> detail.isCorrect() ? 1 : 0)
-                .sum();
+            // 맞힌 문항 수 계산
+            long correctCount = gradingResult.getDetails().stream()
+                    .mapToLong(detail -> detail.isCorrect() ? 1 : 0)
+                    .sum();
 
-        // 응답 객체 구성 (요구사항에 맞는 형식)
-        QuizGradingApiResponse response = QuizGradingApiResponse.builder()
-                .isSuccess(true)
-                .code("QUIZ_7501")
-                .message("퀴즈 채점이 완료되었습니다")
-                .correctCount(correctCount)
-                .result(gradingResult)
-                .build();
+            // 성공 응답
+            QuizGradingApiResponse response = QuizGradingApiResponse.builder()
+                    .isSuccess(true)
+                    .code("QUIZ_7501")
+                    .message("퀴즈 채점이 완료되었습니다")
+                    .correctCount(correctCount)
+                    .result(gradingResult)
+                    .build();
 
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+
+        } catch (CustomException e) {
+            // 에러 응답 (일관된 형식)
+            QuizGradingApiResponse errorResponse = QuizGradingApiResponse.builder()
+                    .isSuccess(false)
+                    .code(e.getErrorCode().name())
+                    .message(e.getErrorCode().getMessage())
+                    .correctCount(null)
+                    .result(null)
+                    .build();
+
+            // 에러 코드에 따른 HTTP 상태 코드 설정
+            return ResponseEntity
+                    .status(e.getErrorCode().getStatus())
+                    .body(errorResponse);
+        }
     }
 }
