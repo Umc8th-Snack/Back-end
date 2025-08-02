@@ -79,6 +79,7 @@ public class SecurityConfig {
                                 "/api/users/signup",
                                 "/api/auth/login",
                                 "/api/auth/kakao",
+                                "/api/auth/google/callback",
                                 "/api/auth/reissue",
                                 "/auth/kakao/callback",
                                 "/api/articles/*/related-articles",
