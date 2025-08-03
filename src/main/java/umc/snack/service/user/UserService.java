@@ -9,7 +9,10 @@ import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.user.dto.UserSignupRequestDto;
 import umc.snack.domain.user.dto.UserSignupResponseDto;
 import umc.snack.domain.user.entity.User;
+import umc.snack.repository.auth.RefreshTokenRepository;
 import umc.snack.repository.user.UserRepository;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +20,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Transactional
     public UserSignupResponseDto signup(UserSignupRequestDto request) {
@@ -55,6 +59,17 @@ public class UserService {
         userRepository.save(user);
 
         return UserSignupResponseDto.fromEntity(user);
+    }
+
+    @Transactional
+    public void withdraw(User user) {
+        if (user.getStatus() == User.Status.DELETED) {
+            throw new CustomException(ErrorCode.USER_2621);
+        }
+        user.setStatus(User.Status.DELETED);
+        user.setDeleteAt(LocalDateTime.now());
+        // refresh 토큰 삭제
+        refreshTokenRepository.deleteAllByUserId(user.getUserId());
     }
 
     // 비밀번호 정규식 체크 메소드

@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import umc.snack.global.BaseEntity;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -40,6 +42,14 @@ public class User extends BaseEntity {
 
     @Column(name = "delete_at")
     private java.time.LocalDateTime deleteAt;
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    public void setDeleteAt(LocalDateTime deleteAt) {
+        this.deleteAt = deleteAt;
+    }
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
