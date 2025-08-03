@@ -63,13 +63,17 @@ public class UserService {
 
     @Transactional
     public void withdraw(User user) {
-        if (user.getStatus() == User.Status.DELETED) {
+        User managedUser  = userRepository.findById(user.getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
+
+        if (managedUser .getStatus() == User.Status.DELETED) {
             throw new CustomException(ErrorCode.USER_2621);
         }
-        user.setStatus(User.Status.DELETED);
-        user.setDeleteAt(LocalDateTime.now());
+
+        managedUser .setStatus(User.Status.DELETED);
+        managedUser .setDeleteAt(LocalDateTime.now());
         // refresh 토큰 삭제
-        refreshTokenRepository.deleteAllByUserId(user.getUserId());
+        refreshTokenRepository.deleteAllByUserId(managedUser.getUserId());
     }
 
     // 비밀번호 정규식 체크 메소드
