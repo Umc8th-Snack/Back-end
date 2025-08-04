@@ -7,4 +7,5 @@ import umc.snack.domain.user.entity.User;
 import org.springframework.data.domain.Pageable;
 public interface MemoRepository extends JpaRepository<Memo, Long> {
     Page<Memo> findByUser(User user, Pageable pageable);
+    void deleteByUserId(Long userId);
 }

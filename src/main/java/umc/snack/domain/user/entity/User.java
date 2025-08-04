@@ -43,12 +43,9 @@ public class User extends BaseEntity {
     @Column(name = "delete_at")
     private java.time.LocalDateTime deleteAt;
 
-    public void setStatus(Status status) {
-        this.status = status;
-    }
-
-    public void setDeleteAt(LocalDateTime deleteAt) {
-        this.deleteAt = deleteAt;
+    public void withdraw() {
+                this.status = Status.DELETED;
+                this.deleteAt = LocalDateTime.now();
     }
 
     @Builder.Default
