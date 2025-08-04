@@ -18,4 +18,6 @@ public interface UserScrapRepository extends JpaRepository<UserScrap, Long> {
     Page<UserScrap> findAllByUserId(Long userId, Pageable pageable);
 
     List<UserScrap> findByUserIdAndCreatedAtAfter(Long userId, LocalDateTime createdAt);
+
+    void deleteByUserId(Long userId);
 }
