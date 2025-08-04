@@ -22,23 +22,37 @@ public class QuizController {
 
     private final QuizService quizService;
 
-    @Operation(summary = "기사에 해당하는 퀴즈 조회", description = "특정 기사에 해당하는 퀴즈 4개를 반환하는 API입니다.")
+    @Operation(summary = "기사에 해당하는 퀴즈 조회", description = "특정 기사에 해당하는 퀴즈 2개를 반환하는 API입니다.")
     @GetMapping("/articles/{article_id}/quiz")
     public ResponseEntity<ApiResponse<QuizResponseDto>> getQuiz(@PathVariable("article_id") Long articleId) {
+        try {
+            QuizResponseDto quizResponse = quizService.getQuizzesByArticleId(articleId);
 
-        QuizResponseDto quizResponse = quizService.getQuizzesByArticleId(articleId);
+            ApiResponse<QuizResponseDto> response = ApiResponse.onSuccess(
+                    "QUIZ_7500",
+                    "기사 퀴즈 조회에 성공하였습니다.",
+                    quizResponse
+            );
 
-        ApiResponse<QuizResponseDto> response = ApiResponse.onSuccess(
-                "QUIZ_7500",
-                "기사 퀴즈 조회에 성공하였습니다.",
-                quizResponse
-        );
+            return ResponseEntity.ok(response);
+        } catch (CustomException e) {
+            // 1. CustomException에서 에러 코드와 메시지 가져옴
+            String errorCode = e.getErrorCode().name();
+            String errorMessage = e.getErrorCode().getMessage();
 
-        return ResponseEntity.ok(response);
+            // 2. 실패 형식에 맞는 ApiResponse를 생성
+            ApiResponse<QuizResponseDto> errorResponse = ApiResponse.onFailure(errorCode, errorMessage, null);
+
+            // 3. 에러 코드에 정의된 HTTP 상태와 함께 응답을 반환
+            return ResponseEntity
+                    .status(e.getErrorCode().getStatus())
+                    .body(errorResponse);
+        }
+
     }
 
     @Operation(summary = "퀴즈 채점", description = "사용자가 제출한 퀴즈 답안을 채점하고 결과를 반환하는 API입니다.")
-    @PostMapping("/articles/{articleId}/submit")
+    @PostMapping("/quizzes/{articleId}/submit")
     public ResponseEntity<QuizGradingApiResponse> gradeQuizzes(
             @PathVariable("articleId") Long articleId,
             @RequestBody QuizGradingRequestDto requestDto,
