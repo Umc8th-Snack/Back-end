@@ -9,7 +9,12 @@ import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.user.dto.UserSignupRequestDto;
 import umc.snack.domain.user.dto.UserSignupResponseDto;
 import umc.snack.domain.user.entity.User;
+import umc.snack.repository.auth.RefreshTokenRepository;
+import umc.snack.repository.memo.MemoRepository;
+import umc.snack.repository.scrap.UserScrapRepository;
 import umc.snack.repository.user.UserRepository;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +22,9 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final MemoRepository memoRepository;
+    private final UserScrapRepository userScrapRepository;
 
     @Transactional
     public UserSignupResponseDto signup(UserSignupRequestDto request) {
@@ -55,6 +63,26 @@ public class UserService {
         userRepository.save(user);
 
         return UserSignupResponseDto.fromEntity(user);
+    }
+
+    @Transactional
+    public void withdraw(User user) {
+        if (user == null) {
+            throw new CustomException(ErrorCode.USER_2622); // 존재하지 않는 회원
+        }
+        User managedUser = userRepository.findById(user.getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622)); // 존재하지 않는 회원
+
+        if (managedUser .getStatus() == User.Status.DELETED) { // 이미 탈퇴 처리된 회원
+            throw new CustomException(ErrorCode.USER_2621);
+        }
+
+        managedUser.withdraw();
+        // refresh 토큰, 탈퇴한 user관련 메모, 스크랩 DB에서 삭제
+        refreshTokenRepository.deleteByUserId(managedUser.getUserId());
+        userScrapRepository.deleteByUserId(managedUser.getUserId());
+        memoRepository.deleteAllByUser_UserId(managedUser.getUserId());
+
     }
 
     // 비밀번호 정규식 체크 메소드
