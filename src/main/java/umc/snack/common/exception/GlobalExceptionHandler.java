@@ -6,7 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import umc.snack.common.response.ApiResponse;
+import umc.snack.common.dto.ApiResponse;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -16,7 +16,7 @@ public class GlobalExceptionHandler {
         ErrorCode code = ex.getErrorCode();
         return ResponseEntity
                 .status(code.getStatus())
-                .body(ApiResponse.fail(code.name(), code.getMessage(), null));
+                .body(ApiResponse.onFailure(code.name(), code.getMessage(), null));
     }
 
     // 메모 내용 비어있는 경우
@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
         String errorMessage = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
 
-        ApiResponse<Object> apiResponse = ApiResponse.fail(
+        ApiResponse<Object> apiResponse = ApiResponse.onFailure(
                 ErrorCode.MEMO_8604.name(),
                 errorMessage,
                 null
@@ -37,7 +37,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleTypeMismatchException(MethodArgumentTypeMismatchException ex) {
         String message = String.format("'%s' 파라미터의 형식이 잘못되었습니다.", ex.getName());
 
-        ApiResponse<Object> apiResponse = ApiResponse.fail(
+        ApiResponse<Object> apiResponse = ApiResponse.onFailure(
                 ErrorCode.REQ_3102.name(),
                 message,
                 null
@@ -50,6 +50,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleException(Exception ex) {
         return ResponseEntity
                 .status(500)
-                .body(ApiResponse.fail("SERVER_5001", "서버 내부 오류입니다.", ex.getMessage()));
+                .body(ApiResponse.onFailure("SERVER_5001", "서버 내부 오류입니다.", ex.getMessage()));
     }
 }

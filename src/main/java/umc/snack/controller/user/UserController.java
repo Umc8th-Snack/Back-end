@@ -5,7 +5,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.user.dto.UserInfoResponseDto;
 import umc.snack.domain.user.dto.UserSignupRequestDto;
@@ -29,7 +31,7 @@ public class UserController {
 
         UserSignupResponseDto result = userService.signup(request);
         return ResponseEntity.ok(
-                ApiResponse.onSuccess("USER_2501", "회원가입이 정상적으로 처리되었습니다.", result)
+                ApiResponse.onSuccess("USER_2500", "회원가입이 정상적으로 처리되었습니다.", result)
         );
     }
 
@@ -51,9 +53,9 @@ public class UserController {
 
     @Operation(summary = "회원탈퇴", description = "내 계정(회원)을 탈퇴합니다.")
     @DeleteMapping("/me")
-    public ResponseEntity<?> withdrawUser() {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
+    public ResponseEntity<?> withdrawUser(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        userService.withdraw(userDetails.getUser());
+        return ResponseEntity.ok(ApiResponse.onSuccess("USER_2520","회원 탈퇴가 정상적으로 처리되었습니다.",null));
     }
 
     @Operation(summary = "내 정보 수정", description = "닉네임, 소개 등 내 정보를 수정합니다.")
