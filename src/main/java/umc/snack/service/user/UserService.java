@@ -78,10 +78,10 @@ public class UserService {
         }
 
         managedUser.withdraw();
-        // refresh 토큰 삭제
+        // refresh 토큰, 탈퇴한 user관련 메모, 스크랩 DB에서 삭제
         refreshTokenRepository.deleteByUserId(managedUser.getUserId());
         userScrapRepository.deleteByUserId(managedUser.getUserId());
-        memoRepository.deleteByUserId(managedUser.getUserId());
+        memoRepository.deleteAllByUser_UserId(managedUser.getUserId());
 
     }
 
