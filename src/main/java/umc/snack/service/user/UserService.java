@@ -2,10 +2,13 @@ package umc.snack.service.user;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
+import umc.snack.domain.user.dto.UserInfoResponseDto;
 import umc.snack.domain.user.dto.UserSignupRequestDto;
 import umc.snack.domain.user.dto.UserSignupResponseDto;
 import umc.snack.domain.user.entity.User;
@@ -63,6 +66,15 @@ public class UserService {
         userRepository.save(user);
 
         return UserSignupResponseDto.fromEntity(user);
+    }
+
+    // 로그인 사용자 정보 조회
+    public UserInfoResponseDto getCurrentUserInfo() {
+        // SecurityContext에서 현재 로그인한 사용자 정보 가져오기
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = userDetails.getUser();
+
+        return UserInfoResponseDto.fromEntity(currentUser);
     }
 
     @Transactional

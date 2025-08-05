@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
+import umc.snack.domain.user.dto.UserInfoResponseDto;
 import umc.snack.domain.user.dto.UserSignupRequestDto;
 import umc.snack.domain.user.dto.UserSignupResponseDto;
 import umc.snack.domain.user.entity.User;
@@ -43,9 +44,11 @@ public class UserController {
 
     @Operation(summary = "마이페이지 정보 조회", description = "내 회원 정보를 조회합니다.")
     @GetMapping("/me")
-    public ResponseEntity<?> getMyPage() {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
+    public ResponseEntity<ApiResponse<UserInfoResponseDto>> getMyPage() {
+        UserInfoResponseDto result = userService.getCurrentUserInfo();
+        return ResponseEntity.ok(
+                ApiResponse.onSuccess("USER_2530", "사용자 정보 조회에 성공했습니다", result)
+        );
     }
 
     @Operation(summary = "회원탈퇴", description = "내 계정(회원)을 탈퇴합니다.")
