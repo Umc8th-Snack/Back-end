@@ -12,6 +12,8 @@ import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.user.dto.UserInfoResponseDto;
 import umc.snack.domain.user.dto.UserSignupRequestDto;
 import umc.snack.domain.user.dto.UserSignupResponseDto;
+import umc.snack.domain.user.dto.UserUpdateRequestDto;
+import umc.snack.domain.user.dto.UserUpdateResponseDto;
 import umc.snack.domain.user.entity.User;
 import umc.snack.service.user.UserService;
 
@@ -58,10 +60,12 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.onSuccess("USER_2520","회원 탈퇴가 정상적으로 처리되었습니다.",null));
     }
 
-    @Operation(summary = "내 정보 수정", description = "닉네임, 소개 등 내 정보를 수정합니다.")
+    @Operation(summary = "내 정보 수정", description = "닉네임, 프로필 이미지, 소개 등 내 정보를 수정합니다.")
     @PatchMapping("/me")
-    public ResponseEntity<?> updateMyInfo(@RequestBody Object request) {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
+    public ResponseEntity<ApiResponse<UserUpdateResponseDto>> updateMyInfo(@RequestBody @Valid UserUpdateRequestDto request) {
+        UserUpdateResponseDto result = userService.updateMyInfo(request);
+        return ResponseEntity.ok(
+                ApiResponse.onSuccess("USER_2540", "사용자 정보가 성공적으로 수정되었습니다", result)
+        );
     }
 }

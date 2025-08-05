@@ -11,6 +11,8 @@ import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.user.dto.UserInfoResponseDto;
 import umc.snack.domain.user.dto.UserSignupRequestDto;
 import umc.snack.domain.user.dto.UserSignupResponseDto;
+import umc.snack.domain.user.dto.UserUpdateRequestDto;
+import umc.snack.domain.user.dto.UserUpdateResponseDto;
 import umc.snack.domain.user.entity.User;
 import umc.snack.repository.auth.RefreshTokenRepository;
 import umc.snack.repository.memo.MemoRepository;
@@ -113,6 +115,35 @@ public class UserService {
     private boolean isValidEmail(String email) {
         String regex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
         return email != null && email.matches(regex);
+    }
+
+    @Transactional
+    public UserUpdateResponseDto updateMyInfo(UserUpdateRequestDto request) {
+        // SecurityContext에서 현재 로그인한 사용자 정보 가져오기
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = userDetails.getUser();
+
+        // 관리되는 엔티티 조회
+        User managedUser = userRepository.findById(currentUser.getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622)); // 존재하지 않는 회원
+
+        // 닉네임 변경 시 유효성 검사
+        if (request.getNickname() != null) {
+            // 닉네임 형식 검사
+            if (!isValidNickname(request.getNickname())) {
+                throw new CustomException(ErrorCode.USER_2607);
+            }
+            // 닉네임 중복 검사 (자신의 현재 닉네임과 다른 경우에만)
+            if (!request.getNickname().equals(managedUser.getNickname()) && 
+                userRepository.existsByNickname(request.getNickname())) {
+                throw new CustomException(ErrorCode.USER_2641);
+            }
+        }
+
+        // 사용자 정보 업데이트
+        managedUser.updateUserInfo(request.getNickname(), request.getProfileUrl(), request.getIntroduction());
+
+        return UserUpdateResponseDto.fromEntity(managedUser);
     }
 }
 
