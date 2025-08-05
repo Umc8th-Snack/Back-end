@@ -80,12 +80,18 @@ public class UserService {
     }
 
     @Transactional
-    public void withdraw(User user) {
+    public void withdraw(User user, String password) {
         if (user == null) {
             throw new CustomException(ErrorCode.USER_2622); // 존재하지 않는 회원
         }
+
         User managedUser = userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622)); // 존재하지 않는 회원
+
+        // 비밀번호 검증 로직
+        if (!passwordEncoder.matches(password, managedUser.getPassword())) {
+            throw new CustomException(ErrorCode.USER_2623);
+        }
 
         if (managedUser .getStatus() == User.Status.DELETED) { // 이미 탈퇴 처리된 회원
             throw new CustomException(ErrorCode.USER_2621);

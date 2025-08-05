@@ -9,11 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
-import umc.snack.domain.user.dto.UserInfoResponseDto;
-import umc.snack.domain.user.dto.UserSignupRequestDto;
-import umc.snack.domain.user.dto.UserSignupResponseDto;
-import umc.snack.domain.user.dto.UserUpdateRequestDto;
-import umc.snack.domain.user.dto.UserUpdateResponseDto;
+import umc.snack.domain.user.dto.*;
 import umc.snack.domain.user.entity.User;
 import umc.snack.service.user.UserService;
 
@@ -54,9 +50,9 @@ public class UserController {
     }
 
     @Operation(summary = "회원탈퇴", description = "내 계정(회원)을 탈퇴합니다.")
-    @DeleteMapping("/me")
-    public ResponseEntity<?> withdrawUser(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        userService.withdraw(userDetails.getUser());
+    @PostMapping("/me/withdraw")
+    public ResponseEntity<?> withdrawUser(@AuthenticationPrincipal CustomUserDetails userDetails, @RequestBody UserWithdrawRequestDto request) {
+        userService.withdraw(userDetails.getUser(), request.getPassword());
         return ResponseEntity.ok(ApiResponse.onSuccess("USER_2520","회원 탈퇴가 정상적으로 처리되었습니다.",null));
     }
 
