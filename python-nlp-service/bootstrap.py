@@ -25,7 +25,7 @@ subprocess.run(
 # TF-IDF 모델 학습
 print("TF-IDF 모델 학습 중...")
 subprocess.run(
-    ["python", "scripts/train_tfidf_model.py"],
+    ['python', '-m', 'scripts.train_tfidf_model'],
     check=True,
     cwd=BASE_DIR
 )
