@@ -26,7 +26,7 @@ public class MemoRedirectController {
                                                  @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         Long userID = customUserDetails.getUserId();
 
-        MemoResponseDto.RedirectResultDto resultDto = memoCommandService.redirectToArticle(memoId, userId);
+        MemoResponseDto.RedirectResultDto resultDto = memoCommandService.redirectToArticle(memoId, userID);
         
         return ApiResponse.onSuccess(
                 "MEMO_8501",
