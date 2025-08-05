@@ -108,7 +108,7 @@ public class SecurityConfig {
                         .configurationSource(request -> {
                             CorsConfiguration config = new CorsConfiguration();
                             config.setAllowCredentials(true);
-                            config.setAllowedOriginPatterns(List.of("http://localhost:5173", "https://snack-front-end.vercel.app"));
+                            config.setAllowedOriginPatterns(List.of("https://snacknews.site", "http://localhost:5173", "https://snack-front-end.vercel.app"));
                             config.setAllowedHeaders(List.of(
                                     "Authorization",
                                     "Content-Type",
