@@ -108,17 +108,10 @@ public class S3FileService {
     }
 
     private String getFileUrl(String key) {
-        if (s3Properties.getCloudFrontUrl() != null && !s3Properties.getCloudFrontUrl().isEmpty()) {
-            return s3Properties.getCloudFrontUrl() + "/" + key;
-        }
         return "https://" + s3Properties.getBucketName() + ".s3." + s3Properties.getRegion() + ".amazonaws.com/" + key;
     }
 
     private String extractKeyFromUrl(String fileUrl) {
-        if (s3Properties.getCloudFrontUrl() != null && fileUrl.startsWith(s3Properties.getCloudFrontUrl())) {
-            return fileUrl.substring(s3Properties.getCloudFrontUrl().length() + 1);
-        }
-        
         String bucketUrl = "https://" + s3Properties.getBucketName() + ".s3." + s3Properties.getRegion() + ".amazonaws.com/";
         if (fileUrl.startsWith(bucketUrl)) {
             return fileUrl.substring(bucketUrl.length());

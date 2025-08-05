@@ -54,4 +54,3 @@ aws:
     secret-key: ${AWS_S3_SECRET_KEY}
     region: ${AWS_S3_REGION:ap-northeast-2}
     bucket-name: ${AWS_S3_BUCKET_NAME}
-    cloud-front-url: ${AWS_CLOUDFRONT_URL:}
