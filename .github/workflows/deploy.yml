@@ -25,17 +25,23 @@ jobs:
       - name: Build JAR without tests
         run: ./gradlew clean build -x test
 
-      - name: Upload jar to EC2
+      - name: Rename JAR to fixed name for deployment
+        run: |
+          JAR_PATH=$(find build/libs -name "*.jar" | grep -v "plain" | head -n 1)
+          echo "✅ Found JAR: $JAR_PATH"
+          cp "$JAR_PATH" build/libs/snack-0.0.1-SNAPSHOT.jar
+
+      - name: Upload JAR to EC2 (overwrite)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          source: build/libs/*.jar
-          target: /home/ubuntu/snack/build/libs/
+          source: build/libs/snack-0.0.1-SNAPSHOT.jar
+          target: /home/ubuntu/Back-end/build/libs/
 
-      - name: Restart EC2 Service
+      - name: Restart Spring Boot service on EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -43,5 +49,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
+            echo "🚀 Restarting snack.service"
+            sudo systemctl daemon-reexec
             sudo systemctl restart snack.service
             sudo systemctl status snack.service --no-pager
