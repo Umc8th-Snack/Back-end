@@ -5,44 +5,50 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Collections;
 import java.util.List;
 
 @Getter
 @AllArgsConstructor
 public class GeminiResultDto {
 
-    private String summary;
-    private List<QuizDto> quizzes;
-    private List<TermDto> terms;
 
-    @Getter @Setter
+    private String summary = "";
+    private List<QuizDto> quizzes = Collections.emptyList();
+    private List<TermDto> terms = Collections.emptyList();
+
+    @Getter
     @NoArgsConstructor
+    @AllArgsConstructor
     public static class QuizDto {
-        private String question;
-        private List<QuizOptionDto> options;
-        private Answer answer;
-        private String explanation;
+        private String question = "";
+        private List<QuizOptionDto> options = Collections.emptyList();
+        private Answer answer = new Answer();
+        private String explanation = "";
     }
 
-    @Getter @Setter
+    @Getter
     @NoArgsConstructor
+    @AllArgsConstructor
     public static class QuizOptionDto {
         private int id;
-        private String text;
+        private String text = "";
     }
 
-    @Getter @Setter
+    @Getter
     @NoArgsConstructor
+    @AllArgsConstructor
     public static class TermDto {
-        private String word;
-        private String meaning;
+        private String word = "";
+        private String meaning = "";
     }
 
+    @Getter
     @NoArgsConstructor
-    @Getter @Setter
+    @AllArgsConstructor
     public static class Answer {
         private int id;
-        private String text;
+        private String text = "";
     }
 
 }

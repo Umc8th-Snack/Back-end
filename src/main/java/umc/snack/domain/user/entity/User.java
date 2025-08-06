@@ -48,6 +48,18 @@ public class User extends BaseEntity {
                 this.deleteAt = LocalDateTime.now();
     }
 
+    public void updateUserInfo(String nickname, String profileUrl, String introduction) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (profileUrl != null) {
+            this.profileUrl = profileUrl;
+        }
+        if (introduction != null) {
+            this.introduction = introduction;
+        }
+    }
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
