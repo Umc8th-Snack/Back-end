@@ -53,4 +53,15 @@ public class FileController {
                 ApiResponse.onSuccess("FILE_2703", "파일이 성공적으로 삭제되었습니다.", null)
         );
     }
+
+    @Operation(summary = "S3 연결 테스트", description = "S3 버킷 연결 상태를 확인합니다.")
+    @GetMapping("/test")
+    public ResponseEntity<ApiResponse<Void>> testS3Connection() {
+        
+        s3FileService.testS3Connection();
+        
+        return ResponseEntity.ok(
+                ApiResponse.onSuccess("FILE_2704", "S3 연결 테스트가 성공했습니다.", null)
+        );
+    }
 }

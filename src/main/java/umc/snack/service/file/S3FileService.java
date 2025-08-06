@@ -32,6 +32,9 @@ public class S3FileService {
         String fileName = generateFileName(file.getOriginalFilename());
         String key = directory + "/" + fileName;
         
+        log.info("Attempting to upload file to S3 - Bucket: {}, Region: {}, Key: {}", 
+                s3Properties.getBucketName(), s3Properties.getRegion(), key);
+        
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(s3Properties.getBucketName())
@@ -55,10 +58,16 @@ public class S3FileService {
             );
             
         } catch (IOException e) {
-            log.error("Failed to upload file to S3", e);
+            log.error("IOException occurred while reading file: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
         } catch (S3Exception e) {
-            log.error("S3 error occurred during file upload", e);
+            log.error("S3Exception occurred during file upload - Error Code: {}, Status Code: {}, Message: {}", 
+                    e.awsErrorDetails().errorCode(), 
+                    e.statusCode(), 
+                    e.awsErrorDetails().errorMessage(), e);
+            throw new CustomException(ErrorCode.S3_UPLOAD_ERROR);
+        } catch (Exception e) {
+            log.error("Unexpected error occurred during file upload: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.S3_UPLOAD_ERROR);
         }
     }
@@ -78,6 +87,33 @@ public class S3FileService {
         } catch (S3Exception e) {
             log.error("Failed to delete file from S3: {}", fileUrl, e);
             throw new CustomException(ErrorCode.S3_DELETE_ERROR);
+        }
+    }
+
+    /**
+     * S3 연결과 설정을 테스트하는 메서드
+     */
+    public void testS3Connection() {
+        try {
+            log.info("Testing S3 connection - Bucket: {}, Region: {}", 
+                    s3Properties.getBucketName(), s3Properties.getRegion());
+            
+            HeadBucketRequest headBucketRequest = HeadBucketRequest.builder()
+                    .bucket(s3Properties.getBucketName())
+                    .build();
+                    
+            s3Client.headBucket(headBucketRequest);
+            log.info("S3 connection test successful - Bucket exists and is accessible");
+            
+        } catch (S3Exception e) {
+            log.error("S3 connection test failed - Error Code: {}, Status Code: {}, Message: {}", 
+                    e.awsErrorDetails().errorCode(), 
+                    e.statusCode(), 
+                    e.awsErrorDetails().errorMessage(), e);
+            throw new CustomException(ErrorCode.S3_UPLOAD_ERROR);
+        } catch (Exception e) {
+            log.error("S3 connection test failed with unexpected error: {}", e.getMessage(), e);
+            throw new CustomException(ErrorCode.S3_UPLOAD_ERROR);
         }
     }
 
