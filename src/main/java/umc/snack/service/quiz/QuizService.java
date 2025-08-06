@@ -46,7 +46,7 @@ public class QuizService {
         
         // 3. 퀴즈가 없는 경우 예외 처리
         if (articleQuizzes.isEmpty()) {
-            throw new CustomException(ErrorCode.QUIZ_7601);
+            throw new CustomException(ErrorCode.QUIZ_7602);
         }
         
         // 4. Quiz 엔티티들로부터 DTO 생성
@@ -64,7 +64,7 @@ public class QuizService {
         try {
             // JSON 문자열을 Map으로 파싱
             Map<String, Object> quizData = objectMapper.readValue(quiz.getQuizContent(), Map.class);
-            
+
             String question = (String) quizData.get("question");
 
             // options가 객체 배열 형태이므로 text 필드만 추출
@@ -74,18 +74,18 @@ public class QuizService {
             List<String> options = optionObjects.stream()
                     .map(option -> (String) option.get("text"))
                     .collect(Collectors.toList());
-            
+
             return QuizResponseDto.QuizContentDto.builder()
                     .quizId(quiz.getQuizId())
                     .question(question)
                     .options(options)
                     .build();
         } catch (JsonProcessingException e) {
-            log.error("퀴즈 내용 파싱 오류: {}", e.getMessage());
-            throw new CustomException(ErrorCode.SERVER_5101);
+            log.debug("퀴즈 내용 파싱 오류: {}", e.getMessage());
+            throw new CustomException(ErrorCode.QUIZ_7604);
         } catch (ClassCastException e) {
-            log.error("퀴즈 JSON 구조 파싱 오류: {}", e.getMessage());
-            throw new CustomException(ErrorCode.SERVER_5101);
+            log.debug("퀴즈 JSON 구조 파싱 오류: {}", e.getMessage());
+            throw new CustomException(ErrorCode.QUIZ_7605);
         }
     }
     
@@ -108,7 +108,7 @@ public class QuizService {
                 .map(ArticleQuiz::getQuizId)
                 .collect(Collectors.toSet());
         
-        log.info("ArticleId: {}, 기사에 속한 유효한 퀴즈 ID들: {}", articleId, validQuizIds);
+        log.debug("ArticleId: {}, 기사에 속한 유효한 퀴즈 ID들: {}", articleId, validQuizIds);
         
         // 4. 제출된 퀴즈 ID들이 모두 해당 기사에 속하는지 검증
 
@@ -116,7 +116,7 @@ public class QuizService {
                 .map(QuizGradingRequestDto.SubmittedAnswer::getQuizId)
                 .collect(Collectors.toList());
 
-        log.info("사용자가 제출한 퀴즈 ID들: {}", submittedQuizIds);
+        log.debug("사용자가 제출한 퀴즈 ID들: {}", submittedQuizIds);
 
         // 없으면 에러 반환
         for (Long submittedQuizId : submittedQuizIds) {
@@ -147,41 +147,37 @@ public class QuizService {
     private QuizGradingResponseDto.QuizGradingDetail gradeIndividualQuiz(
             QuizGradingRequestDto.SubmittedAnswer submittedAnswer, Quiz quiz) {
         try {
+            log.debug("퀴즈 채점 시작 - 퀴즈 ID: {}, 제출 답안: {}", quiz.getQuizId(), submittedAnswer.getSubmitted_answer_index());
+            log.debug("퀴즈 JSON 원본: {}", quiz.getQuizContent());
+            
             // JSON 문자열을 Map으로 파싱
             Map<String, Object> quizData = objectMapper.readValue(quiz.getQuizContent(), Map.class);
             
-            log.info("퀴즈 ID: {}, JSON 구조: {}", quiz.getQuizId(), quizData);
+            log.debug("파싱된 퀴즈 데이터: {}", quizData);
             
-            // 정답 텍스트 추출
-            String answerText = (String) quizData.get("answer");
-            if (answerText == null) {
+            // 정답 객체 추출
+            @SuppressWarnings("unchecked")
+            Map<String, Object> answerObj = (Map<String, Object>) quizData.get("answer");
+            if (answerObj == null) {
                 log.error("퀴즈 ID {}의 JSON에 answer 필드가 없습니다. 사용 가능한 키들: {}", 
                          quiz.getQuizId(), quizData.keySet());
-                throw new CustomException(ErrorCode.SERVER_5101);
+                throw new CustomException(ErrorCode.QUIZ_7606);
             }
             
-            // options에서 정답 텍스트와 일치하는 인덱스 찾기
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> options = (List<Map<String, Object>>) quizData.get("options");
-            if (options == null) {
-                log.error("퀴즈 ID {}의 JSON에 options 필드가 없습니다.", quiz.getQuizId());
-                throw new CustomException(ErrorCode.SERVER_5101);
+            // answer 객체에서 id와 text 추출
+            Integer answerId = (Integer) answerObj.get("id");
+            String answerText = (String) answerObj.get("text");
+            
+            if (answerId == null) {
+                log.error("퀴즈 ID {}의 answer 객체에 id 필드가 없습니다. answer: {}", 
+                         quiz.getQuizId(), answerObj);
+                throw new CustomException(ErrorCode.QUIZ_7607);
             }
             
-            int correctAnswerIndex = -1;
-            for (Map<String, Object> option : options) {
-                String optionText = (String) option.get("text");
-                if (answerText.equals(optionText)) {
-                    correctAnswerIndex = (Integer) option.get("id");
-                    break;
-                }
-            }
+            // answer 객체의 id를 직접 사용 (더 간단하고 정확함)
+            int correctAnswerIndex = answerId;
             
-            if (correctAnswerIndex == -1) {
-                log.error("퀴즈 ID {}에서 정답 텍스트 '{}'와 일치하는 옵션을 찾을 수 없습니다. 옵션들: {}", 
-                         quiz.getQuizId(), answerText, options);
-                throw new CustomException(ErrorCode.SERVER_5101);
-            }
+            log.debug("퀴즈 ID: {}, 정답 ID: {}, 정답 텍스트: {}", quiz.getQuizId(), correctAnswerIndex, answerText);
             
             // 설명 추출
             String description = (String) quizData.get("explanation");
@@ -203,8 +199,17 @@ public class QuizService {
                     .build();
                     
         } catch (JsonProcessingException e) {
-            log.error("퀴즈 채점 중 JSON 파싱 오류: {}", e.getMessage());
-            throw new CustomException(ErrorCode.SERVER_5101);
+            log.error("퀴즈 채점 중 JSON 파싱 오류 - 퀴즈 ID: {}, 에러: {}", quiz.getQuizId(), e.getMessage());
+            log.error("문제가 된 JSON: {}", quiz.getQuizContent());
+            throw new CustomException(ErrorCode.QUIZ_7604);
+        } catch (ClassCastException e) {
+            log.error("퀴즈 채점 중 타입 캐스팅 오류 - 퀴즈 ID: {}, 에러: {}", quiz.getQuizId(), e.getMessage());
+            log.error("문제가 된 JSON: {}", quiz.getQuizContent());
+            throw new CustomException(ErrorCode.QUIZ_7605);
+        } catch (Exception e) {
+            log.error("퀴즈 채점 중 예상치 못한 오류 - 퀴즈 ID: {}, 에러: {}", quiz.getQuizId(), e.getMessage(), e);
+            log.error("문제가 된 JSON: {}", quiz.getQuizContent());
+            throw new CustomException(ErrorCode.QUIZ_7608);
         }
     }
 } 

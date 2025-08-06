@@ -135,8 +135,8 @@ public class ArticleSummarizeService {
         }
 
         int batchSize = 5;
-        //int total = articles.size();
-        int total = Math.min(articles.size(), 5); // 최신 기사 5개까지만 실행(테스트용)
+//        int total = articles.size();
+        int total = Math.min(articles.size(), 20); // 최신 기사 20개까지만 실행(테스트용)
 
         for (int i = 0; i < total; i += batchSize) {
             int end = Math.min(i + batchSize, total);
@@ -144,10 +144,6 @@ public class ArticleSummarizeService {
 
             for (Article article : batch) {
 
-                log.info("기사 처리 시작 - ID: {}", article.getArticleId()); // 디버깅용 추가
-
-//                CrawledArticle crawled = crawledArticleRepository.findById(article.getArticleId())
-//                        .orElse(null);
                 CrawledArticle crawled = crawledArticleRepository.findByArticleId(article.getArticleId()).orElse(null);
 
                 log.info("CrawledArticle 조회 결과: {}", crawled); // 디버깅용 추가
@@ -159,7 +155,6 @@ public class ArticleSummarizeService {
                 } // 디버깅용 추가
 
                 String content = crawled.getContent(); // 디버깅용 추가
-                log.info("기사 본문 내용: {}", content); // 디버깅용 추가
 
                 if (content == null || content.trim().isEmpty()) {
                     log.warn("기사 본문이 없음 - {}", article.getArticleId());

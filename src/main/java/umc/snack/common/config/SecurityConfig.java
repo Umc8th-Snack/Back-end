@@ -17,6 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+import umc.snack.common.config.security.CustomAuthenticationEntryPoint;
 import umc.snack.common.config.security.jwt.JWTFilter;
 import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.common.config.security.jwt.LoginFilter;
@@ -24,6 +25,7 @@ import umc.snack.repository.auth.RefreshTokenRepository;
 import umc.snack.repository.user.UserRepository;
 import umc.snack.service.auth.ReissueService;
 
+import java.util.Collections;
 import java.util.List;
 
 @Configuration
@@ -34,13 +36,15 @@ public class SecurityConfig {
     private final JWTUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
     private final ReissueService reissueService;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
-    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil, ReissueService reissueService ,RefreshTokenRepository refreshTokenRepository) {
+    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil, ReissueService reissueService ,RefreshTokenRepository refreshTokenRepository, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
 
         this.authenticationConfiguration = authenticationConfiguration;
         this.jwtUtil = jwtUtil;
         this.refreshTokenRepository = refreshTokenRepository;
         this.reissueService = reissueService;
+        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
     }
 
     @Bean
@@ -79,6 +83,7 @@ public class SecurityConfig {
                                 "/api/users/signup",
                                 "/api/auth/login",
                                 "/api/auth/kakao",
+                                "/api/auth/google/callback",
                                 "/api/auth/reissue",
                                 "/auth/kakao/callback",
                                 "/api/articles/*/related-articles",
@@ -104,7 +109,8 @@ public class SecurityConfig {
                         .configurationSource(request -> {
                             CorsConfiguration config = new CorsConfiguration();
                             config.setAllowCredentials(true);
-                            config.setAllowedOriginPatterns(List.of("http://localhost:5173", "https://snack-front-end.vercel.app"));
+                            // 수정된 부분: "https://snacknews.site" 대신 "*"를 추가하거나, 모든 패턴을 허용
+                            config.setAllowedOriginPatterns(Collections.singletonList("*"));
                             config.setAllowedHeaders(List.of(
                                     "Authorization",
                                     "Content-Type",
@@ -116,6 +122,10 @@ public class SecurityConfig {
                             config.setExposedHeaders(List.of("Authorization"));
                             return config;
                         })
+                );
+        http
+                .exceptionHandling((exceptions) -> exceptions
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
                 );
         //세션 설정
         http

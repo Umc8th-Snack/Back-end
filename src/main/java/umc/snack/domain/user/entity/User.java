@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import umc.snack.global.BaseEntity;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -40,6 +42,23 @@ public class User extends BaseEntity {
 
     @Column(name = "delete_at")
     private java.time.LocalDateTime deleteAt;
+
+    public void withdraw() {
+                this.status = Status.DELETED;
+                this.deleteAt = LocalDateTime.now();
+    }
+
+    public void updateUserInfo(String nickname, String profileUrl, String introduction) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (profileUrl != null) {
+            this.profileUrl = profileUrl;
+        }
+        if (introduction != null) {
+            this.introduction = introduction;
+        }
+    }
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
