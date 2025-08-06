@@ -24,7 +24,7 @@ public class ArticleSemanticVector {
 
     // 'articles' 테이블의 'id'와 1:1 관계를 가집니다.
     @OneToOne
-    @JoinColumn(name = "article_id", referencedColumnName = "id")
+    @JoinColumn(name = "article_id", referencedColumnName = "article_id")
     private Article article;
 
     @Column(name = "vector", nullable = false, columnDefinition = "text")
