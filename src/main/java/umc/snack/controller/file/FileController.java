@@ -54,6 +54,18 @@ public class FileController {
         );
     }
 
+    @Operation(summary = "프로필 이미지 삭제", description = "현재 사용자의 프로필 이미지를 S3에서 삭제하고 DB에서도 제거합니다. 본인의 프로필 이미지만 삭제 가능합니다.")
+    @DeleteMapping("/profile")
+    public ResponseEntity<ApiResponse<Void>> deleteProfileImage(
+            @RequestParam("fileUrl") String fileUrl) {
+        
+        s3FileService.deleteProfileImage(fileUrl);
+        
+        return ResponseEntity.ok(
+                ApiResponse.onSuccess("FILE_2705", "프로필 이미지가 성공적으로 삭제되었습니다.", null)
+        );
+    }
+
     @Operation(summary = "S3 연결 테스트", description = "S3 버킷 연결 상태를 확인합니다.")
     @GetMapping("/test")
     public ResponseEntity<ApiResponse<Void>> testS3Connection() {

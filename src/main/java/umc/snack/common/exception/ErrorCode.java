@@ -136,6 +136,8 @@ public enum ErrorCode {
     INVALID_FILE_TYPE(400, "지원하지 않는 파일 형식입니다. 이미지 파일만 업로드 가능합니다."),
     INVALID_FILE_NAME(400, "유효하지 않은 파일 이름입니다."),
     INVALID_FILE_URL(400, "유효하지 않은 파일 URL입니다."),
+    FILE_NOT_FOUND(404, "요청한 파일을 찾을 수 없습니다."),
+    UNAUTHORIZED_FILE_ACCESS(403, "해당 파일에 대한 접근 권한이 없습니다."),
     FILE_UPLOAD_FAILED(500, "파일 업로드에 실패했습니다."),
     S3_UPLOAD_ERROR(500, "S3 파일 업로드 중 오류가 발생했습니다."),
     S3_DELETE_ERROR(500, "S3 파일 삭제 중 오류가 발생했습니다."),
