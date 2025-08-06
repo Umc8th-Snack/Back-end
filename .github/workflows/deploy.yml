@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: CD
 
 on:
   push:
@@ -22,30 +22,20 @@ jobs:
       - name: Grant execute permission to gradlew
         run: chmod +x ./gradlew
 
-      - name: Build JAR without tests
+      - name: Build JAR
         run: ./gradlew clean build -x test
 
-      - name: Rename JAR to fixed name for deployment
-        run: |
-          JAR_PATH=$(find build/libs -name "*.jar" | grep -v "plain" | head -n 1)
-          echo "✅ Found JAR: $JAR_PATH"
-          if [ "$JAR_PATH" != "build/libs/snack-0.0.1-SNAPSHOT.jar" ]; then
-              cp "$JAR_PATH" build/libs/snack-0.0.1-SNAPSHOT.jar
-          else
-              echo "⚠️ JAR already has correct name. Skipping rename."
-          fi
-
-      - name: Upload JAR to EC2 (overwrite)
+      - name: Upload project to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          source: build/libs/snack-0.0.1-SNAPSHOT.jar
-          target: /home/ubuntu/Back-end/build/libs/
+          source: ./
+          target: /home/ubuntu/Back-end
 
-      - name: Restart Spring Boot service on EC2
+      - name: Restart snack.service on EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -53,7 +43,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            echo "🚀 Restarting snack.service"
+            echo "🔄 Restarting snack.service"
             sudo systemctl daemon-reexec
             sudo systemctl restart snack.service
             sudo systemctl status snack.service --no-pager
