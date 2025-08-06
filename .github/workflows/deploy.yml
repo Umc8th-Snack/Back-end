@@ -29,7 +29,11 @@ jobs:
         run: |
           JAR_PATH=$(find build/libs -name "*.jar" | grep -v "plain" | head -n 1)
           echo "✅ Found JAR: $JAR_PATH"
-          cp "$JAR_PATH" build/libs/snack-0.0.1-SNAPSHOT.jar
+          if [ "$JAR_PATH" != "build/libs/snack-0.0.1-SNAPSHOT.jar" ]; then
+              cp "$JAR_PATH" build/libs/snack-0.0.1-SNAPSHOT.jar
+          else
+              echo "⚠️ JAR already has correct name. Skipping rename."
+          fi
 
       - name: Upload JAR to EC2 (overwrite)
         uses: appleboy/scp-action@v0.1.7
