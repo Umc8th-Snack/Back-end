@@ -1,5 +1,6 @@
 package umc.snack.service.article;
 
+import io.jsonwebtoken.lang.Assert;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,8 @@ import umc.snack.repository.article.ArticleRepository;
 import umc.snack.repository.article.CrawledArticleRepository;
 
 import java.util.List;
+
+import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
 
 @Service
 public class ArticleSummarizeService {
@@ -36,33 +39,68 @@ public class ArticleSummarizeService {
         this.crawledArticleRepository = crawledArticleRepository;
         this.geminiParsingService = geminiParsingService;
     }
-
     String promptTemplate = """
-            아래 뉴스 기사를 700글자 이내로 간결하게 요약해줘.
-            기사 내용을 바탕으로 4지선다 객관식 퀴즈 2개를 만들어줘.
-            각 퀴즈는 반드시 [문제, 보기 4개(choices), 정답(answer), 해설(explanation)]을 포함해줘.
-            정답은 "{보기번호}. {보기내용}" 형식으로 되어야해.
-            요약본에서 중고등학생이 이해하기 어려울 만한 단어 4개를 뽑아줘.
-            단어의 뜻은 되도록 명사형 어미로 끝내줘.
+            다음 지시를 정확히 따르세요.
+                        
+             [규칙]
+             1. 요약: 한글 기준 공백 제외 700자 이내로 간결하게.
+             2. 퀴즈: 기사 내용 기반 4지선다 객관식 2문항 작성.
+                - 각 문항은 반드시 다음 키를 포함: question, options(1~4 id 포함), answer, explanation.
+                - answer 형식: "{보기번호}. {보기내용}"
+             3. 용어: 중·고등학생이 이해하기 어려울 만한 단어 4개 선정.
+                - meaning은 품사에 맞게: 명사는 ‘…명사형 어미’, 형용사는 ‘…형용사형 어미’로 끝낼 것.
+                - meaning의 끝에 '.' 붙이지 말 것.
+                - 각 항목에 word, meaning.
+                - word는 한자를 포함하지 말 것.
+             4. 출력은 아래 JSON 스키마와 동일해야 하며, 추가 키/텍스트/주석/마크다운 금지.
+                - "answer"는 반드시 {"id": 번호, "text": 보기내용}의 object로 작성할 것.
+                - "answer": "4. 보기내용"과 같이 문자열로 출력하지 말 것.
             
-            결과는 반드시 아래 JSON 형식으로만 응답해.
+             [출력 JSON 스키마]
+             {
+               "summary": "…",
+               "quizzes": [
+                 {
+                   "question": "…",
+                   "options": [
+                     { "id": 1, "text": "…" },
+                     { "id": 2, "text": "…" },
+                     { "id": 3, "text": "…" },
+                     { "id": 4, "text": "…" }
+                   ],
+                   "answer": { "id": "…", "text": "…" },
+                   "explanation": "…"
+                 },
+                 {
+                   "question": "…",
+                   "options": [
+                     { "id": 1, "text": "…" },
+                     { "id": 2, "text": "…" },
+                     { "id": 3, "text": "…" },
+                     { "id": 4, "text": "…" }
+                   ],
+                   "answer": { "id": "…", "text": "…" },
+                   "explanation": "…"
+                 }
+               ],
+               "terms": [
+                 { "word": "…", "meaning": "…" },
+                 { "word": "…", "meaning": "…" },
+                 { "word": "…", "meaning": "…" },
+                 { "word": "…", "meaning": "…" }
+               ]
+             }
             
-            {
-              "summary": "...",
-              "quizzes": [
-                {
-                  "question": "...",
-                  "options": [ { "id": 1, "text": "..." }, { "id": 2, "text": "..." }],
-                  "answer": "...",
-                  "explanation": "..."
-                }
-              ],
-              "terms": [
-                { "word": "...", "meaning": "..." }
-              ]
-            }
+             [검증]
+             - JSON 파싱 가능해야 함.
+             - 글자수 초과 시 요약을 더 줄일 것.
+             - 모든 따옴표는 쌍따옴표 사용.
+             - 누락된 키 없어야 함.
             
-            기사 본문:
+            
+             [입력]
+             기사 본문:
+             
             """;
 
     // 자동 재시도 로직 (모델 overload 발생 시 최대 10회 재시도)
@@ -88,8 +126,7 @@ public class ArticleSummarizeService {
         throw new RuntimeException("Gemini model overload로 재시도 실패");
     }
 
-    @Transactional
-    void getCompletion() {
+    public void getCompletion() {
         List<Article> articles = articleRepository.findBySummaryIsNull();
 
         if (articles.isEmpty()) {
@@ -98,22 +135,41 @@ public class ArticleSummarizeService {
         }
 
         int batchSize = 5;
-        int total = articles.size();
+        //int total = articles.size();
+        int total = Math.min(articles.size(), 5); // 최신 기사 5개까지만 실행(테스트용)
 
         for (int i = 0; i < total; i += batchSize) {
             int end = Math.min(i + batchSize, total);
             List<Article> batch = articles.subList(i, end);
 
             for (Article article : batch) {
-                CrawledArticle crawled = crawledArticleRepository.findById(article.getArticleId())
-                        .orElse(null);
-                if (crawled == null) continue;
+
+                log.info("기사 처리 시작 - ID: {}", article.getArticleId()); // 디버깅용 추가
+
+//                CrawledArticle crawled = crawledArticleRepository.findById(article.getArticleId())
+//                        .orElse(null);
+                CrawledArticle crawled = crawledArticleRepository.findByArticleId(article.getArticleId()).orElse(null);
+
+                log.info("CrawledArticle 조회 결과: {}", crawled); // 디버깅용 추가
+
+//                if (crawled == null) continue;
+                if (crawled == null) {
+                    log.warn("CrawledArticle이 없음 - {}", article.getArticleId());
+                    continue;
+                } // 디버깅용 추가
+
+                String content = crawled.getContent(); // 디버깅용 추가
+                log.info("기사 본문 내용: {}", content); // 디버깅용 추가
+
+                if (content == null || content.trim().isEmpty()) {
+                    log.warn("기사 본문이 없음 - {}", article.getArticleId());
+                    continue;
+                } // 디버깅용 추가
 
                 String prompt = promptTemplate + crawled.getContent();
+                log.info("Gemini 호출 직전 - articleId: {}", article.getArticleId()); // 디버깅용 추가
                 String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
-
-                log.info("기사 ID: {}", article.getArticleId());
-                log.info("Gemini 결과: {}", result);
+                log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), result); // 디버깅용
                 log.info("=========================================================");
 
                 geminiParsingService.updateArticleSummary(article.getArticleId(), result);
@@ -126,16 +182,8 @@ public class ArticleSummarizeService {
                     return;
                 }
 
-                try {
-                    articleRepository.findById(article.getArticleId())
-                            .filter(a -> a.getSummary() != null)
-                            .orElseThrow(() ->
-                                    new IllegalStateException("기사 요약이 생성되지 않았습니다. articleId: " + article.getArticleId())
-                            );
-                } catch (IllegalStateException e) {
-                    log.error("요약 저장 실패: {}", e.getMessage());
-                    continue; // 다음 기사 처리
-                }            }
+                Article updatedArticle = articleRepository.findById(article.getArticleId()).orElse(null);
+                Assert.notNull(updatedArticle.getSummary(), "요약이 생성되어야 합니다.");            }
 
             // 5개마다 추가 대기
             try {

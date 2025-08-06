@@ -69,8 +69,8 @@ public class ArticleCrawlerService {
                     if (eqIndex >= 0) {
                         text = text.substring(eqIndex + 1);
                     }
-                    // "기자" 또는 "특파원" 단어 제거
-                    text = text.replaceAll("(기자|특파원)$", "").trim();
+                    // "기자", "특파원" 또는 "인턴" 단어 제거
+                    text = text.replaceAll("(기자|특파원|인턴)$", "").trim();
                     if (!text.isEmpty()) {
                         authorList.add(text);
                     }
@@ -85,7 +85,7 @@ public class ArticleCrawlerService {
                         if (eqIndex >= 0) {
                             text = text.substring(eqIndex + 1);
                         }
-                        text = text.replaceAll("(기자|특파원)$", "").trim();
+                        text = text.replaceAll("(기자|특파원|인턴)$", "").trim();
                         if (!text.isEmpty()) {
                             authorList.add(text);
                         }

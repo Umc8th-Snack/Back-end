@@ -3,13 +3,50 @@ package umc.snack.common.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+import umc.snack.common.config.security.jwt.JWTFilter;
+import umc.snack.common.config.security.jwt.JWTUtil;
+import umc.snack.common.config.security.jwt.LoginFilter;
+import umc.snack.repository.auth.RefreshTokenRepository;
+import umc.snack.repository.user.UserRepository;
+import umc.snack.service.auth.ReissueService;
+
+import java.util.List;
 
 @Configuration
+@EnableWebSecurity
 public class SecurityConfig {
+
+    private final AuthenticationConfiguration authenticationConfiguration;
+    private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final ReissueService reissueService;
+
+    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil, ReissueService reissueService ,RefreshTokenRepository refreshTokenRepository) {
+
+        this.authenticationConfiguration = authenticationConfiguration;
+        this.jwtUtil = jwtUtil;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.reissueService = reissueService;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+        return configuration.getAuthenticationManager();
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -17,9 +54,21 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, UserRepository userRepository) throws Exception {
+        //csrf disable
         http
-                .authorizeHttpRequests((authz) -> authz
+                .csrf((auth) -> auth.disable());
+
+        //Form 로그인 방식 disable
+        http
+                .formLogin((auth) -> auth.disable());
+
+        //http basic 인증 방식 disable
+        http
+                .httpBasic((auth) -> auth.disable());
+
+        http
+                .authorizeHttpRequests((auth) -> auth
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
@@ -30,23 +79,59 @@ public class SecurityConfig {
                                 "/api/users/signup",
                                 "/api/auth/login",
                                 "/api/auth/kakao",
+                                "/api/auth/reissue",
                                 "/auth/kakao/callback",
                                 "/api/articles/*/related-articles",
                                 "/api/articles/search",
                                 "/api/articles/main",
+                                "/api/feeds/main/**",
                                 // 관리자 공개 api -> 개발 단계에서는 전체 공개
+                                "/api/share/**",
                                 "/api/articles/crawl/status",
                                 "/api/articles/*/summarize",
-                                "/api/terms",
-
-                                //스크랩 테스트용
-                                "/api/scraps/**",
-                                "/api/articles/**"
+                                "/api/terms"
                         ).permitAll()
                         // 나머지는 모두 JWT 토큰 인증 필요
                         .anyRequest().authenticated()
-                )
-                .csrf(csrf -> csrf.disable());
+                );
+
+        http
+                .addFilterBefore(new JWTFilter(jwtUtil, userRepository, refreshTokenRepository), LoginFilter.class);
+        http
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, reissueService, refreshTokenRepository), UsernamePasswordAuthenticationFilter.class)
+
+                .cors(cors -> cors
+                        .configurationSource(request -> {
+                            CorsConfiguration config = new CorsConfiguration();
+                            config.setAllowCredentials(true);
+                            config.setAllowedOriginPatterns(List.of("http://localhost:5173", "https://snack-front-end.vercel.app"));
+                            config.setAllowedHeaders(List.of(
+                                    "Authorization",
+                                    "Content-Type",
+                                    "Accept",
+                                    "Origin",
+                                    "X-Requested-With"
+                            ));
+                            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                            config.setExposedHeaders(List.of("Authorization"));
+                            return config;
+                        })
+                );
+        //세션 설정
+        http
+                .sessionManagement((session) -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+
         return http.build();
     }
+    @Bean
+    public DaoAuthenticationProvider daoAuthenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        provider.setHideUserNotFoundExceptions(false);
+        return provider;
+    }
 }
+

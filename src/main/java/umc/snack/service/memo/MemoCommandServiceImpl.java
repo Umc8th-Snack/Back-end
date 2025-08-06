@@ -1,0 +1,144 @@
+package umc.snack.service.memo;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import umc.snack.common.exception.CustomException;
+import umc.snack.common.exception.ErrorCode;
+import umc.snack.converter.memo.MemoConverter;
+import umc.snack.domain.article.entity.Article;
+import umc.snack.domain.memo.dto.MemoRequestDto;
+import umc.snack.domain.memo.dto.MemoResponseDto;
+import umc.snack.domain.memo.entity.Memo;
+import umc.snack.domain.user.entity.User;
+import umc.snack.repository.article.ArticleRepository;
+import umc.snack.repository.memo.MemoRepository;
+import umc.snack.repository.user.UserRepository;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class MemoCommandServiceImpl implements MemoCommandService {
+    private final MemoRepository memoRepository;
+    private final ArticleRepository articleRepository;
+    private final UserRepository userRepository;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
+
+    @Override
+    public MemoResponseDto.CreateResultDto createMemo(Long articleId, MemoRequestDto.CreateDto request, Long userId) {
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
+
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMO_8605));
+        Memo newMemo = Memo.builder()
+                .content(request.getContent())
+                .article(article)
+                .user(currentUser)
+                .build();
+
+        try {
+            Memo savedMemo = memoRepository.save(newMemo);
+            return MemoConverter.toCreateResultDto(savedMemo);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.MEMO_8607);
+        }
+    }
+
+    @Override
+    public MemoResponseDto.UpdateResultDto updateMemo(Long articleId, Long memoId, MemoRequestDto.UpdateDto request, Long userId) {
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
+
+        Memo memo = memoRepository.findById(memoId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMO_8601));
+
+        if (!memo.getUser().getUserId().equals(currentUser.getUserId())) {
+            throw new CustomException(ErrorCode.MEMO_8602);
+        }
+
+        // 1. 메모에 연결된 기사 있는지 확인
+        if (memo.getArticle() == null) {
+            throw new CustomException(ErrorCode.MEMO_8603);
+        }
+        // 2. 경로로 받은 article_id와 메모의 article_id 가 일치하는지 확인
+        //    (해당 코드 없으면 연결된 기사가 있기만 하면 메모 마구잡이로 수정됨)
+        if(!memo.getArticle().getArticleId().equals(articleId)) {
+            throw new CustomException(ErrorCode.MEMO_8606);
+        }
+
+        memo.updateContent(request.getContent());
+
+        try {
+            memo.updateContent(request.getContent());
+            memoRepository.save(memo);
+            return MemoConverter.toUpdateResultDto(memo);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.MEMO_8607);
+        }
+    }
+
+    @Override
+    public void deleteMemo(Long articleId, Long memoId, Long userId) {
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
+
+        // 삭제할 메모 조회
+        Memo memo = memoRepository.findById(memoId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMO_8601));
+
+        // 메모 소유권 확인
+        if (!memo.getUser().getUserId().equals(currentUser.getUserId())) {
+            throw new CustomException(ErrorCode.MEMO_8602);
+        }
+
+        // 1. 메모에 연결된 기사 있는지 확인
+        if (memo.getArticle() == null) {
+            throw new CustomException(ErrorCode.MEMO_8603);
+        }
+        // 2. 경로로 받은 article_id와 메모의 articleId 가 일치하는지 확인
+        //    (해당 코드 없으면 연결된 기사가 있기만 하면 메모 마구잡이로 수정됨)
+        if(!memo.getArticle().getArticleId().equals(articleId)) {
+            throw new CustomException(ErrorCode.MEMO_8606);
+        }
+
+        try {
+            memoRepository.delete(memo);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.MEMO_8609);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MemoResponseDto.RedirectResultDto redirectToArticle(Long memoId, Long userId) {
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
+
+        // 메모 조회
+        Memo memo = memoRepository.findById(memoId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMO_8601));
+
+        // 메모 소유권 확인
+        if (!memo.getUser().getUserId().equals(currentUser.getUserId())) {
+            throw new CustomException(ErrorCode.MEMO_8602);
+        }
+
+        // 메모에 연결된 기사 확인
+        if (memo.getArticle() == null) {
+            throw new CustomException(ErrorCode.MEMO_8603);
+        }
+
+        // 리다이렉트 URL 생성
+        String redirectUrl = frontendUrl + "/articles/" + memo.getArticle().getArticleId();
+
+        return MemoResponseDto.RedirectResultDto.builder()
+                .redirectUrl(redirectUrl)
+                .build();
+
+    }
+}

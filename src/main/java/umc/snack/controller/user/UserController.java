@@ -6,7 +6,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.user.dto.UserSignupRequestDto;
+import umc.snack.domain.user.dto.UserSignupResponseDto;
 import umc.snack.domain.user.entity.User;
 import umc.snack.service.user.UserService;
 
@@ -22,16 +24,11 @@ public class UserController {
 
     @Operation(summary = "회원가입",description = "이메일, 비밀번호, 닉네임으로 회원가입합니다.")
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody @Valid UserSignupRequestDto request) {
-        // TODO: 구현 예정
-        var result = userService.signup(request);
+    public ResponseEntity<ApiResponse<UserSignupResponseDto>> signup(@RequestBody @Valid UserSignupRequestDto request) {
+
+        UserSignupResponseDto result = userService.signup(request);
         return ResponseEntity.ok(
-                Map.of(
-                        "isSuccess", true,
-                        "code", "USER_2501",
-                        "message", "회원가입이 정상적으로 처리되었습니다.",
-                        "result", result
-                )
+                ApiResponse.onSuccess("USER_2501", "회원가입이 정상적으로 처리되었습니다.", result)
         );
     }
 

@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  nginx:
+    image: nginx:stable
+    container_name: nginx
+    volumes:
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d
+      - ./infra/certbot/conf:/etc/letsencrypt
+      - ./infra/certbot/www:/var/www/certbot
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - spring
+      - python
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./infra/certbot/conf:/etc/letsencrypt
+      - ./infra/certbot/www:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot --email liz0824@naver.com --agree-tos --no-eff-email -d snacknews.site -d www.snacknews.site
+
+  spring:
+    build:
+      context: .
+      dockerfile: src/Dockerfile
+    container_name: spring
+    expose:
+      - "8080"
+    env_file:
+      - .env
+
+  python:
+    build:
+      context: ./python-nlp-service
+      dockerfile: Dockerfile
+    container_name: python
+    expose:
+      - "5000"
+    env_file:
+      - python-nlp-service/.env

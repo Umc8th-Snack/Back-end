@@ -2,7 +2,7 @@ package umc.snack.global.gemini;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -11,7 +11,7 @@ import umc.snack.domain.quiz.entity.ArticleQuiz;
 import umc.snack.domain.quiz.entity.Quiz;
 import umc.snack.domain.term.entity.ArticleTerm;
 import umc.snack.domain.term.entity.Term;
-import umc.snack.repository.article.ArticleQuizRepository;
+import umc.snack.repository.quiz.ArticleQuizRepository;
 import umc.snack.repository.article.ArticleRepository;
 import umc.snack.repository.article.ArticleTermRepository;
 import umc.snack.repository.quiz.QuizRepository;
@@ -75,13 +75,18 @@ public class GeminiParsingService {
             if (terms != null) {
                 for (GeminiResultDto.TermDto termDto : terms) {
                     // term 존재 여부 확인
-                    Term term = termRepository.findByWord(termDto.getWord())
-                            .orElseGet(() -> termRepository.save(
-                                    Term.builder()
-                                            .word(termDto.getWord())
-                                            .definition(termDto.getMeaning())
-                                            .build()
-                            ));
+                    List<Term> existingTerms = termRepository.findAllByWordAndDefinition(termDto.getWord(), termDto.getMeaning());
+                    Term term;
+                    if (!existingTerms.isEmpty()) {
+                        term = existingTerms.get(0); // 이미 존재하는 term
+                    } else {
+                        term = termRepository.save(
+                                Term.builder()
+                                        .word(termDto.getWord())
+                                        .definition(termDto.getMeaning())
+                                        .build()
+                        );
+                    }
                     // article-term 관계 중복 확인 후 저장
                     boolean exists = articleTermRepository.findByArticleIdAndTermId(article.getArticleId(), term.getTermId())
                             .isPresent();
