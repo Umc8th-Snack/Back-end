@@ -118,7 +118,7 @@ public class SecurityConfig {
                                     "Origin",
                                     "X-Requested-With"
                             ));
-                            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                             config.setExposedHeaders(List.of("Authorization"));
                             return config;
                         })
