@@ -43,4 +43,8 @@ public class MemoResponseDto {
         private long totalElements;
     }
 
+    @Builder @Getter @NoArgsConstructor @AllArgsConstructor
+    public static class ContentDto {
+        private String content;
+    }
 }
