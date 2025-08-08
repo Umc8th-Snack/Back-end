@@ -13,7 +13,7 @@ public class UserUpdateRequestDto {
     private String nickname;
     
     @Schema(description = "프로필 이미지 URL", example = "https://example.com/profiles/new_image.jpg")
-    private String profileUrl;
+    private String profileImage;
     
     @Schema(description = "소개", example = "안녕하세요, 새로운 소개입니다.")
     private String introduction;
