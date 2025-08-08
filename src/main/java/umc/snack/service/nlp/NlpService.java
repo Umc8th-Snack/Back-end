@@ -116,6 +116,10 @@ public class NlpService {
 
     // 코사인 유사도 계산 메서드
     private double calculateCosineSimilarity(double[] vectorA, double[] vectorB) {
+        if (vectorA.length != vectorB.length) {
+            throw new IllegalArgumentException("벡터 길이가 일치하지 않습니다");
+        }
+
         double dotProduct = 0.0;
         double normA = 0.0;
         double normB = 0.0;
@@ -126,6 +130,11 @@ public class NlpService {
             normB += Math.pow(vectorB[i], 2);
         }
 
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        double normProduct = Math.sqrt(normA) * Math.sqrt(normB);
+        if (normProduct == 0.0) {
+            return 0.0; // 벡터 중 하나가 영벡터인 경우
+        }
+
+        return  dotProduct / normProduct;
     }
 }
