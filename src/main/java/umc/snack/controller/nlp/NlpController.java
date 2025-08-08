@@ -2,6 +2,10 @@ package umc.snack.controller.nlp;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +29,7 @@ public class NlpController {
     )
     @PostMapping("/vectorize/articles")
     public ResponseEntity<ApiResponse<ArticleVectorizeListResponseDto>> vectorizeArticles(
-            @RequestBody ArticleVectorizeListRequestDto requestDto) {
+            @RequestBody @Valid ArticleVectorizeListRequestDto requestDto) {
 
         // DTO에 정의된 List<ArticleVectorizeRequestDto>를 받아서 서비스로 전달
         ArticleVectorizeListResponseDto result = nlpService.processAndSaveArticleVectors(requestDto.getArticles());
@@ -40,7 +44,7 @@ public class NlpController {
     )
     @PostMapping("/vectorize/query")
     public ResponseEntity<ApiResponse<QueryVectorizeResponseDto>> vectorizeQuery(
-            @RequestBody QueryVectorizeRequestDto requestDto) {
+            @RequestBody  @Valid QueryVectorizeRequestDto requestDto) {
 
         QueryVectorizeResponseDto result = nlpService.processQueryVector(requestDto.getQuery());
 
@@ -56,9 +60,9 @@ public class NlpController {
     )
     @GetMapping("/search/articles")
     public ResponseEntity<ApiResponse<SearchArticleResponseDto>> searchArticles(
-            @RequestParam(name = "query") String query,
-            @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "10") int size) {
+            @RequestParam(name = "query") @NotBlank String query,
+            @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
+            @RequestParam(name = "size", defaultValue = "10") @Min(1) @Max(100) int size) {
 
         SearchArticleResponseDto result = nlpService.searchArticles(query, page, size);
 
