@@ -132,7 +132,7 @@ public class NlpService {
 
         double normProduct = Math.sqrt(normA) * Math.sqrt(normB);
         if (normProduct == 0.0) {
-            return 0.0; // 벡터 중 하나가 영벡터인 경우
+            return 0.0; // 벡터 중 하나가 영벡터인 경
         }
 
         return  dotProduct / normProduct;
