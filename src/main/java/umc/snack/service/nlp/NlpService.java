@@ -32,7 +32,16 @@ public class NlpService {
     public ArticleVectorizeListResponseDto processAndSaveArticleVectors(List<ArticleVectorizeRequestDto> articleRequestDtos) {
         // 1. FastAPI로 기사 본문 전송
         String url = fastapiUrl + "/vectorize/articles";
-        ArticleVectorizeListResponseDto response = restTemplate.postForObject(url, articleRequestDtos, ArticleVectorizeListResponseDto.class);
+        ArticleVectorizeListResponseDto response;
+        try {
+            response = restTemplate.postForObject(url, articleRequestDtos, ArticleVectorizeListResponseDto.class);
+        } catch (Exception e) {
+            throw new RuntimeException("FastAPI 벡터화 서비스 호출 실패", e);
+        }
+
+        if (response == null) {
+            throw new RuntimeException("FastAPI 서비스로부터 응답을 받지 못했습니다");
+        }
 
         // 2. 응답받은 벡터와 키워드를 DB에 저장
         if (response != null && response.getResults() != null) {
