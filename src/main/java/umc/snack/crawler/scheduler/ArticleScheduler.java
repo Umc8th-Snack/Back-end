@@ -61,7 +61,7 @@ public class ArticleScheduler {
     public void crawlOnceAfterStartup() {
         crawlArticles();
         // 크롤링 끝난 뒤 5분 후 요약 예약
-        scheduleSummarizeAfter5Min();
+//        scheduleSummarizeAfter5Min();
     }
 
     private void crawlArticles() {
@@ -74,20 +74,20 @@ public class ArticleScheduler {
         }
     }
 
-    // 5분 뒤 요약 예약 메서드 추가
-    private void scheduleSummarizeAfter5Min() {
-        log.info("서버 시작 크롤링 완료! Gemini 요약 예약: 5분 뒤 실행 예정 ({})", LocalDateTime.now().plusMinutes(5));
-        taskScheduler.schedule(
-                () -> {
-                    log.info("5분 경과! Gemini 기사 요약 자동 실행 시작 ({})", LocalDateTime.now());
-//                    log.info("30초 경과! Gemini 기사 요약 자동 실행 시작 ({})", LocalDateTime.now());
-                    try {
-                        articleSummarizeService.getCompletion();
-                    } catch (Exception e) {
-                        log.error("❌ Gemini 기사 요약 중 에러 발생: {}", e.getMessage(), e);
-                    }
-                },
-                java.util.Date.from(java.time.Instant.now().plusSeconds(300))
-        );
-    }
+//    // 5분 뒤 요약 예약 메서드 추가
+//    private void scheduleSummarizeAfter5Min() {
+//        log.info("서버 시작 크롤링 완료! Gemini 요약 예약: 5분 뒤 실행 예정 ({})", LocalDateTime.now().plusMinutes(5));
+//        taskScheduler.schedule(
+//                () -> {
+//                    log.info("5분 경과! Gemini 기사 요약 자동 실행 시작 ({})", LocalDateTime.now());
+////                    log.info("30초 경과! Gemini 기사 요약 자동 실행 시작 ({})", LocalDateTime.now());
+//                    try {
+//                        articleSummarizeService.getCompletion();
+//                    } catch (Exception e) {
+//                        log.error("❌ Gemini 기사 요약 중 에러 발생: {}", e.getMessage(), e);
+//                    }
+//                },
+//                java.util.Date.from(java.time.Instant.now().plusSeconds(300))
+//        );
+//    }
 }

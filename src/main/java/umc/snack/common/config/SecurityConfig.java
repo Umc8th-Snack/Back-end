@@ -25,6 +25,7 @@ import umc.snack.repository.auth.RefreshTokenRepository;
 import umc.snack.repository.user.UserRepository;
 import umc.snack.service.auth.ReissueService;
 
+import java.util.Collections;
 import java.util.List;
 
 @Configuration
@@ -108,7 +109,8 @@ public class SecurityConfig {
                         .configurationSource(request -> {
                             CorsConfiguration config = new CorsConfiguration();
                             config.setAllowCredentials(true);
-                            config.setAllowedOriginPatterns(List.of("https://snacknews.site", "http://localhost:5173", "https://snack-front-end.vercel.app"));
+                            // 수정된 부분: "https://snacknews.site" 대신 "*"를 추가하거나, 모든 패턴을 허용
+                            config.setAllowedOriginPatterns(Collections.singletonList("*"));
                             config.setAllowedHeaders(List.of(
                                     "Authorization",
                                     "Content-Type",
@@ -116,7 +118,7 @@ public class SecurityConfig {
                                     "Origin",
                                     "X-Requested-With"
                             ));
-                            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                             config.setExposedHeaders(List.of("Authorization"));
                             return config;
                         })

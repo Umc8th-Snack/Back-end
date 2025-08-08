@@ -5,6 +5,9 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpServerErrorException;
 import umc.snack.domain.article.entity.Article;
@@ -127,27 +130,17 @@ public class ArticleSummarizeService {
     }
 
     public void getCompletion() {
-        List<Article> articles = articleRepository.findBySummaryIsNull();
+        // 최근 5개만
+        PageRequest page = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Article> articlePage = articleRepository.findBySummaryIsNull(page);
+        List<Article> articles = articlePage.getContent();
 
         if (articles.isEmpty()) {
             log.info("요약이 필요한 기사가 없습니다.");
             return;
         }
 
-        int batchSize = 5;
-        //int total = articles.size();
-        int total = Math.min(articles.size(), 5); // 최신 기사 5개까지만 실행(테스트용)
-
-        for (int i = 0; i < total; i += batchSize) {
-            int end = Math.min(i + batchSize, total);
-            List<Article> batch = articles.subList(i, end);
-
-            for (Article article : batch) {
-
-                log.info("기사 처리 시작 - ID: {}", article.getArticleId()); // 디버깅용 추가
-
-//                CrawledArticle crawled = crawledArticleRepository.findById(article.getArticleId())
-//                        .orElse(null);
+        for (Article article : articles) {
                 CrawledArticle crawled = crawledArticleRepository.findByArticleId(article.getArticleId()).orElse(null);
 
                 log.info("CrawledArticle 조회 결과: {}", crawled); // 디버깅용 추가
@@ -159,40 +152,93 @@ public class ArticleSummarizeService {
                 } // 디버깅용 추가
 
                 String content = crawled.getContent(); // 디버깅용 추가
-                log.info("기사 본문 내용: {}", content); // 디버깅용 추가
 
                 if (content == null || content.trim().isEmpty()) {
                     log.warn("기사 본문이 없음 - {}", article.getArticleId());
                     continue;
                 } // 디버깅용 추가
-
-                String prompt = promptTemplate + crawled.getContent();
-                log.info("Gemini 호출 직전 - articleId: {}", article.getArticleId()); // 디버깅용 추가
-                String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
-                log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), result); // 디버깅용
-                log.info("=========================================================");
-
-                geminiParsingService.updateArticleSummary(article.getArticleId(), result);
-
-                // 1개 처리 후 10초 대기 (overload 방지)
-                try {
-                    Thread.sleep(10_000); // 고정 10초 대기
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-
-                Article updatedArticle = articleRepository.findById(article.getArticleId()).orElse(null);
-                Assert.notNull(updatedArticle.getSummary(), "요약이 생성되어야 합니다.");            }
-
-            // 5개마다 추가 대기
             try {
-                log.info("== 5개 처리 후 잠시 대기 ==");
+                // Gemini API 호출
+                String prompt = promptTemplate + crawled.getContent();
+                String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
+                geminiParsingService.updateArticleSummary(article.getArticleId(), result);
+            } catch (Exception e) {
+                // 실패 시 summary="FAILED"로 표기 (중복 재시도 방지)
+//                geminiParsingService.updateArticleSummary(article.getArticleId(), "FAILED");
+                log.error("요약 실패 - articleId: {}", article.getArticleId(), e);
+            }
+            try {
                 Thread.sleep(10_000);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 return;
             }
         }
     }
+
+    // 기존 서비스 로직
+//    public void getCompletion() {
+//        List<Article> articles = articleRepository.findBySummaryIsNull();
+//
+//        if (articles.isEmpty()) {
+//            log.info("요약이 필요한 기사가 없습니다.");
+//            return;
+//        }
+//
+//        int batchSize = 5;
+////        int total = articles.size();
+//        int total = Math.min(articles.size(), 20); // 최신 기사 20개까지만 실행(테스트용)
+//
+//        for (int i = 0; i < total; i += batchSize) {
+//            int end = Math.min(i + batchSize, total);
+//            List<Article> batch = articles.subList(i, end);
+//
+//            for (Article article : batch) {
+//
+//                CrawledArticle crawled = crawledArticleRepository.findByArticleId(article.getArticleId()).orElse(null);
+//
+//                log.info("CrawledArticle 조회 결과: {}", crawled); // 디버깅용 추가
+//
+////                if (crawled == null) continue;
+//                if (crawled == null) {
+//                    log.warn("CrawledArticle이 없음 - {}", article.getArticleId());
+//                    continue;
+//                } // 디버깅용 추가
+//
+//                String content = crawled.getContent(); // 디버깅용 추가
+//
+//                if (content == null || content.trim().isEmpty()) {
+//                    log.warn("기사 본문이 없음 - {}", article.getArticleId());
+//                    continue;
+//                } // 디버깅용 추가
+//
+//                String prompt = promptTemplate + crawled.getContent();
+//                log.info("Gemini 호출 직전 - articleId: {}", article.getArticleId()); // 디버깅용 추가
+//                String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
+//                log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), result); // 디버깅용
+//                log.info("=========================================================");
+//
+//                geminiParsingService.updateArticleSummary(article.getArticleId(), result);
+//
+//                // 1개 처리 후 10초 대기 (overload 방지)
+//                try {
+//                    Thread.sleep(10_000); // 고정 10초 대기
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                    return;
+//                }
+//
+//                Article updatedArticle = articleRepository.findById(article.getArticleId()).orElse(null);
+//                Assert.notNull(updatedArticle.getSummary(), "요약이 생성되어야 합니다.");            }
+//
+//            // 5개마다 추가 대기
+//            try {
+//                log.info("== 5개 처리 후 잠시 대기 ==");
+//                Thread.sleep(10_000);
+//            } catch (InterruptedException e) {
+//                Thread.currentThread().interrupt();
+//                return;
+//            }
+//        }
+//    }
 }
