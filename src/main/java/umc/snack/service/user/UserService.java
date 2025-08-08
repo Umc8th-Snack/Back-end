@@ -105,6 +105,47 @@ public class UserService {
 
     }
 
+    @Transactional
+    public void changePassword(Long userId, String currentPw, String newPw, String confirmPw) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622)); // 존재하지 않는 회원
+
+        // 소셜 전용 계정
+//        if (user.isSocialOnly()) throw new CustomException(ErrorCode.USER_2612); // 소셜 계정은 비밀번호를 바꿀 수 없음
+
+        if (!passwordEncoder.matches(currentPw, user.getPassword())) {
+            throw new CustomException(ErrorCode.USER_2613); // 비밀번호가 일치하지 않음
+        }
+        // 현재 비밀번호 검증
+        if (!passwordEncoder.matches(currentPw, user.getPassword())) {
+            throw new CustomException(ErrorCode.USER_2623);
+        }
+
+        // 새 비밀번호와 확인 불일치
+        if (!newPw.equals(confirmPw)) {
+            throw new CustomException(ErrorCode.USER_2613);
+        }
+
+        // 비밀번호 형식 오류
+        if (!isValidPassword(request.getPassword())) {
+            throw new CustomException(ErrorCode.USER_2603);
+        }
+
+        // 5) 이전 비번 재사용 방지 (필요시)
+        if (passwordEncoder.matches(newPw, user.getPassword())) {
+            throw new CustomException(ErrorCode.USER_2602);
+        }
+
+        // 6) 저장
+        user.setPassword(passwordEncoder.encode(newPw));
+        userRepository.save(user);
+
+        // 7) Refresh 토큰 삭제 (모든 기기 로그아웃)
+        refreshTokenRepository.deleteByUserId(userId);
+    }
+
+
     // 비밀번호 정규식 체크 메소드
     private boolean isValidPassword(String password) {
         // 최소 8자, 영문/숫자 각각 1개 이상 포함
