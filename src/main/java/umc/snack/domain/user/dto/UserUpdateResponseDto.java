@@ -29,7 +29,7 @@ public class UserUpdateResponseDto {
         return UserUpdateResponseDto.builder()
                 .userId(user.getUserId())
                 .nickname(user.getNickname())
-                .profileUrl(user.getProfileUrl())
+//                .profileUrl(user.getProfileUrl())
                 .build();
     }
 }

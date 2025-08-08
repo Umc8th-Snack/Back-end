@@ -8,11 +8,7 @@ import org.springframework.stereotype.Service;
 import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
-import umc.snack.domain.user.dto.UserInfoResponseDto;
-import umc.snack.domain.user.dto.UserSignupRequestDto;
-import umc.snack.domain.user.dto.UserSignupResponseDto;
-import umc.snack.domain.user.dto.UserUpdateRequestDto;
-import umc.snack.domain.user.dto.UserUpdateResponseDto;
+import umc.snack.domain.user.dto.*;
 import umc.snack.domain.user.entity.User;
 import umc.snack.repository.auth.RefreshTokenRepository;
 import umc.snack.repository.memo.MemoRepository;
@@ -88,6 +84,10 @@ public class UserService {
         User managedUser = userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622)); // 존재하지 않는 회원
 
+        if (managedUser.getPassword() == null || managedUser.getPassword().isBlank()) {
+            throw new CustomException(ErrorCode.USER_2612); // 비번 없음(소셜) 상태에서 비번 확인 불가
+        }
+
         // 비밀번호 검증 로직
         if (!passwordEncoder.matches(password, managedUser.getPassword())) {
             throw new CustomException(ErrorCode.USER_2623);
@@ -106,20 +106,23 @@ public class UserService {
     }
 
     @Transactional
-    public void changePassword(Long userId, String currentPw, String newPw, String confirmPw) {
+    public PasswordChangeResponseDto changePassword(Long userId, PasswordChangeRequestDto request) {
+
+        String currentPw = request.getCurrentPassword();
+        String newPw = request.getNewPassword();
+        String confirmPw = request.getConfirmPassword();
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622)); // 존재하지 않는 회원
 
-        // 소셜 전용 계정
-//        if (user.isSocialOnly()) throw new CustomException(ErrorCode.USER_2612); // 소셜 계정은 비밀번호를 바꿀 수 없음
-
-        if (!passwordEncoder.matches(currentPw, user.getPassword())) {
-            throw new CustomException(ErrorCode.USER_2613); // 비밀번호가 일치하지 않음
+        // password가 null이면 로컬 비번 미설정 상태로 간주
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new CustomException(ErrorCode.USER_2612); // 소셜 계정은 비밀번호 변경 불가
         }
+
         // 현재 비밀번호 검증
         if (!passwordEncoder.matches(currentPw, user.getPassword())) {
-            throw new CustomException(ErrorCode.USER_2623);
+            throw new CustomException(ErrorCode.USER_2611);
         }
 
         // 새 비밀번호와 확인 불일치
@@ -128,29 +131,34 @@ public class UserService {
         }
 
         // 비밀번호 형식 오류
-        if (!isValidPassword(request.getPassword())) {
+        if (!isValidPassword(request.getNewPassword())) {
             throw new CustomException(ErrorCode.USER_2603);
         }
 
-        // 5) 이전 비번 재사용 방지 (필요시)
+        // 이전 비번 재사용 방지
         if (passwordEncoder.matches(newPw, user.getPassword())) {
-            throw new CustomException(ErrorCode.USER_2602);
+            throw new CustomException(ErrorCode.USER_2614);
         }
 
-        // 6) 저장
-        user.setPassword(passwordEncoder.encode(newPw));
-        userRepository.save(user);
+        // 저장
+        user.changePassword(passwordEncoder.encode(newPw));
 
-        // 7) Refresh 토큰 삭제 (모든 기기 로그아웃)
+        // Refresh 토큰 삭제 (모든 기기 로그아웃)
         refreshTokenRepository.deleteByUserId(userId);
+
+        return PasswordChangeResponseDto.builder()
+                .userId(user.getUserId())
+                .changedAt(LocalDateTime.now())
+                .build();
     }
 
 
     // 비밀번호 정규식 체크 메소드
     private boolean isValidPassword(String password) {
-        // 최소 8자, 영문/숫자 각각 1개 이상 포함
-        String regex = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$";
+        // 최소 8자, 영문 1개 이상, 숫자 1개 이상, 특수문자 허용(공백 제외)
+        String regex = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d!@#$%^&*()_+\\-={}\\[\\]:;\"'<>,.?/\\\\|`~]{8,}$";
         return password != null && password.matches(regex);
+
     }
     // 닉네임 정규식 체크 메소드
     private boolean isValidNickname(String nickname) {

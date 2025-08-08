@@ -2,7 +2,11 @@ package umc.snack.domain.user.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor
+@Getter
 public class PasswordChangeRequestDto {
 
     @NotBlank(message = "현재 비밀번호를 입력해주세요.")

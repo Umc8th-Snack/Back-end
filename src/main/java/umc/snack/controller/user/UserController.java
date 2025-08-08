@@ -35,9 +35,11 @@ public class UserController {
 
     @Operation(summary = "내 비밀번호 변경", description = "현재 비밀번호와 새 비밀번호를 입력하여 비밀번호를 변경합니다.")
     @PatchMapping("/me/password")
-    public ResponseEntity<?> updatePassword(@RequestBody Object request) {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
+    public ResponseEntity<ApiResponse<PasswordChangeResponseDto>> changePassword(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                                 @RequestBody @Valid PasswordChangeRequestDto request) {
+        PasswordChangeResponseDto response = userService.changePassword(userDetails.getUserId(), request);
+
+        return ResponseEntity.ok(ApiResponse.onSuccess("USER_2510", "비밀번호가 성공적으로 변경되었습니다.", response));
     }
 
     @Operation(summary = "마이페이지 정보 조회", description = "내 회원 정보를 조회합니다.")

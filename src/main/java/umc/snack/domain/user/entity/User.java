@@ -60,6 +60,10 @@ public class User extends BaseEntity {
             this.introduction = introduction;
         }
     }
+    // 비밀번호 변경
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
 
     @Builder.Default
     @Enumerated(EnumType.STRING)

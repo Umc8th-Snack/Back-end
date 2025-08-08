@@ -26,7 +26,7 @@ public class UserInfoResponseDto {
                 .userId(user.getUserId())
                 .email(user.getEmail())
                 .nickname(user.getNickname())
-                .profileUrl(user.getProfileUrl())
+//                .profileUrl(user.getProfileUrl())
                 .introduction(user.getIntroduction())
                 .build();
     }
