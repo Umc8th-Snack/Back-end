@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.nlp.dto.*;
-import umc.snack.domain.article.ArticleSemanticVector; // 기사 벡터 저장 엔티티
+import umc.snack.domain.article.entity.ArticleSemanticVector; // 기사 벡터 저장 엔티티
 import umc.snack.repository.article.ArticleRepository;
 import umc.snack.repository.nlp.ArticleSemanticVectorRepository;
 

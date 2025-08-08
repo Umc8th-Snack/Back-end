@@ -1,4 +1,4 @@
-package umc.snack.domain.article;
+package umc.snack.domain.article.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import umc.snack.domain.article.entity.Article;
 
 
 @Entity

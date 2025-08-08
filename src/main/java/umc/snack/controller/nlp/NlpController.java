@@ -67,7 +67,7 @@ public class NlpController {
         SearchArticleResponseDto result = nlpService.searchArticles(query, page, size);
 
         return ResponseEntity.ok(
-                ApiResponse.onSuccess("NLP_5003", "기사 검색 성공", result)
+                ApiResponse.onSuccess("NLP_9702", "기사 검색 성공", result)
         );
     }
 }
