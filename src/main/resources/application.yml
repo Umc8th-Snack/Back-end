@@ -18,8 +18,10 @@ spring:
     token:
       secretKey: ${JWT_SECRET_KEY}
       expiration:
-        access: 14400000
-        refresh: 1209600000
+#        access: 1800000 # 30분
+#        refresh: 86400000 # 1일
+        access: 60000 # 1분
+        refresh: 180000 # 3분
 
 # 프론트엔드 URL 설정
 frontend:

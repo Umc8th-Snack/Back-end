@@ -35,6 +35,12 @@ public class GoogleOAuthService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Value("${spring.jwt.token.expiration.access}")
+    private Long accessExpiredMs;
+
+    @Value("${spring.jwt.token.expiration.refresh}")
+    private Long refreshExpiredMs;
+
     @Value("${google.oauth.client-id:}")
     private String googleClientId;
 
@@ -60,8 +66,8 @@ public class GoogleOAuthService {
             User user = findOrCreateUser(userInfo);
             
             // 4. JWT 토큰 생성
-            String accessToken = jwtUtil.createJwt("access", user.getUserId(), user.getEmail(), user.getRole().name(), 1_800_000L); // 30분
-            String refreshToken = jwtUtil.createJwt("refresh", user.getUserId(), user.getEmail(), user.getRole().name(), 86_400_000L); // 1일
+            String accessToken = jwtUtil.createJwt("access", user.getUserId(), user.getEmail(), user.getRole().name(), accessExpiredMs); // 30분
+            String refreshToken = jwtUtil.createJwt("refresh", user.getUserId(), user.getEmail(), user.getRole().name(), refreshExpiredMs); // 1일
             
             // 5. Refresh Token 저장
             saveRefreshToken(user.getUserId(), user.getEmail(), refreshToken);
@@ -171,7 +177,7 @@ public class GoogleOAuthService {
                 .userId(userId)
                 .email(email)
                 .refreshToken(refreshToken)
-                .expiration(LocalDateTime.now().plusSeconds(86_400_000L / 1000)) // 1일
+                .expiration(LocalDateTime.now().plusSeconds(refreshExpiredMs / 1000)) // 1일
                 .build();
         refreshTokenRepository.save(token);
     }

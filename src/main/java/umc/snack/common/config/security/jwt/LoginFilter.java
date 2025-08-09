@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -35,15 +36,26 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     private final JWTUtil jwtUtil;
     private final ReissueService reissueService;
 
-    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil, ReissueService reissueService ,RefreshTokenRepository refreshTokenRepository) {
+    @Value("${spring.jwt.token.expiration.access}")
+    private Long accessExpiredMs;
 
+    @Value("${spring.jwt.token.expiration.refresh}")
+    private Long refreshExpiredMs;
+
+    public LoginFilter(AuthenticationManager authenticationManager,
+                       JWTUtil jwtUtil,
+                       ReissueService reissueService,
+                       RefreshTokenRepository refreshTokenRepository,
+                       Long accessExpiredMs,
+                       Long refreshExpiredMs) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.refreshTokenRepository = refreshTokenRepository;
         this.reissueService = reissueService;
-        setUsernameParameter("email"); // email을 username으로 인식함
+        this.accessExpiredMs = accessExpiredMs;
+        this.refreshExpiredMs = refreshExpiredMs;
+        setUsernameParameter("email");
         setFilterProcessesUrl("/api/auth/login");
-
     }
 
     @Override
@@ -73,11 +85,11 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String role = authorities.iterator().next().getAuthority();
 
         // 토큰 생성
-        String accessToken = jwtUtil.createJwt("access", userId, email, role, 1_800_000L); // 30분
-        String refreshToken = jwtUtil.createJwt("refresh", userId, email, role, 86_400_000L); // 1일
+        String accessToken = jwtUtil.createJwt("access", userId, email, role, accessExpiredMs); // 30분
+        String refreshToken = jwtUtil.createJwt("refresh", userId, email, role, refreshExpiredMs); // 1일
 
         // refresh 토큰 저장
-        LocalDateTime expirationDate = LocalDateTime.now().plusSeconds(86_400_000L / 1000); // 1일
+        LocalDateTime expirationDate = LocalDateTime.now().plusSeconds(refreshExpiredMs / 1000); // 1일
         reissueService.replaceRefreshToken(userId, email, refreshToken, expirationDate);
 
         // 응답 DTO
