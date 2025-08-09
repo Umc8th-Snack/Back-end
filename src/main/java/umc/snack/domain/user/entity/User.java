@@ -22,7 +22,8 @@ public class User extends BaseEntity {
     @Column(unique = true, nullable = false, length = 255)
     private String email;
 
-    @Column(nullable = false)
+    // 소셜 전용 계정은 패스워드가 없을 수 있음
+    @Column(nullable = true, length = 255)
     private String password;
 
     @Column(unique = true, nullable = false, length = 255)
@@ -61,11 +62,27 @@ public class User extends BaseEntity {
             this.introduction = introduction;
         }
     }
+    // 비밀번호 변경
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.ROLE_USER;
+
+    public enum LoginType { LOCAL, GOOGLE }
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "login_type", length = 20)
+    private LoginType loginType = LoginType.LOCAL;
+
+    // 소셜 전용 계정 판별
+    public boolean isSocialOnly() {
+        return this.loginType != LoginType.LOCAL;
+    }
 
     public enum Status {
         ACTIVE,
