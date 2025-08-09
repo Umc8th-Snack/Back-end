@@ -17,7 +17,7 @@ print("--- DEBUG INFO END ---")
 # 불용어 DB 삽입
 print("불용어 DB에 삽입 중...")
 subprocess.run(
-    ["python", "scripts/insert_stopwords_to_db.py"],
+    ["python", "-m", "scripts.insert_stopwords_to_db"],
     check=True,
     cwd=BASE_DIR
 )
@@ -25,7 +25,7 @@ subprocess.run(
 # TF-IDF 모델 학습
 print("TF-IDF 모델 학습 중...")
 subprocess.run(
-    ["python", "scripts/train_tfidf_model.py"],
+    ["python", "-m", "scripts.train_tfidf_model"],
     check=True,
     cwd=BASE_DIR
 )

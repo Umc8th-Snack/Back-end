@@ -50,8 +50,6 @@ def tokenize_korean_text_for_tfidf(text: str) -> list[str]:
         if pos.startswith('N') and word not in stopwords_set and len(word) > 1
     ]
 
-
-
 # --- 모델 학습 함수 ---
 def train_and_save_tfidf_model(article_contents: list[str]):
     if not article_contents:
