@@ -134,6 +134,18 @@ public enum ErrorCode {
     FEED_9604(401, "로그인이 필요한 서비스입니다."),
     FEED_9605(400, "페이지 값이 유효하지 않습니다."),
 
+    // 파일/File (9700-9799)
+    FILE_NOT_PROVIDED(400, "파일이 제공되지 않았습니다."),
+    FILE_SIZE_EXCEEDED(400, "파일 크기가 5MB를 초과했습니다."),
+    INVALID_FILE_TYPE(400, "지원하지 않는 파일 형식입니다. 이미지 파일만 업로드 가능합니다."),
+    INVALID_FILE_NAME(400, "유효하지 않은 파일 이름입니다."),
+    INVALID_FILE_URL(400, "유효하지 않은 파일 URL입니다."),
+    FILE_NOT_FOUND(404, "요청한 파일을 찾을 수 없습니다."),
+    UNAUTHORIZED_FILE_ACCESS(403, "해당 파일에 대한 접근 권한이 없습니다."),
+    FILE_UPLOAD_FAILED(500, "파일 업로드에 실패했습니다."),
+    S3_UPLOAD_ERROR(500, "S3 파일 업로드 중 오류가 발생했습니다."),
+    S3_DELETE_ERROR(500, "S3 파일 삭제 중 오류가 발생했습니다."),
+
     // 자연어처리/NLP (9800-9899)
     NLP_9801(422, "요청 데이터가 유효하지 않습니다. 필수 필드를 확인하세요.");
 

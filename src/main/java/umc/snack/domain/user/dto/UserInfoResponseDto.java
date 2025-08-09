@@ -9,15 +9,15 @@ public class UserInfoResponseDto {
     private Long userId;
     private String email;
     private String nickname;
-    private String profileUrl;
+    private String profileImage;
     private String introduction;
 
     @Builder
-    public UserInfoResponseDto(Long userId, String email, String nickname, String profileUrl, String introduction) {
+    public UserInfoResponseDto(Long userId, String email, String nickname, String profileImage, String introduction) {
         this.userId = userId;
         this.email = email;
         this.nickname = nickname;
-        this.profileUrl = profileUrl;
+        this.profileImage = profileImage;
         this.introduction = introduction;
     }
 
@@ -26,7 +26,7 @@ public class UserInfoResponseDto {
                 .userId(user.getUserId())
                 .email(user.getEmail())
                 .nickname(user.getNickname())
-//                .profileUrl(user.getProfileUrl())
+                .profileImage(user.getProfileImage())
                 .introduction(user.getIntroduction())
                 .build();
     }

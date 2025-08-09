@@ -16,20 +16,20 @@ public class UserUpdateResponseDto {
     private String nickname;
     
     @Schema(description = "프로필 이미지 URL", example = "https://example.com/profiles/new_image.jpg")
-    private String profileUrl;
+    private String profileImage;
 
     @Builder
-    public UserUpdateResponseDto(Long userId, String nickname, String profileUrl) {
+    public UserUpdateResponseDto(Long userId, String nickname, String profileImage) {
         this.userId = userId;
         this.nickname = nickname;
-        this.profileUrl = profileUrl;
+        this.profileImage = profileImage;
     }
 
     public static UserUpdateResponseDto fromEntity(User user) {
         return UserUpdateResponseDto.builder()
                 .userId(user.getUserId())
                 .nickname(user.getNickname())
-//                .profileUrl(user.getProfileUrl())
+                .profileImage(user.getProfileImage())
                 .build();
     }
 }
