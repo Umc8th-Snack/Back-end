@@ -147,7 +147,7 @@ public class UserService {
         }
 
         // 사용자 정보 업데이트
-        managedUser.updateUserInfo(request.getNickname(), request.getProfileUrl(), request.getIntroduction());
+        managedUser.updateUserInfo(request.getNickname(), request.getProfileImage(), request.getIntroduction());
 
         return UserUpdateResponseDto.fromEntity(managedUser);
     }

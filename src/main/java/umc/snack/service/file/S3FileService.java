@@ -111,9 +111,9 @@ public class S3FileService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
 
         // 프로필 이미지 URL 검증
-        if (managedUser.getProfileUrl() == null || !managedUser.getProfileUrl().equals(fileUrl)) {
+        if (managedUser.getProfileImage() == null || !managedUser.getProfileImage().equals(fileUrl)) {
             log.warn("User {} attempted to delete profile image they don't own. Requested: {}, Actual: {}", 
-                    currentUser.getUserId(), fileUrl, managedUser.getProfileUrl());
+                    currentUser.getUserId(), fileUrl, managedUser.getProfileImage());
             throw new CustomException(ErrorCode.UNAUTHORIZED_FILE_ACCESS);
         }
 

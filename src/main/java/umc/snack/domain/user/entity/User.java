@@ -28,9 +28,11 @@ public class User extends BaseEntity {
     @Column(unique = true, nullable = false, length = 255)
     private String nickname;
 
+    // 프로필의 링크
     @Column(name = "profile_url")
     private String profileUrl;
 
+    // 프로필 사진의 링크
     @Column(name = "profile_image")
     private String profileImage;
 
@@ -48,12 +50,12 @@ public class User extends BaseEntity {
                 this.deleteAt = LocalDateTime.now();
     }
 
-    public void updateUserInfo(String nickname, String profileUrl, String introduction) {
+    public void updateUserInfo(String nickname, String profileImage, String introduction) {
         if (nickname != null) {
             this.nickname = nickname;
         }
-        if (profileUrl != null) {
-            this.profileUrl = profileUrl;
+        if (profileImage != null) {
+            this.profileImage = profileImage;
         }
         if (introduction != null) {
             this.introduction = introduction;
