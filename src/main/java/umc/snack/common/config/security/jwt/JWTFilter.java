@@ -43,6 +43,13 @@ public class JWTFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        // 재발급 요청은 Access 토큰 검증 스킵
+        String path = request.getRequestURI();
+        if ("/api/auth/reissue".equals(path)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // 헤더에서 access키에 담긴 토큰을 꺼냄
         String authorizationHeader = request.getHeader("Authorization");
         String accessToken = null;
@@ -63,11 +70,11 @@ public class JWTFilter extends OncePerRequestFilter {
         // 토큰 만료 여부 확인
         try {
             if (jwtUtil.isExpired(accessToken)) {
-                setErrorResponse(response, objectMapper, ErrorCode.AUTH_2161); // 유효하지 않은 Access 토큰
+                setErrorResponse(response, objectMapper, ErrorCode.AUTH_2166); // Access 토큰 만료
                 return;
             }
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
-            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2161); // 유효하지 않은 Access 토큰
+            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2166); // Access 토큰 만료
             return;
         } catch (Exception e) {
             setErrorResponse(response, objectMapper, ErrorCode.AUTH_2161); // 유효하지 않은 Access 토큰
@@ -100,7 +107,7 @@ public class JWTFilter extends OncePerRequestFilter {
 
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
-            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2141); // 등록되지 않은 이메일입니다.
+            setErrorResponse(response, objectMapper, ErrorCode.AUTH_2101); // 등록되지 않은 이메일입니다.
             return;
         }
         CustomUserDetails customUserDetails = new CustomUserDetails(user);

@@ -1,6 +1,7 @@
 package umc.snack.common.config;
 
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -37,6 +38,12 @@ public class SecurityConfig {
     private final RefreshTokenRepository refreshTokenRepository;
     private final ReissueService reissueService;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+
+    @Value("${spring.jwt.token.expiration.access}")
+    private Long accessExpiredMs;
+
+    @Value("${spring.jwt.token.expiration.refresh}")
+    private Long refreshExpiredMs;
 
     public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil, ReissueService reissueService ,RefreshTokenRepository refreshTokenRepository, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
 
@@ -103,8 +110,14 @@ public class SecurityConfig {
         http
                 .addFilterBefore(new JWTFilter(jwtUtil, userRepository, refreshTokenRepository), LoginFilter.class);
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, reissueService, refreshTokenRepository), UsernamePasswordAuthenticationFilter.class)
-
+                .addFilterAt(new LoginFilter(
+                                authenticationManager(authenticationConfiguration),
+                                jwtUtil,
+                                reissueService,
+                                refreshTokenRepository,
+                                accessExpiredMs,
+                                refreshExpiredMs),
+                        UsernamePasswordAuthenticationFilter.class)
                 .cors(cors -> cors
                         .configurationSource(request -> {
                             CorsConfiguration config = new CorsConfiguration();

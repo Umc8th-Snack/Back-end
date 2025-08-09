@@ -27,9 +27,9 @@ public class LogoutService {
         String refreshToken = extractRefreshTokenFromCookies(request);
 
         if (refreshToken == null) {
-            // [AUTH_2131] 쿠키에 refresh token 없음
+            // [AUTH_2163] 쿠키에 refresh token 없음
             expireRefreshCookie(response);
-            return buildFail(ErrorCode.AUTH_2131);
+            return buildFail(ErrorCode.AUTH_2163);
         }
 
         // 2. DB에 해당 refresh token이 존재하는지 확인
@@ -44,10 +44,10 @@ public class LogoutService {
         try {
             jwtUtil.isExpired(refreshToken);
         } catch (ExpiredJwtException e) {
-            // [AUTH_2133] 만료된 토큰
+            // [AUTH_2164] 만료된 토큰
             refreshTokenRepository.deleteByRefreshToken(refreshToken);
             expireRefreshCookie(response);
-            return buildFail(ErrorCode.AUTH_2133);
+            return buildFail(ErrorCode.AUTH_2164);
         }
 
         // 4. 정상 로그아웃 (refresh token 삭제 + 쿠키 만료)

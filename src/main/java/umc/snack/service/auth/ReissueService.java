@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,12 @@ public class ReissueService {
     private final JWTUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
+
+    @Value("${spring.jwt.token.expiration.access}")
+    private Long accessExpiredMs;
+
+    @Value("${spring.jwt.token.expiration.refresh}")
+    private Long refreshExpiredMs;
 
     @Transactional
     public ResponseEntity<ApiResponse<TokenReissueResponseDto>> reissue(HttpServletRequest request, HttpServletResponse response) {
@@ -67,13 +74,13 @@ public class ReissueService {
                 .orElse(null);
         if (user == null) {
             // 등록되지 않은 이메일(계정)
-            return buildFail(ErrorCode.AUTH_2141, "AUTH_2141");
+            return buildFail(ErrorCode.AUTH_2101, "AUTH_2101");
         }
 
         // 6. 토큰 재발급 (access + refresh)
         String role = jwtUtil.getRole(refreshToken);
-        String newAccess = jwtUtil.createJwt("access", userId, user.getEmail(), role, 1_800_000L);    // 30분
-        String newRefresh = jwtUtil.createJwt("refresh", userId, user.getEmail(), role, 86_400_000L);    // 1일
+        String newAccess = jwtUtil.createJwt("access", userId, user.getEmail(), role, accessExpiredMs);    // 30분
+        String newRefresh = jwtUtil.createJwt("refresh", userId, user.getEmail(), role, refreshExpiredMs);    // 1일
 
         // 기존 refreshToken 폐기, 새로운 refreshToken 저장 (화이트리스트 정책)
         refreshTokenRepository.delete(found);
@@ -82,7 +89,7 @@ public class ReissueService {
                         .userId(userId)
                         .email(user.getEmail())
                         .refreshToken(newRefresh)
-                        .expiration(LocalDateTime.now().plusSeconds(86_400_000L / 1000))
+                        .expiration(LocalDateTime.now().plusSeconds(refreshExpiredMs / 1000))
                         .build()
         );
 
