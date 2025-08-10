@@ -18,6 +18,7 @@ import umc.snack.repository.article.ArticleRepository;
 import umc.snack.repository.article.CrawledArticleRepository;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
 
@@ -106,32 +107,39 @@ public class ArticleSummarizeService {
              
             """;
 
-    // 자동 재시도 로직 (모델 overload 발생 시 최대 10회 재시도)
+    // 자동 재시도 로직 (모델 overload 발생 시 최대 5회 재시도)
     private String getCompletionWithRetry(String prompt, String model) {
-        int maxRetry = 10;
+        int maxRetry = 5;
+        long baseMillis = 2000; // 2s
         for (int i = 0; i < maxRetry; i++) {
             try {
                 return geminiService.getCompletion(prompt, model);
             } catch (HttpServerErrorException ex) {
-                if (ex.getStatusCode().value() == 503) {
-                    log.warn("503 에러 발생. {}번째 재시도 대기 중...", i + 1);
-                    try {
-                        Thread.sleep((long) Math.pow(2, i) * 1000); // 지수 백오프
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new RuntimeException("재시도 중 인터럽트 발생", e);
-                    }
+                int code = ex.getStatusCode().value();
+                if (code == 503 || code == 429 || code == 502 || code == 504) {
+                    long sleep = Math.min((long) Math.pow(2, i) * baseMillis, 120_000); // ≤120s
+                    long jitter = ThreadLocalRandom.current().nextLong(0, 1000);
+                    log.warn("{} 에러. {}번째 재시도 전 {}ms 대기", code, i + 1, sleep + jitter);
+                    try { Thread.sleep(sleep + jitter); }
+                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); throw new RuntimeException(ie); }
                     continue;
                 }
                 throw ex;
+            } catch (Exception e) {
+                // 네트워크/타임아웃 등도 1회 재시도는 유효
+                if (i < maxRetry - 1) {
+                    try { Thread.sleep(1500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                    continue;
+                }
+                throw e;
             }
         }
-        throw new RuntimeException("Gemini model overload로 재시도 실패");
+        throw new RuntimeException("Gemini 호출 재시도 실패");
     }
 
     public void getCompletion() {
-        // 최근 5개만
-        PageRequest page = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // 최근 7개만
+        PageRequest page = PageRequest.of(0, 7, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Article> articlePage = articleRepository.findBySummaryIsNull(page);
         List<Article> articles = articlePage.getContent();
 
@@ -141,17 +149,18 @@ public class ArticleSummarizeService {
         }
 
         for (Article article : articles) {
-                CrawledArticle crawled = crawledArticleRepository.findByArticleId(article.getArticleId()).orElse(null);
+            CrawledArticle crawled = crawledArticleRepository
+                    .findByArticleIdAndStatus(article.getArticleId(), CrawledArticle.Status.PROCESSED)
+                    .orElse(null);
 
                 log.info("CrawledArticle 조회 결과: {}", crawled); // 디버깅용 추가
 
-//                if (crawled == null) continue;
                 if (crawled == null) {
-                    log.warn("CrawledArticle이 없음 - {}", article.getArticleId());
+                    log.warn("PROCESSED 상태의 CrawledArticle이 없음 - {}", article.getArticleId());
                     continue;
-                } // 디버깅용 추가
+                }
 
-                String content = crawled.getContent(); // 디버깅용 추가
+                String content = crawled.getContent();
 
                 if (content == null || content.trim().isEmpty()) {
                     log.warn("기사 본문이 없음 - {}", article.getArticleId());
@@ -161,14 +170,18 @@ public class ArticleSummarizeService {
                 // Gemini API 호출
                 String prompt = promptTemplate + crawled.getContent();
                 String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
+                log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), result);
+                log.info("=========================================================");
+
                 geminiParsingService.updateArticleSummary(article.getArticleId(), result);
             } catch (Exception e) {
                 // 실패 시 summary="FAILED"로 표기 (중복 재시도 방지)
 //                geminiParsingService.updateArticleSummary(article.getArticleId(), "FAILED");
                 log.error("요약 실패 - articleId: {}", article.getArticleId(), e);
             }
+            // 10초 대기
             try {
-                Thread.sleep(10_000);
+                Thread.sleep(20_000);
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 return;
