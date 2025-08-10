@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import umc.snack.common.response.ApiResponse;
+import umc.snack.common.dto.ApiResponse;
 import umc.snack.service.article.ArticleService;
 
 import java.util.List;
@@ -41,7 +41,7 @@ public class ArticleController {
         );
 
         return ResponseEntity.ok(
-                ApiResponse.success(
+                ApiResponse.onSuccess(
                         "ARTICLE_8001",
                         "크롤링 상태 조회 성공",
                         result
@@ -55,7 +55,7 @@ public class ArticleController {
     public ResponseEntity<ApiResponse<ArticleDto>> getArticle(@PathVariable Long articleId) {
         ArticleDto dto = articleService.getArticleById(articleId);
         return ResponseEntity.ok(
-                ApiResponse.success(
+                ApiResponse.onSuccess(
                         "ARTICLE_9001",
                         "기사 정보를 성공적으로 불러왔습니다.",
                         dto
@@ -69,7 +69,7 @@ public class ArticleController {
     public ResponseEntity<ApiResponse<List<TermResponseDto>>> getTerms(@PathVariable Long articleId) {
         List<TermResponseDto> terms = articleService.getTermsByArticleId(articleId);
         return ResponseEntity.ok(
-                ApiResponse.success(
+                ApiResponse.onSuccess(
                         "ARTICLE_9002",
                         "기사 주요 용어 조회 성공",
                         terms

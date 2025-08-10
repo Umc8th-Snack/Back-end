@@ -1,6 +1,7 @@
 package umc.snack.common.config;
 
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,7 @@ import umc.snack.repository.auth.RefreshTokenRepository;
 import umc.snack.repository.user.UserRepository;
 import umc.snack.service.auth.ReissueService;
 
+import java.util.Collections;
 import java.util.List;
 
 @Configuration
@@ -36,6 +38,12 @@ public class SecurityConfig {
     private final RefreshTokenRepository refreshTokenRepository;
     private final ReissueService reissueService;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+
+    @Value("${spring.jwt.token.expiration.access}")
+    private Long accessExpiredMs;
+
+    @Value("${spring.jwt.token.expiration.refresh}")
+    private Long refreshExpiredMs;
 
     public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil, ReissueService reissueService ,RefreshTokenRepository refreshTokenRepository, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
 
@@ -102,13 +110,20 @@ public class SecurityConfig {
         http
                 .addFilterBefore(new JWTFilter(jwtUtil, userRepository, refreshTokenRepository), LoginFilter.class);
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, reissueService, refreshTokenRepository), UsernamePasswordAuthenticationFilter.class)
-
+                .addFilterAt(new LoginFilter(
+                                authenticationManager(authenticationConfiguration),
+                                jwtUtil,
+                                reissueService,
+                                refreshTokenRepository,
+                                accessExpiredMs,
+                                refreshExpiredMs),
+                        UsernamePasswordAuthenticationFilter.class)
                 .cors(cors -> cors
                         .configurationSource(request -> {
                             CorsConfiguration config = new CorsConfiguration();
                             config.setAllowCredentials(true);
-                            config.setAllowedOriginPatterns(List.of("https://snacknews.site", "http://localhost:5173", "https://snack-front-end.vercel.app"));
+                            // 수정된 부분: "https://snacknews.site" 대신 "*"를 추가하거나, 모든 패턴을 허용
+                            config.setAllowedOriginPatterns(Collections.singletonList("*"));
                             config.setAllowedHeaders(List.of(
                                     "Authorization",
                                     "Content-Type",
@@ -116,7 +131,7 @@ public class SecurityConfig {
                                     "Origin",
                                     "X-Requested-With"
                             ));
-                            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                             config.setExposedHeaders(List.of("Authorization"));
                             return config;
                         })

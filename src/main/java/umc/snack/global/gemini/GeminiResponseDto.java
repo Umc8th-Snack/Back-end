@@ -17,7 +17,7 @@ public class GeminiResponseDto {
         private Content content = new Content();
         private String finishReason = "";
         private int index = 0;
-        List<SafetyRating> safetyRatings;
+        List<SafetyRating> safetyRatings = Collections.emptyList();
     }
 
     @Getter
