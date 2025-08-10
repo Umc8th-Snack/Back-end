@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.dto.ApiResponse;
+import umc.snack.common.exception.CustomException;
+import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.feed.dto.ArticleInFeedDto;
 import umc.snack.service.feed.FeedService;
@@ -54,10 +56,19 @@ public class FeedController {
 
 
     @Operation(summary = "맞춤 피드에서 기사 제공", description = "사용자에게 맞춤화된 기사를 무한스크롤 조회합니다.")
+    @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫 페이지 조회 시에는 생략")
     @GetMapping("/personalized")
-    public ResponseEntity<?> getPersonalizedFeedArticles(
-            @RequestParam(defaultValue = "1") int page) {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("맞춤 피드 기사 제공 API - 개발 예정 (page: " + page + ")");
+    public ApiResponse<ArticleInFeedDto> getPersonalizedFeedArticles(
+            @RequestParam(required = false) Long lastArticleId,
+            @AuthenticationPrincipal Long userId) {
+
+        // 로그인 안되어있는 경우 예외처리
+        /*
+        if (userId == null) {
+            throw new CustomException(ErrorCode.AUTH_2101); // 인증 정보 누락
+        }
+*/
+        ArticleInFeedDto responseDto = feedService.getPersonalizedFeed(lastArticleId, userId);
+        return ApiResponse.onSuccess("FEED_9503", "맞춤 피드 조회에 성공하였습니다.", responseDto);
     }
 }
