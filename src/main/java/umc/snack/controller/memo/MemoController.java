@@ -73,19 +73,4 @@ public class MemoController {
                 null
         );
     }
-
-    /*
-    @Operation(summary = "사용자 작성 메모 목록 조회", description = "로그인한 사용자가 작성한 모든 메모 목록을 최신순으로 페이징하여 조회합니다.")
-    @GetMapping("")
-    public ApiResponse<MemoResponseDto.MemoListDto> getMemoByUser(
-            @RequestParam(defaultValue = "0") @Parameter(description = "조회할 페이지 번호", example = "0") int page,
-            @RequestParam(defaultValue = "10") @Parameter(description = "한 페이지에 보여줄 메모 개수", example = "10") int size,
-            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-        Long userId = customUserDetails.getUserId();
-
-        MemoResponseDto.MemoListDto resultDto = memoQueryService.getMemosByUser(userId, page, size);
-
-        return ApiResponse.onSuccess("MEMO_8504", "메모 목록을 조회했습니다.", resultDto);
-    }
-    */
 }

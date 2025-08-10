@@ -19,7 +19,7 @@ public class MyMemoController {
     @GetMapping("")
     public ApiResponse<MemoResponseDto.MemoListDto> getMyMemos(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "5") int size,
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         Long userId = customUserDetails.getUserId();
