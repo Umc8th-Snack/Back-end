@@ -170,7 +170,9 @@ public class ArticleSummarizeService {
                 // Gemini API 호출
                 String prompt = promptTemplate + crawled.getContent();
                 String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
-                log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), result);
+
+                String shortResult = result.length() > 1000 ? result.substring(0, 1000) + "...(truncated)" : result;
+                log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), shortResult);
                 log.info("=========================================================");
 
                 geminiParsingService.updateArticleSummary(article.getArticleId(), result);
