@@ -151,18 +151,25 @@ public class GoogleOAuthService {
     }
 
     private User findOrCreateUser(GoogleUserInfo userInfo) {
-        Optional<User> existingUser = userRepository.findByEmail(userInfo.getEmail());
-        
-        if (existingUser.isPresent()) {
-            return existingUser.get();
+        Optional<User> existingUserOpt = userRepository.findByEmail(userInfo.getEmail());
+
+        if (existingUserOpt.isPresent()) {
+            User existingUser = existingUserOpt.get();
+            // loginType이 설정되어 있지 않은 경우에만 GOOGLE로 세팅
+            if (existingUser.getLoginType() == null) {
+                existingUser.setLoginType(User.LoginType.GOOGLE);
+            }
+            // 이미 LOCAL이면 변경하지 않고 반환
+            return existingUser;
         } else {
-            // 새 사용자 생성 (소셜 로그인 사용자는 비밀번호가 없으므로 임시 값 설정)
+            // 신규 소셜 로그인 회원
             User newUser = User.builder()
                     .email(userInfo.getEmail())
                     .password("SOCIAL_LOGIN_USER") // 소셜 로그인 사용자 임시 패스워드
                     .nickname(userInfo.getName())
                     .role(User.Role.ROLE_USER)
                     .status(User.Status.ACTIVE)
+                    .loginType(User.LoginType.GOOGLE)
                     .build();
             return userRepository.save(newUser);
         }
