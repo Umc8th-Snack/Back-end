@@ -13,19 +13,9 @@ import umc.snack.domain.article.entity.ArticleCategory;
 import java.util.List;
 
 public interface FeedRepository extends JpaRepository<Article, Long> {
-    // 메인 피드에서 전체 카테고리 기사 조회
-    @Query("SELECT DISTINCT a FROM Article a " +
-            "LEFT JOIN FETCH a.articleCategories ac " +
-            "LEFT JOIN FETCH ac.category")
-    Slice<Article> findAllArticles(Pageable pageable);
 
-    // 메인 피드에서 전체 기사 다음 페이지 조회
-    @Query("SELECT DISTINCT a FROM Article a " +
-            "LEFT JOIN FETCH a.articleCategories ac " +
-            "LEFT JOIN FETCH ac.category " +
-            "WHERE a.articleId < :lastArticleId")
-    Slice<Article> findAllArticlesWithCursor(@Param("lastArticleId") Long lastArticleId, Pageable pageable);
-
+    /*
+// 카테고리 단일 선택
     // 카테고리별 첫 페이지 조회
     @Query("SELECT DISTINCT a FROM Article a " +
             "LEFT JOIN FETCH a.articleCategories ac " +
@@ -40,13 +30,22 @@ public interface FeedRepository extends JpaRepository<Article, Long> {
             "WHERE ac.category.categoryName = :categoryName AND a.articleId < :lastArticleId")
     Slice<Article> findByCategoryNameWithCursor(
             @Param("categoryName") String categoryName, @Param("lastArticleId") Long lastArticleId, Pageable pageable);
-
-    // 맞춤 피드 첫 페이지 조회
+*/
+    // 카테고리 다중 선택
+    // 카테고리별 첫 페이지 조회
     @Query("SELECT DISTINCT a FROM Article a " +
             "LEFT JOIN FETCH a.articleCategories ac " +
             "LEFT JOIN FETCH ac.category " +
-            "WHERE ac.category.categoryId IN :categoryIds")
-    Slice<Article> findByPersonalizedCategories(@Param("CategoryIds") List<Long> categoryIds, Pageable pageable);
+            "WHERE ac.category.categoryName IN :categoryNames")
+    Slice<Article> findByCategoryName(@Param("categoryNames") List<String> categoryNames, Pageable pageable);
+
+    // 카테고리별 다음 페이지 조회 (커서 기반)
+    @Query("SELECT DISTINCT a FROM Article a " +
+            "LEFT JOIN FETCH a.articleCategories ac " +
+            "LEFT JOIN FETCH ac.category " +
+            "WHERE ac.category.categoryName IN :categoryNames AND a.articleId < :lastArticleId")
+    Slice<Article> findByCategoryNameWithCursor(
+            @Param("categoryNames") List<String> categoryNames, @Param("lastArticleId") Long lastArticleId, Pageable pageable);
 
     // 맞춤피드 다음 페이지 조회
     @Query("SELECT DISTINCT a FROM Article a " +

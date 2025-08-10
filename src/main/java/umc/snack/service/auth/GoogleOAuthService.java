@@ -35,6 +35,12 @@ public class GoogleOAuthService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Value("${spring.jwt.token.expiration.access}")
+    private Long accessExpiredMs;
+
+    @Value("${spring.jwt.token.expiration.refresh}")
+    private Long refreshExpiredMs;
+
     @Value("${google.oauth.client-id:}")
     private String googleClientId;
 
@@ -60,8 +66,8 @@ public class GoogleOAuthService {
             User user = findOrCreateUser(userInfo);
             
             // 4. JWT 토큰 생성
-            String accessToken = jwtUtil.createJwt("access", user.getUserId(), user.getEmail(), user.getRole().name(), 1_800_000L); // 30분
-            String refreshToken = jwtUtil.createJwt("refresh", user.getUserId(), user.getEmail(), user.getRole().name(), 86_400_000L); // 1일
+            String accessToken = jwtUtil.createJwt("access", user.getUserId(), user.getEmail(), user.getRole().name(), accessExpiredMs); // 30분
+            String refreshToken = jwtUtil.createJwt("refresh", user.getUserId(), user.getEmail(), user.getRole().name(), refreshExpiredMs); // 1일
             
             // 5. Refresh Token 저장
             saveRefreshToken(user.getUserId(), user.getEmail(), refreshToken);
@@ -145,18 +151,25 @@ public class GoogleOAuthService {
     }
 
     private User findOrCreateUser(GoogleUserInfo userInfo) {
-        Optional<User> existingUser = userRepository.findByEmail(userInfo.getEmail());
-        
-        if (existingUser.isPresent()) {
-            return existingUser.get();
+        Optional<User> existingUserOpt = userRepository.findByEmail(userInfo.getEmail());
+
+        if (existingUserOpt.isPresent()) {
+            User existingUser = existingUserOpt.get();
+            // loginType이 설정되어 있지 않은 경우에만 GOOGLE로 세팅
+            if (existingUser.getLoginType() == null) {
+                existingUser.setLoginType(User.LoginType.GOOGLE);
+            }
+            // 이미 LOCAL이면 변경하지 않고 반환
+            return existingUser;
         } else {
-            // 새 사용자 생성 (소셜 로그인 사용자는 비밀번호가 없으므로 임시 값 설정)
+            // 신규 소셜 로그인 회원
             User newUser = User.builder()
                     .email(userInfo.getEmail())
                     .password("SOCIAL_LOGIN_USER") // 소셜 로그인 사용자 임시 패스워드
                     .nickname(userInfo.getName())
                     .role(User.Role.ROLE_USER)
                     .status(User.Status.ACTIVE)
+                    .loginType(User.LoginType.GOOGLE)
                     .build();
             return userRepository.save(newUser);
         }
@@ -171,7 +184,7 @@ public class GoogleOAuthService {
                 .userId(userId)
                 .email(email)
                 .refreshToken(refreshToken)
-                .expiration(LocalDateTime.now().plusSeconds(86_400_000L / 1000)) // 1일
+                .expiration(LocalDateTime.now().plusSeconds(refreshExpiredMs / 1000)) // 1일
                 .build();
         refreshTokenRepository.save(token);
     }

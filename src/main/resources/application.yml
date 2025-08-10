@@ -18,8 +18,10 @@ spring:
     token:
       secretKey: ${JWT_SECRET_KEY}
       expiration:
-        access: 14400000
-        refresh: 1209600000
+        access: 1800000 # 30분
+        refresh: 86400000 # 1일
+#        access: 60000 # 1분
+#        refresh: 180000 # 3분
 
 # 프론트엔드 URL 설정
 frontend:
@@ -46,3 +48,11 @@ google:
     client-id: ${GOOGLE_OAUTH_CLIENT_ID}
     client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
     redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI}
+
+# AWS S3 설정
+aws:
+  s3:
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+    region: ${AWS_REGION:ap-northeast-2}
+    bucket-name: ${AWS_S3_BUCKET}

@@ -2,6 +2,7 @@ package umc.snack.repository.auth;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import umc.snack.domain.auth.entity.RefreshToken;
+import umc.snack.domain.user.entity.User;
 
 import java.util.Optional;
 

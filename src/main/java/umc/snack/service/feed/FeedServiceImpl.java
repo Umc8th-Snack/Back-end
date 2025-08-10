@@ -1,10 +1,7 @@
 package umc.snack.service.feed;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.snack.common.exception.CustomException;
@@ -30,7 +27,9 @@ public class FeedServiceImpl implements FeedService{
     private static final int PAGE_SIZE = 16;
 
     @Override
-    public ArticleInFeedDto getMainFeedByCategory(String categoryName, Long lastArticleId, Long userId) {
+    public ArticleInFeedDto getMainFeedByCategories(List<String> categoryNames, Long lastArticleId, Long userId) {
+        /*
+        // 카테고리 단일 선택
         // 유효하지 않은 커서 값에 대한 예외처리
         if (lastArticleId != null && lastArticleId <= 0) {
             throw new CustomException(ErrorCode.FEED_9603);
@@ -40,24 +39,48 @@ public class FeedServiceImpl implements FeedService{
 
         Slice<Article> articleSlice;
 
-        // 전체 카테고리에 대해 조회하는 경우
-        if ("전체".equals(categoryName)) {
-            if (lastArticleId == null)
-                articleSlice = feedRepository.findAllArticles(pageable);
-            else
-                articleSlice = feedRepository.findAllArticlesWithCursor(lastArticleId, pageable);
-        } else { // 전체가 아닌, 특정 카테고리에 대해 조회하는 경우
-            if (!categoryRepository.existsByCategoryName(categoryName))
+        if (!categoryRepository.existsByCategoryName(categoryNames))
+            throw new CustomException(ErrorCode.FEED_9601);
+        if (lastArticleId == null) {
+            articleSlice = feedRepository.findByCategoryName(categoryNames, pageable);
+        } else {
+            articleSlice = feedRepository.findByCategoryNameWithCursor(categoryNames, lastArticleId, pageable);
+        }
+
+
+        // 공통 로직을 처리하는 헬퍼 메서드 호출
+        return buildFeedResponse(categoryNames, articleSlice);
+        */
+
+        // 카테고리 다중 선택
+        // 유효하지 않은 커서 값에 대한 예외처리
+        if (lastArticleId != null && lastArticleId <= 0) {
+            throw new CustomException(ErrorCode.FEED_9603);
+        }
+
+        // 유효하지 않은 카테고리에 대한 예외처리
+        for (String categoryName : categoryNames) {
+            if (!categoryRepository.existsByCategoryName(categoryName)) {
                 throw new CustomException(ErrorCode.FEED_9601);
-            if (lastArticleId == null) {
-                articleSlice = feedRepository.findByCategoryName(categoryName, pageable);
-            } else {
-                articleSlice = feedRepository.findByCategoryNameWithCursor(categoryName, lastArticleId, pageable);
             }
         }
 
-        // 공통 로직을 처리하는 헬퍼 메서드 호출
-        return buildFeedResponse(categoryName, articleSlice);
+        Pageable pageable = PageRequest.of(0, PAGE_SIZE, Sort.by("publishedAt").descending()
+                .and(Sort.by("articleId").descending()));
+
+        Slice<Article> articleSlice;
+
+        if (lastArticleId == null) {
+            articleSlice = feedRepository.findByCategoryName(categoryNames, pageable);
+        } else {
+            articleSlice = feedRepository.findByCategoryNameWithCursor(categoryNames, lastArticleId, pageable);
+        }
+
+        String responseCategoryName = String.join(",", categoryNames);
+        return buildFeedResponse(responseCategoryName, articleSlice);
+
+
+
     }
     private ArticleInFeedDto buildFeedResponse(String categoryName, Slice<Article> articleSlice) {
         if (!articleSlice.hasContent())

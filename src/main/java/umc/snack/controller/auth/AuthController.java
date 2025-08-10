@@ -52,20 +52,6 @@ public class AuthController {
         return reissueService.reissue(request, response);
     }
 
-    @Operation(summary = "카카오 소셜 로그인", description = "인가 코드를 전달하여 카카오 소셜 로그인을 시작합니다.")
-    @GetMapping("/kakao")
-    public ResponseEntity<?> kakaoLogin() {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
-    }
-
-    @Operation(summary = "카카오 소셜 로그인 콜백 주소", description = "카카오 인가코드로 로그인 처리를 완료합니다.")
-    @GetMapping("/kakao/callback")
-    public ResponseEntity<?> kakaoCallback(@RequestParam(required = false) String code) {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
-    }
-
     @Operation(summary = "구글 소셜 로그인 콜백", description = "구글 인증 서버로부터 받은 인가 코드로 소셜 로그인을 처리합니다.")
     @GetMapping("/google/callback")
     public ResponseEntity<ApiResponse<SocialLoginResponseDto>> googleCallback(@RequestParam(required = false) String code) {

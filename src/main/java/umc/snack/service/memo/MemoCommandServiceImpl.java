@@ -113,6 +113,7 @@ public class MemoCommandServiceImpl implements MemoCommandService {
         }
     }
 
+
     @Override
     @Transactional(readOnly = true)
     public MemoResponseDto.RedirectResultDto redirectToArticle(Long memoId, Long userId) {
@@ -139,6 +140,5 @@ public class MemoCommandServiceImpl implements MemoCommandService {
         return MemoResponseDto.RedirectResultDto.builder()
                 .redirectUrl(redirectUrl)
                 .build();
-
     }
 }
