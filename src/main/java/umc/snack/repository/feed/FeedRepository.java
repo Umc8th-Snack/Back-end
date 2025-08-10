@@ -1,6 +1,5 @@
 package umc.snack.repository.feed;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -47,10 +46,4 @@ public interface FeedRepository extends JpaRepository<Article, Long> {
     Slice<Article> findByCategoryNameWithCursor(
             @Param("categoryNames") List<String> categoryNames, @Param("lastArticleId") Long lastArticleId, Pageable pageable);
 
-    // 맞춤피드 다음 페이지 조회
-    @Query("SELECT DISTINCT a FROM Article a " +
-            "LEFT JOIN FETCH a.articleCategories ac " +
-            "LEFT JOIN FETCH ac.category " +
-            "WHERE ac.category.categoryId IN :categoryIds AND a.articleId < :lastArticleID")
-    Slice<Article> findByPersonalizedCategoriesWithCursor(@Param("categoryIds") List<Long> categoryIds, @Param("lastArticleId") Long lastArticleId, Pageable pageable);
 }
