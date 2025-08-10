@@ -108,7 +108,7 @@ public class ArticleSummarizeService {
 
     // 자동 재시도 로직 (모델 overload 발생 시 최대 10회 재시도)
     private String getCompletionWithRetry(String prompt, String model) {
-        int maxRetry = 10;
+        int maxRetry = 5;
         for (int i = 0; i < maxRetry; i++) {
             try {
                 return geminiService.getCompletion(prompt, model);
@@ -131,7 +131,7 @@ public class ArticleSummarizeService {
 
     public void getCompletion() {
         // 최근 5개만
-        PageRequest page = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt"));
+        PageRequest page = PageRequest.of(0, 7, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Article> articlePage = articleRepository.findBySummaryIsNull(page);
         List<Article> articles = articlePage.getContent();
 
@@ -161,6 +161,9 @@ public class ArticleSummarizeService {
                 // Gemini API 호출
                 String prompt = promptTemplate + crawled.getContent();
                 String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
+                log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), result);
+                log.info("=========================================================");
+
                 geminiParsingService.updateArticleSummary(article.getArticleId(), result);
             } catch (Exception e) {
                 // 실패 시 summary="FAILED"로 표기 (중복 재시도 방지)
@@ -168,7 +171,7 @@ public class ArticleSummarizeService {
                 log.error("요약 실패 - articleId: {}", article.getArticleId(), e);
             }
             try {
-                Thread.sleep(10_000);
+                Thread.sleep(20_000);
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 return;
