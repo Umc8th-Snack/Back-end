@@ -110,46 +110,46 @@ public class UserService {
     // 이메일 변경
     @Transactional
     public EmailChangeResponseDto changeEmail(Long userId, EmailChangeRequestDto req) {
-        // 0) 입력 정규화
+        // 입력 정규화
         String newEmail = req.getNewEmail() == null ? null : req.getNewEmail().trim().toLowerCase();
         String currentPw = req.getCurrentPassword() == null ? null : req.getCurrentPassword().trim();
 
-        // 1) 필수값 / 형식 검증
+        // 필수값 / 형식 검증
         if (newEmail == null || newEmail.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_2604); // "이메일 형식이 올바르지 않습니다." (필수 겸용)
+            throw new CustomException(ErrorCode.USER_2604); // 이메일 형식이 올바르지 않습니다.
         }
         if (!isValidEmail(newEmail)) {
             throw new CustomException(ErrorCode.USER_2604);
         }
         if (currentPw == null || currentPw.isEmpty()) {
-            throw new CustomException(ErrorCode.USER_2623); // "비밀번호가 일치하지 않습니다."(필수/불일치 공용)
+            throw new CustomException(ErrorCode.USER_2611); // 비밀번호가 일치하지 않습니다.
         }
 
-        // 2) 사용자 조회
+        // 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
 
-        // 3) 소셜 전용 계정은 이메일 변경 금지(코드 없으면 2615 같은 신규 코드 권장)
+        // 소셜 전용 계정은 이메일 변경 금지
         if (user.isSocialOnly()) {
-            throw new CustomException(ErrorCode.USER_2615); // 없다면 임시로 AUTH/USER 403 코드 사용
+            throw new CustomException(ErrorCode.USER_2615);
         }
 
         // 4) 현재 비밀번호 확인
         if (!passwordEncoder.matches(currentPw, user.getPassword())) {
-            throw new CustomException(ErrorCode.USER_2623);
+            throw new CustomException(ErrorCode.USER_2611);
         }
 
-        // 5) 동일 이메일 방지
+        // 동일 이메일 방지
         if (user.getEmail() != null && user.getEmail().equalsIgnoreCase(newEmail)) {
-            throw new CustomException(ErrorCode.USER_2610); // "기존 이메일과 동일합니다." (신규 추가 권장)
+            throw new CustomException(ErrorCode.USER_2616); // 기존 이메일과 동일합니다.
         }
 
-        // 6) 중복 이메일 검사
+        // 중복 이메일 검사
         if (userRepository.existsByEmail(newEmail)) {
             throw new CustomException(ErrorCode.USER_2601); // 이미 가입된 이메일
         }
 
-        // 7) 변경 + 리프레시 토큰 무효화
+        // 변경 + 리프레시 토큰 무효화
         user.changeEmail(newEmail);
         refreshTokenRepository.deleteByUserId(user.getUserId());
 
