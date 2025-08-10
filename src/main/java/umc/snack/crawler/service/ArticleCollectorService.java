@@ -53,7 +53,7 @@ public class ArticleCollectorService {
 
         Collections.shuffle(combos);
         for (String[] combo : combos) {
-            if (validLinks.size() >= 2) break;
+            if (validLinks.size() >= 5) break;
 
             String oid = combo[0];
             String sid1 = combo[1];
