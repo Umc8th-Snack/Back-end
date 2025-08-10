@@ -56,14 +56,6 @@ public class ArticleScheduler {
         }
     }
 
-    // 서버 기동 직후 1회 실행
-    @EventListener(ApplicationReadyEvent.class)
-    public void crawlOnceAfterStartup() {
-        crawlArticles();
-        // 크롤링 끝난 뒤 5분 후 요약 예약
-//        scheduleSummarizeAfter5Min();
-    }
-
     private void crawlArticles() {
         try {
             List<String> links = articleCollectorService.collectRandomArticleLinks(); // 링크 수집
