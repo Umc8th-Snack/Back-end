@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
+import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.auth.dto.LoginResponseDto;
 import umc.snack.domain.auth.entity.RefreshToken;
 import umc.snack.repository.auth.RefreshTokenRepository;
@@ -129,14 +130,14 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         // 예외 종류별로 코드/메시지 세팅 (실제 메시지는 예외 구현체에 따라 다를 수 있음)
         if (failed instanceof UsernameNotFoundException) {
-            code = "AUTH_2101";
-            message = "등록되지 않은 이메일입니다.";
+            code = ErrorCode.AUTH_2101.name();
+            message =  ErrorCode.AUTH_2101.getMessage();
         } else if (failed instanceof BadCredentialsException) {
-            code = "AUTH_2102";
-            message = "비밀번호가 올바르지 않습니다.";
+            code = ErrorCode.AUTH_2102.name();
+            message = ErrorCode.AUTH_2102.getMessage();
         } else {
-            code = "AUTH_2103";
-            message = "로그인에 실패하였습니다.";
+            code = ErrorCode.AUTH_2103.name();
+            message = ErrorCode.AUTH_2103.getMessage();
         }
 
         // ApiResponse 생성 (에러 상세 정보 필요 없으면 result만 null)
