@@ -7,9 +7,9 @@ import umc.snack.domain.article.entity.Article; // Article 엔티티 import
 @Getter
 public class RelatedArticleDto {
 
-    private Long articleId; // 엔티티의 articleId 타입이 Long이므로 맞춰줍니다.
+    private Long articleId;
     private String title;
-    private String imageUrl; // API 명세에서는 thumbnailUrl, 엔티티에서는 imageUrl
+    private String imageUrl;
 
     @Builder
     public RelatedArticleDto(Long articleId, String title, String imageUrl) {
