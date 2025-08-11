@@ -10,6 +10,7 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 import numpy as np
+import json
 
 # .env 파일 로드
 load_dotenv()
@@ -77,6 +78,24 @@ class ArticleDto(BaseModel):
 
 class SearchArticleResponseDto(BaseModel):
     articles: List[ArticleDto]
+
+# DTO 모델 정의
+class KeywordScore(BaseModel):
+    word: str
+    tfidf: float
+
+class ArticleSearchResult(BaseModel):
+    article_id: int
+    title: str
+    summary: Optional[str] = None
+    score: float
+    keywords: List[KeywordScore]
+    publishedAt: Optional[str]
+
+class SearchResponse(BaseModel):
+    query: str
+    totalCount: int
+    articles: List[ArticleSearchResult]
 
 # --- 애플리케이션 이벤트 핸들러 ---
 
@@ -170,128 +189,62 @@ async def health_check():
 
 @app.post("/api/nlp/vectorize/articles")
 async def vectorize_articles_from_db(article_ids: List[int]):
-    """
-    기사 ID 목록을 받아 DB에서 데이터를 조회하고 벡터화하여 저장합니다.
-
-    article_semantic_vectors 테이블 구조:
-    - article_id (PK)
-    - vector
-    - keywords
-    - model_version
-    - created_at
-    - updated_at
-    """
     if not article_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="article_ids는 필수입니다."
-        )
-
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="article_ids는 필수입니다.")
     if not db_pool:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="데이터베이스 연결이 없습니다."
-        )
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="데이터베이스 연결이 없습니다.")
 
     async with db_pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cursor:
-            processed_count = 0
-            failed_ids = []
-
+            processed_count, failed_ids = 0, []
             for article_id in article_ids:
                 try:
-                    # 1. DB에서 기사 정보 조회
-                    await cursor.execute("""
-                        SELECT article_id, title, summary 
-                        FROM articles 
-                        WHERE article_id = %s
-                    """, (article_id,))
-
+                    await cursor.execute("SELECT article_id, title, summary FROM articles WHERE article_id = %s", (article_id,))
                     article = await cursor.fetchone()
-
                     if not article:
                         logger.warning(f"기사 ID {article_id}를 찾을 수 없습니다.")
                         failed_ids.append(article_id)
                         continue
 
-                    # 텍스트 결합
-                    text = f"{article['title']} {article['summary']}"
+                    text = article.get('summary') or ''
 
-                    # 2. NLP 처리
-                    if nlp_processor:
-                        # TF-IDF 키워드 추출
+                    tfidf_keywords = {}
+                    sbert_vectors = {}
+
+                    # --- 🚨 여기가 핵심 수정 사항입니다 ---
+                    if not text.strip():
+                        # summary가 비어있으면, 벡터와 키워드를 모두 빈 딕셔너리로 처리
+                        logger.info(f"기사 {article_id}는 summary가 없어 빈 값으로 처리합니다.")
+                    elif nlp_processor:
+                        # summary가 있을 때만 NLP 처리
                         tfidf_keywords = await nlp_processor.extract_tfidf_keywords(text, top_k=10)
-
-                        # SBERT 벡터 생성
                         top_keywords = list(tfidf_keywords.keys())
-                        sbert_vectors = await nlp_processor.generate_sbert_vectors(top_keywords)
+                        if top_keywords:
+                            sbert_vectors = await nlp_processor.generate_sbert_vectors(top_keywords)
 
-                        # 가중 평균 벡터 계산
-                        weighted_vector = await calculate_weighted_average(sbert_vectors, tfidf_keywords)
-                    else:
-                        # nlp_processor가 없으면 더미 데이터
-                        tfidf_keywords = {"테스트": 1.0}
-                        weighted_vector = [0.0] * 384
+                    vector_json_str = json.dumps(sbert_vectors)
+                    keywords_json_str = json.dumps(tfidf_keywords)
 
-                    # 3. 벡터를 문자열로 변환
-                    vector_str = ','.join(map(str, weighted_vector))
-                    keywords_str = ','.join([f"{k}:{v:.4f}" for k, v in tfidf_keywords.items()])
-
-                    # 4. 기존 벡터 확인 (article_id로 직접 확인)
-                    await cursor.execute("""
-                        SELECT article_id 
-                        FROM article_semantic_vectors 
-                        WHERE article_id = %s
-                    """, (article_id,))
-
+                    await cursor.execute("SELECT article_id FROM article_semantic_vectors WHERE article_id = %s", (article_id,))
                     existing = await cursor.fetchone()
-
-                    # 5. DB에 저장 또는 업데이트
                     if existing:
-                        # 기존 레코드 업데이트
-                        await cursor.execute("""
-                            UPDATE article_semantic_vectors 
-                            SET vector = %s, 
-                                keywords = %s,
-                                model_version = %s,
-                                updated_at = NOW()
-                            WHERE article_id = %s
-                        """, (
-                            f"[{vector_str}]",
-                            keywords_str,
-                            "tfidf-sbert-v1",
-                            article_id
-                        ))
-                        logger.info(f"기사 {article_id} 벡터 업데이트 완료")
+                        await cursor.execute(
+                            "UPDATE article_semantic_vectors SET vector = %s, keywords = %s, model_version = %s, updated_at = NOW() WHERE article_id = %s",
+                            (vector_json_str, keywords_json_str, "sbert-keywords-v3", article_id)
+                        )
+                        logger.info(f"기사 {article_id} 키워드 벡터 업데이트 완료")
                     else:
-                        # 새 레코드 삽입
-                        await cursor.execute("""
-                            INSERT INTO article_semantic_vectors 
-                            (article_id, vector, keywords, model_version, created_at, updated_at)
-                            VALUES (%s, %s, %s, %s, NOW(), NOW())
-                        """, (
-                            article_id,
-                            f"[{vector_str}]",
-                            keywords_str,
-                            "tfidf-sbert-v1"
-                        ))
-                        logger.info(f"기사 {article_id} 벡터 신규 저장 완료")
-
+                        await cursor.execute(
+                            "INSERT INTO article_semantic_vectors (article_id, vector, keywords, model_version, created_at, updated_at) VALUES (%s, %s, %s, %s, NOW(), NOW())",
+                            (article_id, vector_json_str, keywords_json_str, "sbert-keywords-v3")
+                        )
+                        logger.info(f"기사 {article_id} 키워드 벡터 신규 저장 완료")
                     processed_count += 1
-
                 except Exception as e:
-                    logger.error(f"기사 {article_id} 처리 중 오류: {e}")
+                    logger.error(f"기사 {article_id} 처리 중 오류: {e}", exc_info=True)
                     failed_ids.append(article_id)
-                    # 개별 트랜잭션 실패 시 롤백하지 않고 계속 진행
                     continue
-
-            return {
-                "status": "completed",
-                "total_requested": len(article_ids),
-                "processed": processed_count,
-                "failed": failed_ids,
-                "message": f"{processed_count}개 기사 벡터화 완료"
-            }
+            return {"status": "completed", "total_requested": len(article_ids), "processed": processed_count, "failed": failed_ids}
 
 @app.post("/api/nlp/vectorize/batch")
 async def batch_vectorize_articles(
@@ -510,7 +463,287 @@ async def calculate_weighted_average(
 
     return weighted_avg.tolist()
 
+@app.post("/api/nlp/search")
+async def search_articles_semantic(
+        query: str,
+        page: int = Query(0, ge=0, description="페이지 번호"),
+        size: int = Query(10, ge=1, le=50, description="페이지 크기"),
+        threshold: float = Query(0.3, ge=0, le=1, description="최소 유사도 임계값")
+):
+    """
+    의미 기반 기사 검색
+    1. 검색어를 TF-IDF로 키워드 추출
+    2. 키워드들의 SBERT 벡터 생성
+    3. TF-IDF 가중 평균으로 쿼리 벡터 생성
+    4. DB의 모든 기사 벡터와 코사인 유사도 계산
+    5. 유사도 높은 순으로 정렬하여 반환
+    """
 
+    if not query or not query.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="검색어를 입력해주세요."
+        )
+
+    if not db_pool:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="데이터베이스 연결이 없습니다."
+        )
+
+    logger.info(f"🔍 의미 기반 검색 시작 - 검색어: '{query}', 페이지: {page}, 크기: {size}")
+
+    try:
+        # 1. 검색어 벡터화
+        query_vector = await vectorize_raw_query(query)
+
+        if query_vector is None:
+            logger.error("검색어 벡터화 실패")
+            return SearchResponse(query=query, totalCount=0, articles=[])
+
+        # 2. DB에서 모든 기사와 벡터 조회
+        async with db_pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                # 모든 기사와 벡터 조회
+                await cursor.execute("""
+                    SELECT 
+                        a.article_id,
+                        a.title,
+                        a.summary,
+                        a.published_at,
+                        asv.vector,
+                        asv.keywords
+                    FROM articles a
+                    INNER JOIN article_semantic_vectors asv 
+                        ON a.article_id = asv.article_id
+                    WHERE asv.vector IS NOT NULL
+                """)
+
+                all_articles = await cursor.fetchall()
+
+                if not all_articles:
+                    logger.warning("벡터화된 기사가 없습니다.")
+                    return SearchResponse(query=query, totalCount=0, articles=[])
+
+                # 3. 코사인 유사도 계산 (새로운 로직)
+                search_results = []
+                for article in all_articles:
+                    try:
+                        # DB에 저장된 벡터(키워드별 벡터 JSON)와 키워드(TF-IDF 점수 JSON) 로드
+                        keyword_vectors = json.loads(article['vector'] or '{}')
+                        tfidf_scores = json.loads(article['keywords'] or '{}')
+
+                        if not keyword_vectors:
+                            continue
+
+                        # 각 키워드 벡터와 검색어 벡터의 유사도 계산
+                        similarities = [
+                            cosine_similarity(query_vector, np.array(vec))
+                            for vec in keyword_vectors.values()
+                        ]
+
+                        # 가장 높은 유사도 점수를 이 기사의 최종 점수로 결정
+                        max_similarity = max(similarities) if similarities else 0.0
+
+                        if max_similarity >= threshold:
+                            # 키워드 DTO 생성 (이제 tfidf_scores 딕셔너리 사용)
+                            keywords_dto = [
+                                KeywordScore(word=w, tfidf=s)
+                                for w, s in tfidf_scores.items()
+                            ]
+
+                            search_results.append({
+                                'article_id': article['article_id'],
+                                'title': article['title'],
+                                'summary': article['summary'],
+                                'score': float(max_similarity),
+                                'keywords': keywords_dto,
+                                'publishedAt': article['published_at'].isoformat() if article['published_at'] else None
+                            })
+                    except Exception as e:
+                        logger.warning(f"기사 {article['article_id']} 검색 처리 중 오류: {e}")
+                        continue
+
+
+                # 4. 유사도 기준 내림차순 정렬
+                search_results.sort(key=lambda x: x['score'], reverse=True)
+
+                # 5. 페이징 처리
+                total_count = len(search_results)
+                start_idx = page * size
+                end_idx = start_idx + size
+                paginated_results = search_results[start_idx:end_idx]
+
+                # 6. 응답 형식으로 변환
+                articles = []
+                for result in paginated_results:
+                    articles.append(ArticleSearchResult(
+                        article_id=result['article_id'],
+                        title=result['title'],
+                        summary=result['summary'],
+                        score=result['score'],
+                        keywords=result['keywords'],
+                        publishedAt=result['publishedAt']
+                    ))
+
+                logger.info(f"✅ 검색 완료 - 전체: {total_count}개, 반환: {len(articles)}개")
+
+                return SearchResponse(
+                    query=query,
+                    totalCount=total_count,
+                    articles=articles
+                )
+
+    except Exception as e:
+        logger.error(f"검색 중 오류 발생: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"검색 처리 중 오류가 발생했습니다: {str(e)}"
+        )
+'''
+async def vectorize_query(query: str) -> Optional[np.ndarray]:
+    """
+    검색어를 의미 벡터로 변환
+    1. TF-IDF로 상위 키워드 추출
+    2. 키워드들의 SBERT 벡터 생성
+    3. TF-IDF 점수를 가중치로 사용한 가중 평균 계산
+    """
+    try:
+        if not nlp_processor:
+            logger.error("NLP 프로세서가 초기화되지 않았습니다.")
+            return None
+
+        # 1. TF-IDF 키워드 추출 (상위 5개)
+        tfidf_keywords = await nlp_processor.extract_tfidf_keywords(query, top_k=5)
+
+        if not tfidf_keywords:
+            logger.warning(f"키워드 추출 실패: {query}")
+            # 키워드가 없으면 전체 쿼리를 하나의 키워드로 사용
+            tfidf_keywords = {query: 1.0}
+
+        # 2. 키워드들의 SBERT 벡터 생성
+        keywords_list = list(tfidf_keywords.keys())
+        sbert_vectors = await nlp_processor.generate_sbert_vectors(keywords_list)
+
+        if not sbert_vectors:
+            logger.error("SBERT 벡터 생성 실패")
+            return None
+
+        # 3. TF-IDF 가중 평균 계산
+        vectors = []
+        weights = []
+
+        for keyword in keywords_list:
+            if keyword in sbert_vectors and keyword in tfidf_keywords:
+                vectors.append(sbert_vectors[keyword])
+                weights.append(tfidf_keywords[keyword])
+
+        if not vectors:
+            logger.error("벡터가 생성되지 않았습니다.")
+            return None
+
+        # numpy 배열로 변환
+        vectors = np.array(vectors)
+        weights = np.array(weights)
+
+        # 가중치 정규화
+        weights = weights / weights.sum()
+
+        # 가중 평균 계산
+        weighted_avg = np.average(vectors, axis=0, weights=weights)
+
+        # 벡터 정규화 (단위 벡터로)
+        norm = np.linalg.norm(weighted_avg)
+        if norm > 0:
+            weighted_avg = weighted_avg / norm
+
+        logger.info(f"쿼리 벡터 생성 완료 - 키워드: {keywords_list}")
+        return weighted_avg
+
+    except Exception as e:
+        logger.error(f"쿼리 벡터화 중 오류: {e}")
+        return None '''
+
+async def vectorize_raw_query(query: str) -> Optional[np.ndarray]:
+    """검색어 전체를 하나의 벡터로 변환"""
+    if not nlp_processor:
+        logger.error("NLP 프로세서가 초기화되지 않았습니다.")
+        return None
+
+    vector_dict = await nlp_processor.generate_sbert_vectors([query])
+    if not vector_dict or query not in vector_dict:
+        logger.error(f"검색어 '{query}'에 대한 SBERT 벡터 생성 실패")
+        return None
+
+    return np.array(vector_dict[query])
+
+def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
+    """두 벡터 간의 코사인 유사도 계산"""
+    try:
+        # 벡터가 이미 정규화되어 있다면 단순 내적만 계산
+        dot_product = np.dot(vec1, vec2)
+
+        # 안전을 위해 norm 체크
+        norm1 = np.linalg.norm(vec1)
+        norm2 = np.linalg.norm(vec2)
+
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+
+        similarity = dot_product / (norm1 * norm2)
+
+        # 부동소수점 오차로 인한 범위 벗어남 방지
+        return max(-1.0, min(1.0, similarity))
+
+    except Exception as e:
+        logger.error(f"코사인 유사도 계산 오류: {e}")
+        return 0.0
+
+def parse_keywords(keywords_str: str) -> List[KeywordScore]:
+    """키워드 문자열을 파싱하여 KeywordScore 리스트로 변환"""
+    if not keywords_str:
+        return []
+
+    keywords = []
+    try:
+        # "word1:0.5,word2:0.3" 형식 파싱
+        pairs = keywords_str.split(',')
+        for pair in pairs[:5]:  # 상위 5개만
+            if ':' in pair:
+                word, score = pair.split(':', 1)
+                keywords.append(KeywordScore(
+                    word=word.strip(),
+                    tfidf=float(score)
+                ))
+    except Exception as e:
+        logger.warning(f"키워드 파싱 오류: {e}")
+
+    return keywords
+
+# 테스트용 엔드포인트
+@app.get("/api/test/search/{query}")
+async def test_search(query: str):
+    """간단한 검색 테스트"""
+    try:
+        result = await search_articles_semantic(query, page=0, size=5)
+        return {
+            "status": "success",
+            "query": query,
+            "found": result.totalCount,
+            "top_results": [
+                {
+                    "id": article.article_id,
+                    "title": article.title[:50],
+                    "score": article.score
+                }
+                for article in result.articles
+            ]
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 # --- 메인 실행 ---
 
