@@ -23,6 +23,13 @@ spring:
 #        access: 60000 # 1분
 #        refresh: 180000 # 3분
 
+  cache:
+    type: caffeine # 사용할 캐시 엔진 : 카페인
+    caffeine:
+      spec: maximumSize=100,expireAfterWrite=8h # 캐시 세부 설정
+
+
+
 # 프론트엔드 URL 설정
 frontend:
   url: ${FRONTEND_URL:http://localhost:3000}
@@ -56,3 +63,4 @@ aws:
     secret-key: ${AWS_SECRET_KEY}
     region: ${AWS_REGION:ap-northeast-2}
     bucket-name: ${AWS_S3_BUCKET}
+

@@ -1,17 +1,25 @@
 package umc.snack.service.article;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.article.dto.ArticleDto;
+import umc.snack.domain.article.dto.RelatedArticleDto;
 import umc.snack.domain.article.entity.Article;
+import umc.snack.domain.feed.entity.Category;
 import umc.snack.domain.term.dto.TermResponseDto;
 import umc.snack.domain.term.entity.ArticleTerm;
 import umc.snack.domain.term.entity.Term;
 import umc.snack.repository.article.ArticleRepository;
 import umc.snack.repository.article.ArticleTermRepository;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -74,4 +82,38 @@ public class ArticleService {
             );
         }).collect(Collectors.toList());
     }
+
+    private static final int RELATED_ARTICLE_COUNT = 3; // 관련 기사 개수
+
+    @Cacheable(value="related-articles", key="#articleId")
+    @Transactional(readOnly = true)
+    public List<RelatedArticleDto> findRelatedArticles(Long articleId) {
+        // 1. 기준 기사 조회
+        Article sourceArticle = articleRepository.findById(articleId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ARTICLE_9105_RELATED));
+
+        // 2. 기준 기사의 카테고리가 없으면 빈 리스트 반환
+        if (sourceArticle.getArticleCategories().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 3. 기준 카테고리 추출
+        Category targetCategory = sourceArticle.getArticleCategories().get(0).getCategory();
+
+        // 4. Pageable 객체 생성
+        Pageable pageable = PageRequest.of(0, RELATED_ARTICLE_COUNT, Sort.by(Sort.Direction.DESC, "publishedAt"));
+
+        // 5. 쿼리 메소드 호출
+        List<Article> relatedArticles = articleRepository.findByArticleCategories_CategoryAndArticleIdNot(
+                targetCategory,
+                articleId,
+                pageable
+        );
+
+        // 6. DTO로 변환하여 반환
+        return relatedArticles.stream()
+                .map(RelatedArticleDto::fromEntity)
+                .collect(Collectors.toList());
+    }
+
 }
