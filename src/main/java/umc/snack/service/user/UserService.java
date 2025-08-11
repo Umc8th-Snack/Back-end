@@ -59,6 +59,7 @@ public class UserService {
                 .nickname(request.getNickname())
                 .status(User.Status.ACTIVE)
                 .role(User.Role.ROLE_USER)
+                .loginType(User.LoginType.LOCAL)
                 .build();
 
         userRepository.save(user);

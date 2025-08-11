@@ -21,22 +21,22 @@ import java.util.List;
 @Tag(name = "Feed", description = "피드 관련 API")
 public class FeedController {
     private final FeedService feedService;
-/*
-    카테고리 단일 선택
-    @Operation(summary = "메인 피드에서 기사 제공", description = "메인 피드에서 특정 카테고리의 기사를 무한스크롤 조회합니다.")
-    @Parameters({
-            @Parameter(name = "category", description = "조회할 카테고리 이름 (예: IT/과학)", required = true),
-            @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
-    })
-    @GetMapping("/main")
-    public ApiResponse<ArticleInFeedDto> getMainFeedArticles(
-            @RequestParam String category,
-            @RequestParam(required = false) Long lastArticleId,
-            @AuthenticationPrincipal Long userId) {
-        ArticleInFeedDto responseDto = feedService.getMainFeedByCategory(category, lastArticleId, userId);
-        return ApiResponse.onSuccess("FEED_9501", "메인 피드 조회에 성공하였습니다", responseDto);
-    }
- */
+    /*
+        카테고리 단일 선택
+        @Operation(summary = "메인 피드에서 기사 제공", description = "메인 피드에서 특정 카테고리의 기사를 무한스크롤 조회합니다.")
+        @Parameters({
+                @Parameter(name = "category", description = "조회할 카테고리 이름 (예: IT/과학)", required = true),
+                @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
+        })
+        @GetMapping("/main")
+        public ApiResponse<ArticleInFeedDto> getMainFeedArticles(
+                @RequestParam String category,
+                @RequestParam(required = false) Long lastArticleId,
+                @AuthenticationPrincipal Long userId) {
+            ArticleInFeedDto responseDto = feedService.getMainFeedByCategory(category, lastArticleId, userId);
+            return ApiResponse.onSuccess("FEED_9501", "메인 피드 조회에 성공하였습니다", responseDto);
+        }
+     */
     // 카테고리 다중 선택
     @Operation(summary = "메인 피드에서 기사 제공", description = "메인 피드에서 특정 카테고리의 기사를 무한스크롤 조회합니다.")
     @Parameters({

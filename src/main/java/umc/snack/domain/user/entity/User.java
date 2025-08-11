@@ -83,6 +83,9 @@ public class User extends BaseEntity {
     public boolean isSocialOnly() {
         return this.loginType != LoginType.LOCAL;
     }
+    public void setLoginType(LoginType loginType) {
+        this.loginType = loginType;
+    }
 
     public enum Status {
         ACTIVE,
