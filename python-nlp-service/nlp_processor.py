@@ -220,20 +220,47 @@ async def process_all_articles(reprocess: bool = False) -> Tuple[int, int]:
         conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
+                # 먼저 전체 기사 수 확인
+                cursor.execute("SELECT COUNT(*) FROM articles WHERE summary IS NOT NULL AND summary != ''")
+                total_articles_with_summary = cursor.fetchone()[0]
+                logger.info(f"summary가 있는 전체 기사 수: {total_articles_with_summary}")
+
+                # 이미 처리된 기사 수 확인
+                cursor.execute("SELECT COUNT(*) FROM article_semantic_vectors")
+                already_processed = cursor.fetchone()[0]
+                logger.info(f"이미 벡터화된 기사 수: {already_processed}")
+
+                # articles 테이블의 PK 컬럼명 확인 (일반적으로 id, article_id, no 등)
+                cursor.execute("DESCRIBE articles")
+                columns = cursor.fetchall()
+                pk_column = None
+                for col in columns:
+                    if 'PRI' in col[3] or col[0].lower() in ['id', 'article_id', 'no']:
+                        pk_column = col[0]
+                        break
+
+                if not pk_column:
+                    # 첫 번째 컬럼을 PK로 가정
+                    pk_column = columns[0][0]
+
+                logger.info(f"사용할 PK 컬럼: {pk_column}")
+
                 # 처리할 기사들 조회
                 if reprocess:
-                    query = """
-                    SELECT a.article_id, a.summary FROM articles a
+                    query = f"""
+                    SELECT a.{pk_column}, a.summary FROM articles a
                     WHERE a.summary IS NOT NULL AND a.summary != ''
                     """
+                    logger.info("재처리 모드: 모든 기사를 다시 처리합니다.")
                 else:
-                    query = """
-                    SELECT a.article_id, a.summary FROM articles a
-                    LEFT JOIN article_semantic_vectors asv ON a.article_id = asv.article_id
-                    LEFT JOIN article_tfidf_vectors atv ON a.article_id = atv.article_id
+                    query = f"""
+                    SELECT a.{pk_column}, a.summary FROM articles a
+                    LEFT JOIN article_semantic_vectors asv ON a.{pk_column} = asv.article_id
+                    LEFT JOIN article_tfidf_vectors atv ON a.{pk_column} = atv.article_id
                     WHERE a.summary IS NOT NULL AND a.summary != ''
                     AND (asv.article_id IS NULL OR atv.article_id IS NULL)
                     """
+                    logger.info("일반 모드: 벡터가 없는 기사만 처리합니다.")
 
                 cursor.execute(query)
                 articles = cursor.fetchall()
@@ -243,15 +270,22 @@ async def process_all_articles(reprocess: bool = False) -> Tuple[int, int]:
 
                 logger.info(f"처리할 기사 수: {total_count}")
 
+                if total_count == 0:
+                    logger.warning("처리할 기사가 없습니다!")
+                    return 0, total_articles_with_summary
+
                 # 배치로 처리
                 batch_size = 30  # SBERT 처리로 인해 배치 크기 감소
                 feature_names = tfidf_vectorizer.get_feature_names_out()
 
                 for i in range(0, len(articles), batch_size):
                     batch = articles[i:i + batch_size]
+                    logger.info(f"배치 {i//batch_size + 1} 처리 중... ({len(batch)}개 기사)")
 
                     for article_id, summary in batch:
                         try:
+                            logger.debug(f"기사 {article_id} 처리 중...")
+
                             # TF-IDF 벡터화
                             tfidf_matrix = tfidf_vectorizer.transform([summary])
                             tfidf_vector = tfidf_matrix.toarray()[0]
@@ -270,6 +304,7 @@ async def process_all_articles(reprocess: bool = False) -> Tuple[int, int]:
                             sbert_keywords = {}
                             if tfidf_keywords:
                                 keywords_list = list(tfidf_keywords.keys())
+                                logger.debug(f"기사 {article_id}: {len(keywords_list)}개 키워드로 SBERT 벡터 생성 중...")
                                 sbert_vectors = sbert_model.encode(keywords_list)
 
                                 for keyword, vector in zip(keywords_list, sbert_vectors):
@@ -281,7 +316,7 @@ async def process_all_articles(reprocess: bool = False) -> Tuple[int, int]:
                             full_tfidf_json = json.dumps(tfidf_vector.tolist())
 
                             # 디버깅을 위한 로깅
-                            logger.debug(f"기사 {article_id}: TF-IDF 키워드 {len(tfidf_keywords)}개, SBERT 벡터 {len(sbert_keywords)}개")
+                            logger.info(f"기사 {article_id}: TF-IDF 키워드 {len(tfidf_keywords)}개, SBERT 벡터 {len(sbert_keywords)}개")
 
                             # TF-IDF 벡터 저장/업데이트 (전체 벡터 저장)
                             tfidf_upsert_query = """
@@ -304,6 +339,7 @@ async def process_all_articles(reprocess: bool = False) -> Tuple[int, int]:
                             cursor.execute(sbert_upsert_query, (article_id, sbert_keywords_json, tfidf_keywords_json))
 
                             processed_count += 1
+                            logger.debug(f"기사 {article_id} 처리 완료!")
 
                         except Exception as e:
                             logger.error(f"기사 {article_id} 처리 실패: {e}")
@@ -311,8 +347,9 @@ async def process_all_articles(reprocess: bool = False) -> Tuple[int, int]:
 
                     # 배치 커밋
                     conn.commit()
-                    logger.info(f"진행률: {min(i + batch_size, total_count)}/{total_count}")
+                    logger.info(f"배치 커밋 완료. 진행률: {min(i + batch_size, total_count)}/{total_count}")
 
+                logger.info(f"벡터화 처리 완료! 총 {processed_count}개 기사 처리됨")
                 return processed_count, total_count
 
         finally:
@@ -364,10 +401,22 @@ async def find_similar_articles(query_text: str, top_k: int = 5,
         conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
-                cursor.execute("""
-                    SELECT a.id, a.title, a.summary, asv.vector, asv.keywords
+                # articles 테이블의 PK 컬럼명 확인
+                cursor.execute("DESCRIBE articles")
+                columns = cursor.fetchall()
+                pk_column = None
+                for col in columns:
+                    if 'PRI' in col[3] or col[0].lower() in ['id', 'article_id', 'no']:
+                        pk_column = col[0]
+                        break
+
+                if not pk_column:
+                    pk_column = columns[0][0]
+
+                cursor.execute(f"""
+                    SELECT a.{pk_column}, a.title, a.summary, asv.vector, asv.keywords
                     FROM articles a
-                    INNER JOIN article_semantic_vectors asv ON a.id = asv.article_id
+                    INNER JOIN article_semantic_vectors asv ON a.{pk_column} = asv.article_id
                     WHERE asv.vector IS NOT NULL
                 """)
                 articles = cursor.fetchall()
