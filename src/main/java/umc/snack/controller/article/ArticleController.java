@@ -94,7 +94,7 @@ public class ArticleController {
         List<RelatedArticleDto> relatedArticles = articleService.findRelatedArticles(articleId);
         if (relatedArticles.isEmpty()) {
             return ResponseEntity.ok(
-                    ApiResponse.onSuccess("ARTICLE_9004", "해당 기사와 관련된 기사가 없습니다.", null));
+                    ApiResponse.onSuccess("ARTICLE_9004", "해당 기사와 관련된 기사가 없습니다.", List.of()));
         } else {
             return ResponseEntity.ok(
                     ApiResponse.onSuccess("ARTICLE_9003", "관련 기사 조회에 성공하였습니다.", relatedArticles)
