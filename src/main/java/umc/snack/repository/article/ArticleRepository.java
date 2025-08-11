@@ -16,7 +16,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 //    List<Article> findBySummaryIsNull();
     Page<Article> findBySummaryIsNull(Pageable pageable);
 
-    List<Article> findByArticleCategories_CategoryAndArticleIdNot(Category category, Long articleId, Pageable pageable);
+    List<Article> findDistinctByArticleCategories_CategoryAndArticleIdNot(Category category, Long articleId, Pageable pageable);
     // articleCategory의 category 이면서(AND) articleId 는 아닌 article을 찾아다오
     // Pageable 객체에 설정된 정렬 순서와 갯수 만큼, List<Article> 형태로!
 }

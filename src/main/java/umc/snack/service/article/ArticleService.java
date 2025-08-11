@@ -104,7 +104,7 @@ public class ArticleService {
         Pageable pageable = PageRequest.of(0, RELATED_ARTICLE_COUNT, Sort.by(Sort.Direction.DESC, "publishedAt"));
 
         // 5. 쿼리 메소드 호출
-        List<Article> relatedArticles = articleRepository.findByArticleCategories_CategoryAndArticleIdNot(
+        List<Article> relatedArticles = articleRepository.findDistinctByArticleCategories_CategoryAndArticleIdNot(
                 targetCategory,
                 articleId,
                 pageable
