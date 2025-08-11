@@ -24,14 +24,17 @@ public class TermReport extends BaseEntity {
     private Long reportId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_tr_user"))
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tr_user"))
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "article_id", foreignKey = @ForeignKey(name = "fk_tr_article"))
+    @JoinColumn(name = "article_id", nullable = false, foreignKey = @ForeignKey(name = "fk_tr_article"))
     private Article article;
 
     @Builder.Default
     @Column(name="is_reported", nullable=false)
     private Boolean isReported = true;
+
+    @Column(name = "reason", columnDefinition = "TEXT")
+    private String reason;
 }
