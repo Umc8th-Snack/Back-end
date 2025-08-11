@@ -26,7 +26,13 @@ spring:
   cache:
     type: caffeine # 사용할 캐시 엔진 : 카페인
     caffeine:
-      spec: maximumSize=100,expireAfterWrite=8h # 캐시 세부 설정
+      spec: maximumSize=100,expireAfterWrite=8h,recordStats # 캐시 세부 설정
+
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: "health,info,caches" # health, info, caches 엔드포인트를 노출
 
 
 
