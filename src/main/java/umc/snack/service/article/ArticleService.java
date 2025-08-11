@@ -107,7 +107,8 @@ public class ArticleService {
         Category targetCategory = sourceArticle.getArticleCategories().get(0).getCategory();
 
         // 4. Pageable 객체 생성
-        Pageable pageable = PageRequest.of(0, RELATED_ARTICLE_COUNT, Sort.by(Sort.Direction.DESC, "publishedAt"));
+        Pageable pageable = PageRequest.of(0, RELATED_ARTICLE_COUNT,
+                Sort.by("publishedAt").descending().and(Sort.by("articleId").descending()));
 
         // 5. 쿼리 메소드 호출
         List<Article> relatedArticles = articleRepository.findDistinctByArticleCategories_CategoryAndArticleIdNot(
