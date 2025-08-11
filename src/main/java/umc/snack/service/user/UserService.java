@@ -91,6 +91,9 @@ public class UserService {
         }
 
         // 비밀번호 검증 로직
+        if (password == null || password.isBlank()) {
+            throw new CustomException(ErrorCode.USER_2611);
+        }
         if (!passwordEncoder.matches(password, managedUser.getPassword())) {
             throw new CustomException(ErrorCode.USER_2611);
         }
@@ -134,7 +137,10 @@ public class UserService {
             throw new CustomException(ErrorCode.USER_2615);
         }
 
-        // 4) 현재 비밀번호 확인
+        // 현재 비밀번호 확인
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new CustomException(ErrorCode.USER_2612); // 비번 없음(소셜/이상치)
+        }
         if (!passwordEncoder.matches(currentPw, user.getPassword())) {
             throw new CustomException(ErrorCode.USER_2611);
         }
