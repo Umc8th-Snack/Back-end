@@ -88,6 +88,12 @@ public class ArticleService {
     @Cacheable(value="related-articles", key="#articleId")
     @Transactional(readOnly = true)
     public List<RelatedArticleDto> findRelatedArticles(Long articleId) {
+
+        // 0. 파라미터 검증
+        if (articleId == null) {
+            throw new CustomException(ErrorCode.REQ_3102);
+        }
+
         // 1. 기준 기사 조회
         Article sourceArticle = articleRepository.findById(articleId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ARTICLE_9105_RELATED));
