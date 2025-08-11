@@ -11,7 +11,11 @@ import umc.snack.global.BaseEntity;
 @Entity
 @Table(name = "term_reports",
         uniqueConstraints = @UniqueConstraint(name = "uk_tr_user_article",
-                columnNames = {"user_id","article_id"}))
+                columnNames = {"user_id","article_id"}),
+        indexes = {
+            @Index(name = "idx_tr_user", columnList = "user_id"),
+            @Index(name = "idx_tr_article", columnList = "article_id")
+        })
 @Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor @Builder
 public class TermReport extends BaseEntity {
@@ -20,11 +24,11 @@ public class TermReport extends BaseEntity {
     private Long reportId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_tr_user"))
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "article_id")
+    @JoinColumn(name = "article_id", foreignKey = @ForeignKey(name = "fk_tr_article"))
     private Article article;
 
     @Builder.Default
