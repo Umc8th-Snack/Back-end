@@ -6,34 +6,42 @@ import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.user.entity.User;
 import umc.snack.global.BaseEntity;
 
-
 @Entity
-@Table(name = "quiz_reports",
-        uniqueConstraints = @UniqueConstraint(name = "uk_qr_user_article",
-                columnNames = {"user_id","article_id"}),
-        indexes = {
-                @Index(name = "idx_qr_user", columnList = "user_id"),
-                @Index(name = "idx_qr_article", columnList = "article_id")
-        })
-@Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor @Builder
+@Table(
+        name = "quiz_reports",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"user_id", "article_id"})
+        }
+)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 public class QuizReport extends BaseEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "report_id")
     private Long reportId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_qr_user"))
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    @Column(name = "article_id", nullable = false)
+    private Long articleId;
+
+    @Column(name = "reported", nullable = false)
+    @Builder.Default
+    private Boolean reported = true;
+
+    @Column(name = "reason", length = 1000)
+    private String reason;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "article_id", nullable = false, foreignKey = @ForeignKey(name = "fk_qr_article"))
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "article_id", insertable = false, updatable = false)
     private Article article;
-
-    @Builder.Default
-    @Column(name="is_reported", nullable=false)
-    private Boolean isReported = true;
-
-    @Column(name = "reason", columnDefinition = "TEXT")
-    private String reason;
 }
