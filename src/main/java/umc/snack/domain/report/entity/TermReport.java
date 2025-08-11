@@ -32,9 +32,26 @@ public class TermReport extends BaseEntity {
     private Article article;
 
     @Builder.Default
-    @Column(name="is_reported", nullable=false)
-    private Boolean isReported = true;
+    @Column(name="reported", nullable=false)
+    private Boolean reported = true;
+
+    // Temporary mirror to satisfy legacy column 'is_reported' if present in DB
+    @Column(name = "is_reported", nullable = false)
+    private Boolean isReportedMirror;
 
     @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
+
+    @PrePersist
+    public void syncReportedBeforeInsert() {
+        if (reported == null) {
+            reported = true;
+        }
+        isReportedMirror = reported;
+    }
+
+    @PreUpdate
+    public void syncReportedBeforeUpdate() {
+        isReportedMirror = reported;
+    }
 }
