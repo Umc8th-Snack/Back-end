@@ -165,23 +165,21 @@ public class ArticleSummarizeService {
                 if (content == null || content.trim().isEmpty()) {
                     log.warn("기사 본문이 없음 - {}", article.getArticleId());
                     continue;
-                } // 디버깅용 추가
+                }
             try {
                 // Gemini API 호출
                 String prompt = promptTemplate + crawled.getContent();
                 String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
 
-                String shortResult = result.length() > 1000 ? result.substring(0, 1000) + "...(truncated)" : result;
-                log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), shortResult);
+                log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), result);
                 log.info("=========================================================");
 
                 geminiParsingService.updateArticleSummary(article.getArticleId(), result);
             } catch (Exception e) {
-                // 실패 시 summary="FAILED"로 표기 (중복 재시도 방지)
-//                geminiParsingService.updateArticleSummary(article.getArticleId(), "FAILED");
+
                 log.error("요약 실패 - articleId: {}", article.getArticleId(), e);
             }
-            // 10초 대기
+            // 20초 대기
             try {
                 Thread.sleep(20_000);
             } catch (InterruptedException ex) {
