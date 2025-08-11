@@ -92,17 +92,4 @@ public class AuthController {
         return logoutService.logout(request, response);
     }
 
-    @Operation(summary = "이메일 인증코드 전송", description = "입력한 이메일로 인증코드를 전송합니다.")
-    @PostMapping("/email/send-code")
-    public ResponseEntity<?> sendEmailCode(@RequestBody Object request) {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
-    }
-
-    @Operation(summary = "이메일 인증코드 검증", description = "이메일로 받은 인증코드가 올바른지 검증합니다.")
-    @PostMapping("/email/verify-code")
-    public ResponseEntity<?> verifyEmailCode(@RequestBody Object request) {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
-    }
 }

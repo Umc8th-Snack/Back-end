@@ -62,6 +62,12 @@ public class User extends BaseEntity {
             this.introduction = introduction;
         }
     }
+
+    // 이메일 변경
+    public void changeEmail(String newEmail) {
+        this.email = newEmail;
+    }
+
     // 비밀번호 변경
     public void changePassword(String encodedPassword) {
         this.password = encodedPassword;
