@@ -10,9 +10,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class TermReportRequestDto {
-    private Long userId;
     private Long articleId;
-    private Boolean reported;
+//    private Boolean reported;
     private String reason;
 }
 

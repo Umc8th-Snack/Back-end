@@ -25,17 +25,17 @@ public class QuizReportServiceImpl implements QuizReportService {
 
     @Override
     public QuizReportResponseDto createReport(QuizReportRequestDto requestDto, Long userIdFromToken) {
-        // 1) userId 추출: 토큰 우선 사용, 없으면 본문
-        Long userId = userIdFromToken != null ? userIdFromToken : requestDto.getUserId();
+        // 1) userId는 인증된 토큰에서만 사용 (보안 강화)
+        Long userId = userIdFromToken;
         if (userId == null || requestDto.getArticleId() == null) {
             throw new CustomException(ErrorCode.REPORT_8803);
         }
 
         // 2) Optional reported default true
-        Boolean reported = requestDto.getReported();
-        if (reported == null) {
-            reported = true;
-        }
+//        Boolean reported = requestDto.getReported();
+//        if (reported == null) {
+//            reported = true;
+//        }
 
         // 3) reason length 검증은 DTO @Size로 1차, 여기서는 방어적 체크
         String reason = requestDto.getReason();
@@ -59,7 +59,7 @@ public class QuizReportServiceImpl implements QuizReportService {
         QuizReport report = QuizReport.builder()
                 .userId(userId)
                 .articleId(article.getArticleId())
-                .reported(reported)
+//                .reported(reported)
                 .reason(reason)
                 .build();
 

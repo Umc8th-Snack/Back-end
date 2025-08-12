@@ -34,7 +34,7 @@ public class ReportController {
             @Valid @RequestBody QuizReportRequestDto requestDto,
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
-        Long userIdFromToken = customUserDetails != null ? customUserDetails.getUserId() : null;
+        Long userIdFromToken = customUserDetails.getUserId();
         QuizReportResponseDto result = quizReportService.createReport(requestDto, userIdFromToken);
 
         ApiResponse<QuizReportResponseDto> response = ApiResponse.onSuccess(
@@ -51,7 +51,7 @@ public class ReportController {
             @Valid @RequestBody TermReportRequestDto requestDto,
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
-        Long userIdFromToken = customUserDetails != null ? customUserDetails.getUserId() : null;
+        Long userIdFromToken = customUserDetails.getUserId();
         TermReportResponseDto result = termReportService.createReport(requestDto, userIdFromToken);
 
         ApiResponse<TermReportResponseDto> response = ApiResponse.onSuccess(

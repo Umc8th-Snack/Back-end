@@ -25,15 +25,16 @@ public class TermReportServiceImpl implements TermReportService {
 
     @Override
     public TermReportResponseDto createReport(TermReportRequestDto requestDto, Long userIdFromToken) {
-        Long userId = userIdFromToken != null ? userIdFromToken : requestDto.getUserId();
+        // userId는 인증된 토큰에서만 사용 (보안 강화)
+        Long userId = userIdFromToken;
         if (userId == null || requestDto.getArticleId() == null) {
             throw new CustomException(ErrorCode.REPORT_8803);
         }
 
-        Boolean reported = requestDto.getReported();
-        if (reported == null) {
-            reported = true;
-        }
+//        Boolean reported = requestDto.getReported();
+//        if (reported == null) {
+//            reported = true;
+//        }
 
         String reason = requestDto.getReason();
         if (reason != null && reason.length() > 1000) {
@@ -54,7 +55,7 @@ public class TermReportServiceImpl implements TermReportService {
                 TermReport.builder()
                         .user(user)
                         .article(article)
-                        .reported(reported)
+//                        .reported()
                         .reason(reason)
                         .build()
         );

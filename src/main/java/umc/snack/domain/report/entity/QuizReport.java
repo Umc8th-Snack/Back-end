@@ -32,7 +32,7 @@ public class QuizReport extends BaseEntity {
 
     @Column(name = "reported", nullable = false)
     @Builder.Default
-    private Boolean reported = true;
+    private Boolean reported = false;
 
     @Column(name = "reason", length = 1000)
     private String reason;
