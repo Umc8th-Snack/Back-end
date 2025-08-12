@@ -101,7 +101,8 @@ public class SecurityConfig {
                                 "/api/share/**",
                                 "/api/articles/crawl/status",
                                 "/api/articles/*/summarize",
-                                "/api/terms"
+                                "/api/terms",
+                                "/api/nlp/*"
                         ).permitAll()
                         // 나머지는 모두 JWT 토큰 인증 필요
                         .anyRequest().authenticated()

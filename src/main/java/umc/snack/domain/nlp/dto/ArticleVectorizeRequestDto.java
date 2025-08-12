@@ -9,5 +9,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class ArticleVectorizeRequestDto {
     private Long articleId;
+    private String title;
     private String summary;
 }

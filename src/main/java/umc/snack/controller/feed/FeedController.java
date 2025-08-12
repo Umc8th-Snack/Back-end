@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.feed.dto.ArticleInFeedDto;
+import umc.snack.domain.nlp.dto.SearchResponseDto;
 import umc.snack.service.feed.FeedService;
+import umc.snack.service.nlp.NlpService;
 
 import java.util.List;
 
@@ -21,22 +23,7 @@ import java.util.List;
 @Tag(name = "Feed", description = "피드 관련 API")
 public class FeedController {
     private final FeedService feedService;
-/*
-    카테고리 단일 선택
-    @Operation(summary = "메인 피드에서 기사 제공", description = "메인 피드에서 특정 카테고리의 기사를 무한스크롤 조회합니다.")
-    @Parameters({
-            @Parameter(name = "category", description = "조회할 카테고리 이름 (예: IT/과학)", required = true),
-            @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
-    })
-    @GetMapping("/main")
-    public ApiResponse<ArticleInFeedDto> getMainFeedArticles(
-            @RequestParam String category,
-            @RequestParam(required = false) Long lastArticleId,
-            @AuthenticationPrincipal Long userId) {
-        ArticleInFeedDto responseDto = feedService.getMainFeedByCategory(category, lastArticleId, userId);
-        return ApiResponse.onSuccess("FEED_9501", "메인 피드 조회에 성공하였습니다", responseDto);
-    }
- */
+    private final NlpService nlpService;
     // 카테고리 다중 선택
     @Operation(summary = "메인 피드에서 기사 제공", description = "메인 피드에서 특정 카테고리의 기사를 무한스크롤 조회합니다.")
     @Parameters({
@@ -53,11 +40,51 @@ public class FeedController {
     }
 
 
+    @Operation(summary = "의미 기반 기사 검색", description = "검색어를 기반으로 의미적으로 유사한 기사를 조회합니다.")
+    @GetMapping("/search")
+    public ApiResponse<SearchResponseDto> searchArticles(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "0.3") double threshold) {
+
+        SearchResponseDto result = feedService.searchArticlesByQuery(query, page, size, threshold);
+        return ApiResponse.onSuccess("FEED_9502", "의미 기반 검색에 성공하였습니다", result);
+    }
+/*
+    // **** 맞춤 피드 API 구현 ****
     @Operation(summary = "맞춤 피드에서 기사 제공", description = "사용자에게 맞춤화된 기사를 무한스크롤 조회합니다.")
+    @Parameters({
+            @Parameter(name = "page", description = "조회할 페이지 번호 (0부터 시작)"),
+            @Parameter(name = "size", description = "한 페이지에 보여줄 기사 수")
+    })
     @GetMapping("/personalized")
-    public ResponseEntity<?> getPersonalizedFeedArticles(
-            @RequestParam(defaultValue = "1") int page) {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("맞춤 피드 기사 제공 API - 개발 예정 (page: " + page + ")");
+    public ApiResponse<ArticleInFeedDto> getPersonalizedFeedArticles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal Long userId) {
+
+        ArticleInFeedDto responseDto = feedService.getPersonalizedFeed(userId, page, size);
+        return ApiResponse.onSuccess("FEED_9503", "맞춤 피드 조회에 성공하였습니다", responseDto);
+    }
+
+ */
+    @Operation(summary = "맞춤 피드에서 기사 제공", description = "사용자의 상위 관심 카테고리 3개에 대한 기사를 최신순으로 무한스크롤 조회합니다.")
+    @Parameters({
+            @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
+    })
+    @GetMapping("/personalized")
+    public ApiResponse<ArticleInFeedDto> getPersonalizedFeedArticles(
+            @RequestParam(required = false) Long lastArticleId,
+            @AuthenticationPrincipal Long userId) {
+
+        ArticleInFeedDto responseDto = feedService.getPersonalizedFeed(userId, lastArticleId);
+
+        // 명세서에 맞게 204 No Content 처리
+        if (responseDto == null || responseDto.getArticles() == null || responseDto.getArticles().isEmpty()) {
+            return ApiResponse.onSuccess("FEED_9504", "맞춤 피드의 기사를 찾을 수 없습니다.", null);
+        }
+
+        return ApiResponse.onSuccess("FEED_9503", "맞춤 피드 조회에 성공하였습니다", responseDto);
     }
 }
