@@ -175,38 +175,67 @@ public class NlpService {
         log.info("🔍 기사 검색 요청 - 검색어: '{}', 페이지: {}, 크기: {}", query, page, size);
 
         // URL에 모든 파라미터를 담아서 생성
+        /*
         URI uri = UriComponentsBuilder.fromHttpUrl(fastapiUrl)
-                .path("/api/nlp/search")
+                .path("/api/articles/search")
                 .queryParam("query", query)
                 .queryParam("page", page)
                 .queryParam("size", size)
                 .queryParam("threshold", threshold)
-                .build(true) // 인코딩된 쿼리 파라미터 생성
+                // .build(true) // 인코딩된 쿼리 파라미터 생성
+                .build()
                 .toUri();
 
-        log.info("FastAPI 호출: POST {}", uri);
+        log.info("FastAPI 호출: GET {}", uri);
 
-        // FastAPI의 해당 엔드포인트는 Request Body가 없으므로 HttpEntity<Void> 사용
-        HttpHeaders headers = new HttpHeaders();
-        HttpEntity<Void> request = new HttpEntity<>(headers);
+        try {
+            ResponseEntity<SearchResponseDto> response = restTemplate.getForEntity(uri, SearchResponseDto.class);
 
-        // POST 요청으로 변경하고, 응답을 DTO로 바로 매핑
-        ResponseEntity<SearchResponseDto> response = restTemplate.exchange(
-                uri,
-                HttpMethod.POST,
-                request,
-                SearchResponseDto.class
-        );
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                SearchResponseDto searchResult = response.getBody();
+                log.info("✅ 검색 완료 - 전체: {}개", searchResult.getTotalCount());
+                return searchResult;
+            } else {
+                log.error("FastAPI 검색 실패: {}", response.getStatusCode());
+                throw new RuntimeException("FastAPI 검색 서비스 호출에 실패했습니다.");
+            }
+        } catch (HttpClientErrorException e) {
+            log.error("FastAPI 클라이언트 오류 ({}): {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("FastAPI 서비스 호출 중 오류 발생");
+        }
+         */
+        // 1. URL 템플릿을 정의합니다. 변수가 들어갈 자리는 {이름}으로 표시합니다.
+        String url = fastapiUrl + "/api/articles/search?query={query}&page={page}&size={size}&threshold={threshold}";
 
-        if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-            SearchResponseDto searchResult = response.getBody();
-            log.info("✅ 검색 완료 - 전체: {}개", searchResult.getTotalCount());
-            return searchResult;
-        } else {
-            log.error("FastAPI 검색 실패: {}", response.getStatusCode());
-            throw new RuntimeException("FastAPI 검색 서비스 호출에 실패했습니다.");
+        // 2. URL에 들어갈 변수들을 Map으로 정의합니다.
+        Map<String, Object> uriVariables = new HashMap<>();
+        uriVariables.put("query", query);
+        uriVariables.put("page", page);
+        uriVariables.put("size", size);
+        uriVariables.put("threshold", threshold);
+
+        log.info("FastAPI 호출: GET {}, 변수: {}", url, uriVariables);
+
+        try {
+            // 3. getForEntity에 URL 템플릿과 변수 Map을 전달합니다.
+            // RestTemplate이 'query' 값을 자동으로 안전하게 인코딩합니다.
+            ResponseEntity<SearchResponseDto> response = restTemplate.getForEntity(url, SearchResponseDto.class, uriVariables);
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return response.getBody();
+            } else {
+                log.error("FastAPI 검색 실패: Status Code {}", response.getStatusCode());
+                throw new RuntimeException("FastAPI 검색 서비스가 성공적인 응답을 반환하지 않았습니다.");
+            }
+        } catch (HttpClientErrorException e) {
+            log.error("FastAPI HTTP 오류 ({}): {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("FastAPI 서비스 호출 중 HTTP 오류가 발생했습니다.");
+        } catch (Exception e) {
+            log.error("FastAPI 호출 중 알 수 없는 오류 발생: {}", e.getMessage());
+            throw new RuntimeException("FastAPI 서비스 호출에 실패했습니다.");
         }
     }
+
 
     public void updateUserProfile(Long userId, List<UserInteractionDto> interactions) {
         String url = fastapiUrl + "/api/nlp/user-profile";

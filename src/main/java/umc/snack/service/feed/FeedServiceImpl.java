@@ -79,61 +79,7 @@ public class FeedServiceImpl implements FeedService{
 
 
     }
-/*
-    @Override
-    @Transactional
-    public ArticleInFeedDto getPersonalizedFeed(Long userId, int page, int size) {
-        LocalDateTime threshold = LocalDateTime.now().minusDays(30);
-        List<UserScrap> scraps = userScrapRepository.findByUserIdAndCreatedAtAfter(userId, threshold);
-        List<UserClicks> clicks = userClickRepository.findByUserIdAndCreatedAtAfter(userId, threshold);
 
-        List<UserInteractionDto> interactions = new ArrayList<>();
-        scraps.forEach(scrap -> interactions.add(new UserInteractionDto(scrap.getArticle().getArticleId(), "scrap")));
-        clicks.forEach(click -> interactions.add(new UserInteractionDto(click.getArticle().getArticleId(), "click")));
-
-        if (!interactions.isEmpty()) {
-            nlpService.updateUserProfile(userId, interactions);
-        }
-
-        FeedResponseDto recommendedFeed = nlpService.getPersonalizedFeed(userId, page, size);
-        if (recommendedFeed == null || recommendedFeed.getArticles().isEmpty()) {
-            throw new CustomException(ErrorCode.FEED_9502);
-        }
-
-        List<Long> articleIds = recommendedFeed.getArticles().stream()
-                .map(RecommendedArticleDto::getArticleId)
-                .collect(Collectors.toList());
-
-        Map<Long, Article> articlesMap = articleRepository.findAllById(articleIds).stream()
-                .collect(Collectors.toMap(Article::getArticleId, article -> article));
-
-        List<Article> sortedArticles = articleIds.stream()
-                .map(articlesMap::get)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-
-        return feedConverter.toArticleInFeedDto("맞춤 피드", false, null, sortedArticles);
-    }
-
-    @Override
-    public SearchResponseDto searchArticlesByQuery(String query, int page, int size, double threshold) {
-        return nlpService.searchArticles(query, page, size, threshold);
-    }
-
-    // **** 중복 메소드 삭제 후, 최종적으로 하나만 남긴 버전 ****
-    private ArticleInFeedDto buildFeedResponse(String categoryName, Slice<Article> articleSlice) {
-        if (!articleSlice.hasContent()) {
-            throw new CustomException(ErrorCode.FEED_9502);
-        }
-
-        List<Article> articles = articleSlice.getContent();
-
-        // **** .getArticleId() -> .getId() 로 수정한 부분 ****
-        Long nextCursorId = articleSlice.hasNext() ? articles.get(articles.size() - 1).getArticleId() : null;
-
-        return feedConverter.toArticleInFeedDto(categoryName, articleSlice.hasNext(), nextCursorId, articles);
-    }
- */
     @Override
     @Transactional(readOnly = true) // readOnly 추가
     public ArticleInFeedDto getPersonalizedFeed(Long userId, Long lastArticleId) {

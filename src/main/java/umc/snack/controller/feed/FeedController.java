@@ -18,7 +18,7 @@ import umc.snack.service.nlp.NlpService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/feeds")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 @Tag(name = "Feed", description = "피드 관련 API")
 public class FeedController {
@@ -30,7 +30,7 @@ public class FeedController {
             @Parameter(name = "category", description = "조회할 카테고리 이름들 (예: category=IT/과학&category=정치)", required = true),
             @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
     })
-    @GetMapping("/main")
+    @GetMapping("/feeds/main")
     public ApiResponse<ArticleInFeedDto> getMainFeedArticles(
             @RequestParam List<String> category,
             @RequestParam(required = false) Long lastArticleId,
@@ -41,7 +41,7 @@ public class FeedController {
 
 
     @Operation(summary = "의미 기반 기사 검색", description = "검색어를 기반으로 의미적으로 유사한 기사를 조회합니다.")
-    @GetMapping("/search")
+    @GetMapping("articles/search")
     public ApiResponse<SearchResponseDto> searchArticles(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
@@ -73,7 +73,7 @@ public class FeedController {
     @Parameters({
             @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
     })
-    @GetMapping("/personalized")
+    @GetMapping("feeds/personalized")
     public ApiResponse<ArticleInFeedDto> getPersonalizedFeedArticles(
             @RequestParam(required = false) Long lastArticleId,
             @AuthenticationPrincipal Long userId) {
