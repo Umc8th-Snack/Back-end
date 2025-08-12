@@ -9,7 +9,7 @@ public class UserMock {
                 .email("mockuser@example.com")
                 .password("mockpassword")
                 .nickname("MockUser")
-                .profileUrl("https://example.com/mock-profile")
+//                .profileUrl("https://example.com/mock-profile")
                 .profileImage("https://example.com/mock-image")
                 .introduction("This is a mock user for testing.")
                 .status(User.Status.ACTIVE)

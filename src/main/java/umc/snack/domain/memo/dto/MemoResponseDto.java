@@ -31,7 +31,8 @@ public class MemoResponseDto {
         private Long memoId;
         private String content;
         private LocalDateTime createdAt;
-        private String articleUrl;
+        // private String articleUrl;
+        private Long articleId;
     }
 
     @Builder @Getter @NoArgsConstructor @AllArgsConstructor
@@ -43,4 +44,8 @@ public class MemoResponseDto {
         private long totalElements;
     }
 
+    @Builder @Getter @NoArgsConstructor @AllArgsConstructor
+    public static class ContentDto {
+        private String content;
+    }
 }

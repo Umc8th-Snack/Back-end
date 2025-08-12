@@ -26,15 +26,16 @@ public class MemoConverter {
 
     public static MemoResponseDto.MemoInfo toMemoInfo(Memo memo) {
 
-        String articleUrl = Optional.ofNullable(memo.getArticle())
-                .map(Article::getArticleUrl)
-                .orElse(null); // 기사가 없는 메모는 articleUrl을 null로 설정
+        Long articleId = Optional.ofNullable(memo.getArticle())
+                .map(Article::getArticleId)
+                .orElse(null); // 기사가 없는 메모는 articleId를 null로 설정
 
         return MemoResponseDto.MemoInfo.builder()
                 .memoId(memo.getMemoId())
                 .content(memo.getContent())
                 .createdAt(memo.getCreatedAt())
-                .articleUrl(memo.getArticle().getArticleUrl())
+                // .articleUrl(memo.getArticle().getArticleUrl())
+                .articleId(articleId)
                 .build();
     }
 

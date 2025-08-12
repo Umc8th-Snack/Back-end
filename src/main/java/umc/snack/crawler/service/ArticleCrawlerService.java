@@ -8,6 +8,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.article.entity.CrawledArticle;
 import umc.snack.repository.article.ArticleRepository;
@@ -32,6 +33,15 @@ public class ArticleCrawlerService {
     private final CategoryService categoryService;
 
     private static final String NAVER_PREFIX = "https://n.news.naver.com";
+
+    private static final java.util.regex.Pattern SID_PATTERN =
+            java.util.regex.Pattern.compile("(?:[?&])sid1?=(\\d{3})(?:[&#]|$)");
+
+    @Value("${AWS_S3_BUCKET}")
+    private String s3Bucket;
+
+    @Value("${AWS_REGION}")
+    private String s3Region;
 
     public void crawlFromJson(String json) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
@@ -133,6 +143,24 @@ public class ArticleCrawlerService {
                 // 카테고리 할당 (sid1은 내부에서 추출됨)
                 categoryService.assignCategoryToArticle(article, link);
 
+                // 아이콘 URL 생성 및 저장 (연관 로딩 없이 URL sid로 파생)
+                String sidForIcon = extractSidFromUrl(link);
+                String categoryName = switch (sidForIcon) {
+                    case "100" -> "정치";
+                    case "101" -> "경제";
+                    case "102" -> "사회";
+                    case "103" -> "생활문화";
+                    case "104" -> "세계";
+                    case "105" -> "IT/과학";
+                    default -> "기타";
+                };
+                String iconUrl = resolveCategoryIconUrl(categoryName, link);
+                if (iconUrl != null && (article.getImageUrl() == null || !iconUrl.equals(article.getImageUrl()))) {
+                    article.updateImageUrl(iconUrl);
+                    articleRepository.save(article);
+                    log.info("🖼️ 아이콘 URL 저장: {} -> {}", categoryName, iconUrl);
+                }
+
                 CrawledArticle crawledArticle = CrawledArticle.builder()
                         .articleUrl(link)
                         .author(author.isEmpty() ? "unknown" : author)
@@ -157,5 +185,28 @@ public class ArticleCrawlerService {
                 log.warn("[크롤링 실패] {} : {}", link, e.getMessage(), e);
             }
         }
+    }
+
+    // 카테고리명은 무시하고, URL의 sid/sid1 값으로 아이콘을 고정 매핑(ASCII 파일명 사용)
+    private String resolveCategoryIconUrl(String categoryName, String articleUrl) {
+        String sid = extractSidFromUrl(articleUrl);
+        String file = switch (sid) {
+            case "100" -> "100.png"; // 정치
+            case "101" -> "101.png"; // 경제
+            case "102" -> "102.png"; // 사회
+            case "103" -> "103.png"; // 생활문화
+            case "104" -> "104.png"; // 세계
+            case "105" -> "105.png"; // IT과학
+            default -> "default.png"; // 기타
+        };
+        // ASCII 파일명만 사용하므로 별도의 URL 인코딩 불필요
+        return String.format("https://%s.s3.%s.amazonaws.com/article_icon/%s", s3Bucket, s3Region, file);
+    }
+
+    // URL에서 sid 또는 sid1 값을 추출 (없으면 null)
+    private String extractSidFromUrl(String url) {
+        if (url == null) return "000";
+        java.util.regex.Matcher m = SID_PATTERN.matcher(url);
+        return m.find() ? m.group(1) : "000";
     }
 }
