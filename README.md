@@ -13,15 +13,13 @@
 ---
 ## 팀원 소개
 
-|                          |         |                                                |
-|--------------------------|---------|------------------------------------------------|
-| ![img_4.png](image/img_4.png)  | 크롤링 · 스크랩 | [@chaewon](https://github.com/chaewon)         |
-| ![img_3.png](image/img_3.png)  | 피드 · 검색 · 메모 | [@padoz3](https://github.com/padoz3)           |
-| ![img_1.png](image/img_1.png)  | 인증 · 사용자 관리 | [@danaggero](https://github.com/danaggero)             |
-| ![img.png](image_5/img.png) | 소셜 로그인 · 퀴즈| [@LABYRINTH3](https://github.com/LABYRINTH3)         |
-| ![img_2.png](image/img_2.png)        | 피드 · 검색 · 인프라 | [@weeeeestern](https://github.com/weeeeestern) |
-
-
+|   | 역할 | GitHub |
+|---|------|--------|
+| <img src="image/img_4.png" alt="img_4" width="120"/> | 크롤링 · 스크랩 | [@chaewon](https://github.com/chaewon) |
+| <img src="image/img_3.png" alt="img_3" width="120"/> | 피드 · 검색 · 메모 | [@padoz3](https://github.com/padoz3) |
+| <img src="image/img_1.png" alt="img_1" width="120"/> | 인증 · 사용자 관리 | [@danaggero](https://github.com/danaggero) |
+| <img src="image/img_5.png" alt="img_5" width="120"/> | 소셜 로그인 · 퀴즈 | [@LABYRINTH3](https://github.com/LABYRINTH3) |
+| <img src="image/img_2.png" alt="img_2" width="120"/> | 피드 · 검색 · 인프라 | [@weeeeestern](https://github.com/weeeeestern) |
 
 
 ## 🛠 기술 스택
