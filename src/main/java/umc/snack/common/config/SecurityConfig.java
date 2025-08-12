@@ -102,6 +102,7 @@ public class SecurityConfig {
                                 "/api/articles/crawl/status",
                                 "/api/articles/*/summarize",
                                 "/api/terms",
+                                "/api/nlp/*",
                                 //캐시 액츄에이터
                                 "/actuator/**"
                         ).permitAll()

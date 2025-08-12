@@ -1,0 +1,47 @@
+package umc.snack.common.config;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.DefaultResponseErrorHandler;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.Duration;
+
+@Configuration
+public class RestTemplateConfig {
+/*
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+
+ */
+    @Bean
+    public RestTemplate restTemplate(RestTemplateBuilder builder) {
+        return builder
+                .setConnectTimeout(Duration.ofSeconds(3))
+                .setReadTimeout(Duration.ofSeconds(5))
+                .additionalInterceptors((request, body, execution) -> {
+                    // 필요 시 간단 로깅/트레이싱 추가
+                    return execution.execute(request, body);
+                })
+                    // 4xx/5xx에서 예외를 던지게 하되, 필요 시 커스터마이즈 가능
+                .errorHandler(new DefaultResponseErrorHandler())
+                .build();
+    }
+
+    @Bean
+    @Qualifier("fastApiRestTemplate")
+    public RestTemplate fastApiRestTemplate(
+            @Value("${fastapi.url}") String baseUrl,
+            RestTemplateBuilder builder) {
+        return builder
+                .rootUri(baseUrl)
+                .setConnectTimeout(Duration.ofSeconds(2))
+                .setReadTimeout(Duration.ofSeconds(4))
+                .build();
+    }
+}
