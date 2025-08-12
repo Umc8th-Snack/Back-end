@@ -49,7 +49,7 @@ public class FeedController {
             @RequestParam(defaultValue = "0.3") double threshold) {
 
         SearchResponseDto result = feedService.searchArticlesByQuery(query, page, size, threshold);
-        return ApiResponse.onSuccess("FEED_9502", "의미 기반 검색에 성공하였습니다", result);
+        return ApiResponse.onSuccess("FEED_9702", "의미 기반 검색에 성공하였습니다", result);
     }
 /*
     // **** 맞춤 피드 API 구현 ****
