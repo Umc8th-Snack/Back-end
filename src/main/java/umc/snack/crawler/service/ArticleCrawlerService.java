@@ -8,6 +8,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.article.entity.CrawledArticle;
 import umc.snack.repository.article.ArticleRepository;
@@ -32,6 +33,12 @@ public class ArticleCrawlerService {
     private final CategoryService categoryService;
 
     private static final String NAVER_PREFIX = "https://n.news.naver.com";
+
+    @Value("${AWS_S3_BUCKET}")
+    private String s3Bucket;
+
+    @Value("${AWS_REGION}")
+    private String s3Region;
 
     public void crawlFromJson(String json) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
@@ -133,6 +140,19 @@ public class ArticleCrawlerService {
                 // 카테고리 할당 (sid1은 내부에서 추출됨)
                 categoryService.assignCategoryToArticle(article, link);
 
+                // 아이콘 URL 생성 및 저장
+                String categoryName = article.getArticleCategories().stream()
+                        .findFirst()
+                        .map(ac -> ac.getCategory().getCategoryName())
+                        .orElse("기타");
+
+                String iconUrl = resolveCategoryIconUrl(categoryName);
+                if (iconUrl != null && (article.getImageUrl() == null || !iconUrl.equals(article.getImageUrl()))) {
+                    article.updateImageUrl(iconUrl);
+                    articleRepository.save(article);
+                    log.info("🖼️ 아이콘 URL 저장: {} -> {}", categoryName, iconUrl);
+                }
+
                 CrawledArticle crawledArticle = CrawledArticle.builder()
                         .articleUrl(link)
                         .author(author.isEmpty() ? "unknown" : author)
@@ -157,5 +177,22 @@ public class ArticleCrawlerService {
                 log.warn("[크롤링 실패] {} : {}", link, e.getMessage(), e);
             }
         }
+    }
+
+    // 카테고리명에 맞는 S3 아이콘 URL 생성
+    private String resolveCategoryIconUrl(String categoryName) {
+        if (categoryName == null) categoryName = "기타";
+        String normalized = categoryName.replace("/", "").replace(" ", "");
+        String fileName;
+        switch (normalized) {
+            case "정치" -> fileName = "정치.png";
+            case "경제" -> fileName = "경제.png";
+            case "사회" -> fileName = "사회.png";
+            case "세계" -> fileName = "세계.png";
+            case "생활문화", "생활", "문화" -> fileName = "생활문화.png";
+            case "IT과학", "IT", "과학" -> fileName = "IT과학.png";
+            default -> fileName = "기타.png";
+        }
+        return String.format("https://%s.s3.%s.amazonaws.com/article_icon/%s", s3Bucket, s3Region, fileName);
     }
 }
