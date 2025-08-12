@@ -21,6 +21,8 @@ import umc.snack.repository.user.UserRepository;
 
 import java.time.LocalDateTime;
 
+import static umc.snack.common.config.security.CookieUtil.createCookie;
+
 @Service
 @RequiredArgsConstructor
 public class ReissueService {
@@ -123,14 +125,6 @@ public class ReissueService {
             }
         }
         return null;
-    }
-
-    private Cookie createCookie(String key, String value) {
-        Cookie cookie = new Cookie(key, value);
-        cookie.setMaxAge(24 * 60 * 60);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        return cookie;
     }
 
     private ResponseEntity<ApiResponse<TokenReissueResponseDto>> buildFail(ErrorCode errorCode, String code) {
