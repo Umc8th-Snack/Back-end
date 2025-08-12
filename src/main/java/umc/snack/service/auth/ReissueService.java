@@ -79,7 +79,7 @@ public class ReissueService {
 
         // 6. 토큰 재발급 (access + refresh)
         String role = jwtUtil.getRole(refreshToken);
-        String newAccess = jwtUtil.createJwt("access", userId, user.getEmail(), role, accessExpiredMs);    // 30분
+        String newAccess = jwtUtil.createJwt("access", userId, user.getEmail(), role, accessExpiredMs);
         String newRefresh = refreshToken; // 기본은 기존 값 유지
         boolean isRefreshRotated = false;
 
