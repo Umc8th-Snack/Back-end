@@ -80,23 +80,32 @@ public class ReissueService {
         // 6. 토큰 재발급 (access + refresh)
         String role = jwtUtil.getRole(refreshToken);
         String newAccess = jwtUtil.createJwt("access", userId, user.getEmail(), role, accessExpiredMs);    // 30분
-        String newRefresh = jwtUtil.createJwt("refresh", userId, user.getEmail(), role, refreshExpiredMs);    // 1일
+        String newRefresh = refreshToken; // 기본은 기존 값 유지
+        boolean isRefreshRotated = false;
 
         // 기존 refreshToken 폐기, 새로운 refreshToken 저장 (화이트리스트 정책)
-        refreshTokenRepository.delete(found);
-        refreshTokenRepository.save(
-                RefreshToken.builder()
-                        .userId(userId)
-                        .email(user.getEmail())
-                        .refreshToken(newRefresh)
-                        .expiration(LocalDateTime.now().plusSeconds(refreshExpiredMs / 1000))
-                        .build()
-        );
+        if (!found.getRefreshToken().equals(refreshToken)) {
+            newRefresh = jwtUtil.createJwt("refresh", userId, user.getEmail(), role, refreshExpiredMs);
+            isRefreshRotated = true;
+
+            // 기존 refreshToken 폐기 후 새로 저장
+            refreshTokenRepository.delete(found);
+            refreshTokenRepository.save(
+                    RefreshToken.builder()
+                            .userId(userId)
+                            .email(user.getEmail())
+                            .refreshToken(newRefresh)
+                            .expiration(LocalDateTime.now().plusSeconds(refreshExpiredMs / 1000))
+                            .build()
+            );
+        }
 
         // access 토큰은 header, refresh 토큰은 쿠키
         response.setHeader("Authorization", "Bearer " + newAccess);
-        response.addCookie(createCookie("refresh", newRefresh));
-
+        // refresh 토큰은 새로 발급했을 때만 쿠키로 내려줌
+        if (isRefreshRotated) {
+            response.addCookie(createCookie("refresh", newRefresh));
+        }
         // 응답 Dto 만들기
         TokenReissueResponseDto dto = TokenReissueResponseDto.builder()
                 .userId(user.getUserId())
