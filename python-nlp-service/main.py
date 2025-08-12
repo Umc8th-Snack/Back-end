@@ -296,7 +296,6 @@ async def batch_vectorize_articles(
                     SELECT article_id 
                     FROM articles 
                     ORDER BY created_at DESC
-                     ORDER BY created_at
                     LIMIT %s
                 """
             else:
@@ -455,8 +454,8 @@ async def search_articles_direct(
 async def search_articles_semantic(
         query: str = Query(..., description="검색할 단어"),
         page: int = Query(0, ge=0, description="페이지 번호"),
-        size: int = Query(10, ge=1, le=50, description="페이지 크기"),
-        threshold: float = Query(0.3, ge=0, le=1, description="최소 유사도 임계값")
+        size: int = Query(5, ge=1, le=50, description="페이지 크기"),
+        threshold: float = Query(0.7, ge=0, le=1, description="최소 유사도 임계값")
 ):
     """
     의미 기반 기사 검색 (키워드 벡터 직접 비교 방식)
@@ -934,6 +933,8 @@ async def debug_sbert_and_db(article_id: int):
                 debug_info["sbert_steps"].append("2. SBERT 벡터 생성 시작...")
                 top_keywords = list(tfidf_keywords.keys())
                 debug_info["keywords_for_sbert"] = top_keywords
+
+                MODEL_DIMENSION = 384
 
                 try:
                     # NLP 프로세서 상태 재확인

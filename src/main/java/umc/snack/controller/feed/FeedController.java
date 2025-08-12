@@ -45,8 +45,8 @@ public class FeedController {
     public ApiResponse<SearchResponseDto> searchArticles(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "0.3") double threshold) {
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "0.7") double threshold) {
 
         SearchResponseDto result = feedService.searchArticlesByQuery(query, page, size, threshold);
 
