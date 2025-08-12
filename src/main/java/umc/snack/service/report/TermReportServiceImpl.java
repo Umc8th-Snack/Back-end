@@ -24,26 +24,19 @@ public class TermReportServiceImpl implements TermReportService {
     private final ArticleRepository articleRepository;
 
     @Override
-    public TermReportResponseDto createReport(TermReportRequestDto requestDto, Long userIdFromToken) {
+    public TermReportResponseDto createReport(Long articleId, TermReportRequestDto requestDto, Long userIdFromToken) {
         // userId는 인증된 토큰에서만 사용 (보안 강화)
         Long userId = userIdFromToken;
-        if (userId == null || requestDto.getArticleId() == null) {
+        if (userId == null || articleId == null) {
             throw new CustomException(ErrorCode.REPORT_8803);
         }
 
-//        Boolean reported = requestDto.getReported();
-//        if (reported == null) {
-//            reported = true;
-//        }
-
-        String reason = requestDto.getReason();
-        if (reason != null && reason.length() > 1000) {
-            throw new CustomException(ErrorCode.REPORT_8802);
-        }
+        // reason 디폴트 값 설정
+        String reason = "용어 설명에 오류가 있어서 신고합니다.";
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
-        Article article = articleRepository.findById(requestDto.getArticleId())
+        Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ARTICLE_9104_GET));
 
         boolean exists = termReportRepository.existsByUser_UserIdAndArticle_ArticleId(userId, article.getArticleId());
@@ -55,7 +48,7 @@ public class TermReportServiceImpl implements TermReportService {
                 TermReport.builder()
                         .user(user)
                         .article(article)
-//                        .reported()
+                        .reported(true)
                         .reason(reason)
                         .build()
         );

@@ -4,7 +4,7 @@ import umc.snack.domain.report.dto.TermReportRequestDto;
 import umc.snack.domain.report.dto.TermReportResponseDto;
 
 public interface TermReportService {
-    TermReportResponseDto createReport(TermReportRequestDto requestDto, Long userIdFromToken);
+    TermReportResponseDto createReport(Long articleId, TermReportRequestDto requestDto, Long userIdFromToken);
 }
 
 

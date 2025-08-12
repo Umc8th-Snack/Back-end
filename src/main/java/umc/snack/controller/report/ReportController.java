@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,7 +21,7 @@ import umc.snack.service.report.QuizReportService;
 import umc.snack.service.report.TermReportService;
 
 @RestController
-@RequestMapping("/api/reports")
+@RequestMapping("/api/articles/{articleId}/reports")
 @RequiredArgsConstructor
 @Tag(name = "Report", description = "신고 API")
 public class ReportController {
@@ -31,11 +32,12 @@ public class ReportController {
     @Operation(summary = "퀴즈 해설 신고하기", description = "사용자가 특정 기사(퀴즈 해설)에 대해 신고를 생성합니다. 한 사용자는 같은 기사에 대해 한 번만 신고할 수 있습니다.")
     @PostMapping("/quiz")
     public ResponseEntity<ApiResponse<QuizReportResponseDto>> reportQuiz(
+            @PathVariable("articleId") Long articleId,
             @Valid @RequestBody QuizReportRequestDto requestDto,
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         Long userIdFromToken = customUserDetails.getUserId();
-        QuizReportResponseDto result = quizReportService.createReport(requestDto, userIdFromToken);
+        QuizReportResponseDto result = quizReportService.createReport(articleId, requestDto, userIdFromToken);
 
         ApiResponse<QuizReportResponseDto> response = ApiResponse.onSuccess(
                 "201",
@@ -48,11 +50,12 @@ public class ReportController {
     @Operation(summary = "용어 신고하기", description = "기사에 포함된 용어 설명에 대해 신고를 생성합니다. 한 사용자는 같은 기사에 대해 한 번만 신고할 수 있습니다.")
     @PostMapping("/term")
     public ResponseEntity<ApiResponse<TermReportResponseDto>> reportTerm(
+            @PathVariable("articleId") Long articleId,
             @Valid @RequestBody TermReportRequestDto requestDto,
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
         Long userIdFromToken = customUserDetails.getUserId();
-        TermReportResponseDto result = termReportService.createReport(requestDto, userIdFromToken);
+        TermReportResponseDto result = termReportService.createReport(articleId, requestDto, userIdFromToken);
 
         ApiResponse<TermReportResponseDto> response = ApiResponse.onSuccess(
                 "201",

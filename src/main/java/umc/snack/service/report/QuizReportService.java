@@ -4,7 +4,7 @@ import umc.snack.domain.report.dto.QuizReportRequestDto;
 import umc.snack.domain.report.dto.QuizReportResponseDto;
 
 public interface QuizReportService {
-    QuizReportResponseDto createReport(QuizReportRequestDto requestDto, Long userIdFromToken);
+    QuizReportResponseDto createReport(Long articleId, QuizReportRequestDto requestDto, Long userIdFromToken);
 }
 
 
