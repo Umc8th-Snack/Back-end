@@ -14,7 +14,8 @@ import umc.snack.global.BaseEntity;
                 columnNames = {"user_id","article_id"}),
         indexes = {
             @Index(name = "idx_tr_user", columnList = "user_id"),
-            @Index(name = "idx_tr_article", columnList = "article_id")
+            @Index(name = "idx_tr_article", columnList = "article_id"),
+            @Index(name = "idx_tr_user_article_reported", columnList = "user_id, article_id, reported")
         })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -45,12 +46,5 @@ public class TermReport extends BaseEntity {
         return reported;
     }
 
-    public void setReported(boolean reported) {
-        this.reported = reported;
-    }
 
-    /** Allow setting via 0/1 semantics if needed */
-    public void setReportedInt(int value) {
-        this.reported = (value == 1);
-    }
 }
