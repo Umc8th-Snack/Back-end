@@ -1,11 +1,29 @@
-# Java 21 JDK (경량 Alpine 버전)
-FROM eclipse-temurin:21-jdk-alpine
-
-# 작업 디렉토리 생성
+# --- Build stage ---
+FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 
-# 빌드된 JAR 복사
-COPY build/libs/snack-0.0.1-SNAPSHOT.jar app.jar
+# Gradle 캐시 최적화
+COPY gradlew ./
+COPY gradle ./gradle
+RUN chmod +x gradlew
 
-# 애플리케이션 실행
-ENTRYPOINT ["java", "-jar", "app.jar"]
+COPY build.gradle settings.gradle ./
+RUN ./gradlew dependencies > /dev/null 2>&1 || true
+
+# 소스 복사 후 빌드
+COPY . .
+RUN ./gradlew bootJar -x test
+
+# --- Run stage ---
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# 필요 시 타임존:
+# RUN apk add --no-cache tzdata && ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+
+# 산출물 복사 (단일 JAR 가정)
+COPY --from=builder /app/build/libs/*.jar /app/app.jar
+
+EXPOSE 8080
+ENV JAVA_OPTS=""
+ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/app.jar"]
