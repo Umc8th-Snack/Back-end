@@ -104,8 +104,7 @@ public class NlpService {
         log.info("📊 기사 벡터화 요청 - {}개 기사", articleIds.size());
 
         try {
-            // FastAPI의 실제 엔드포인트: /api/nlp/vectorize/articles
-            String url = fastapiUrl + "/api/nlp/vectorize/articles";
+            String url = fastapiUrl + "/api/vectorize/articles";
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
