@@ -90,6 +90,7 @@ public class UserScrapServiceImpl implements UserScrapService {
         }
     }
 
+    // 스크랩 버튼 클릭시에 바로 취소되도록 사용, 실질적으로 사용 X
     @Override
     public boolean isScrapped(Long userId, Long articleId) {
         try {
@@ -99,22 +100,23 @@ public class UserScrapServiceImpl implements UserScrapService {
         }
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public String getArticleUrlByScrapIdAndUserId(Long scrapId, Long userId) {
-        try {
-            UserScrap userScrap = userScrapRepository.findById(scrapId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.SCRAP_6105)); // 스크랩 없음
-
-            if (userScrap.getUser() == null || !userScrap.getUser().getUserId().equals(userId)) {
-                throw new CustomException(ErrorCode.SCRAP_6106);
-            }
-
-            return "/api/articles/" + userScrap.getArticle().getArticleId(); // 내부 URI
-        } catch (CustomException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new CustomException(ErrorCode.SERVER_5101);
-        }
-    }
+    // 스크랩 기사 조회에서 기사 아이디만 받으면 프론트 측에서 리디랙션 가능
+//    @Override
+//    @Transactional(readOnly = true)
+//    public String getArticleUrlByScrapIdAndUserId(Long scrapId, Long userId) {
+//        try {
+//            UserScrap userScrap = userScrapRepository.findById(scrapId)
+//                    .orElseThrow(() -> new CustomException(ErrorCode.SCRAP_6105)); // 스크랩 없음
+//
+//            if (userScrap.getUser() == null || !userScrap.getUser().getUserId().equals(userId)) {
+//                throw new CustomException(ErrorCode.SCRAP_6106);
+//            }
+//
+//            return "/api/articles/" + userScrap.getArticle().getArticleId(); // 내부 URI
+//        } catch (CustomException e) {
+//            throw e;
+//        } catch (Exception e) {
+//            throw new CustomException(ErrorCode.SERVER_5101);
+//        }
+//    }
 }
