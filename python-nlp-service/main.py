@@ -89,7 +89,7 @@ class ArticleSearchResult(BaseModel):
     title: str
     summary: Optional[str] = None
     score: float
-    keywords: List[KeywordScore]
+    # keywords: List[KeywordScore]
     publishedAt: Optional[str]
 
 class SearchResponse(BaseModel):
@@ -249,26 +249,28 @@ async def vectorize_articles_from_db(article_ids: List[int]):
                     keywords_json_str = json.dumps(tfidf_keywords)
                     rep_vector_str = json.dumps(representative_vector)
 
-                await cursor.execute("SELECT article_id FROM article_semantic_vectors WHERE article_id = %s", (article_id,))
+                    await cursor.execute("SELECT article_id FROM article_semantic_vectors WHERE article_id = %s", (article_id,))
                     existing = await cursor.fetchone()
                     if existing:
                         await cursor.execute(
                             "UPDATE article_semantic_vectors SET vector = %s, keywords = %s, representative_vector = %s, model_version = %s, updated_at = NOW() WHERE article_id = %s",
-                            (vector_json_str, keywords_json_str, rep_vector_str, "sbert-keywords-v3", article_id)
+                            (vector_json_str, keywords_json_str, rep_vector_str, "sbert-keywords-v4", article_id)
                         )
                         logger.info(f"기사 {article_id} 키워드 및 대표 벡터 업데이트 완료")
                     else:
                         await cursor.execute(
-                            "INSERT INTO article_semantic_vectors (article_id, vector, keywords, model_version, created_at, updated_at) VALUES (%s, %s, %s, %s, NOW(), NOW())",
-                            (article_id, vector_json_str, keywords_json_str, "sbert-keywords-v3")
+                            "INSERT INTO article_semantic_vectors (article_id, vector, keywords, representative_vector, model_version, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, NOW(), NOW())",
+                            (article_id, vector_json_str, keywords_json_str, rep_vector_str, "sbert-keywords-v4")
                         )
-                        logger.info(f"기사 {article_id} 키워드 벡터 신규 저장 완료")
+                        logger.info(f"기사 {article_id} 키워드 및 대표 벡터 신규 저장 완료")
+
                     processed_count += 1
+
                 except Exception as e:
                     logger.error(f"기사 {article_id} 처리 중 오류: {e}", exc_info=True)
                     failed_ids.append(article_id)
                     continue
-            return {"status": "completed", "total_requested": len(article_ids), "processed": processed_count, "failed": failed_ids}
+        return {"status": "completed", "total_requested": len(article_ids), "processed": processed_count, "failed": failed_ids}
 
 @app.post("/api/nlp/vectorize/batch")
 async def batch_vectorize_articles(
@@ -429,7 +431,7 @@ async def get_article_vector(article_id: int):
             return result
 
 # --- 검색 엔드포인트 ---
-
+'''
 @app.get("/api/articles/search/{keyword}")
 async def search_articles_direct(
         keyword: str,
@@ -447,6 +449,61 @@ async def search_articles_direct(
 
     # 간단한 구현 (실제로는 nlp_processor 사용)
     return SearchArticleResponseDto(articles=[])
+'''
+@app.get("/api/articles/search")
+async def search_articles_semantic(
+        query: str = Query(..., description="검색할 단어"),
+        page: int = Query(0, ge=0, description="페이지 번호"),
+        size: int = Query(10, ge=1, le=50, description="페이지 크기"),
+        threshold: float = Query(0.3, ge=0, le=1, description="최소 유사도 임계값")
+):
+    """
+    의미 기반 기사 검색 (키워드 벡터 직접 비교 방식)
+    """
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="데이터베이스 연결이 없습니다.")
+
+    logger.info(f"🔍 의미 기반 검색 시작 - 검색어: '{query}'")
+    query_vector = await vectorize_raw_query(query)
+    if query_vector is None:
+        return SearchResponse(query=query, totalCount=0, articles=[])
+
+    async with db_pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cursor:
+            await cursor.execute(
+                "SELECT a.article_id, a.title, a.summary, a.published_at, asv.vector, asv.keywords "
+                "FROM articles a INNER JOIN article_semantic_vectors asv ON a.article_id = asv.article_id "
+                "WHERE asv.vector IS NOT NULL AND JSON_LENGTH(asv.vector) > 0"
+            )
+            all_articles = await cursor.fetchall()
+            if not all_articles:
+                return SearchResponse(query=query, totalCount=0, articles=[])
+
+            search_results = []
+            for article in all_articles:
+                try:
+                    keyword_vectors = json.loads(article['vector'])
+                    similarities = [cosine_similarity(query_vector, np.array(vec)) for vec in keyword_vectors.values()]
+                    max_similarity = max(similarities) if similarities else 0.0
+
+                    if max_similarity >= threshold:
+                        search_results.append({
+                            'article_id': article['article_id'],
+                            'title': article['title'],
+                            'summary': article['summary'],
+                            'score': float(max_similarity),
+                            'publishedAt': article['published_at'].isoformat() if article['published_at'] else None
+                        })
+                except Exception:
+                    continue
+
+            search_results.sort(key=lambda x: x['score'], reverse=True)
+            paginated_results = search_results[page * size : (page + 1) * size]
+
+            # 키워드는 반환하지 않으므로 ArticleSearchResult 생성 시 keywords 제외
+            articles_response = [ArticleSearchResult(**{k: v for k, v in res.items() if k != 'keywords'}) for res in paginated_results]
+
+            return SearchResponse(query=query, totalCount=len(search_results), articles=articles_response)
 
 # --- 헬퍼 함수 ---
 
@@ -759,12 +816,7 @@ async def _calculate_user_profile_vector(interactions: List[UserInteraction]) ->
     if norm > 0:
         return avg_vector / norm
     return avg_vector
-1.3. 신규 API 엔드포인트 2개 추가
-main.py의 검색 엔드포인트 섹션 뒤에 아래 코드를 추가하세요.
 
-Python
-
-# main.py
 
 # --- 맞춤 피드 엔드포인트 ---
 
