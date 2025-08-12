@@ -76,6 +76,7 @@ public class UserService {
         return UserInfoResponseDto.fromEntity(currentUser);
     }
 
+    // 회원탈퇴
     @Transactional
     public void withdraw(User user, String password) {
         if (user == null) {
@@ -90,8 +91,11 @@ public class UserService {
         }
 
         // 비밀번호 검증 로직
+        if (password == null || password.isBlank()) {
+            throw new CustomException(ErrorCode.USER_2611);
+        }
         if (!passwordEncoder.matches(password, managedUser.getPassword())) {
-            throw new CustomException(ErrorCode.USER_2623);
+            throw new CustomException(ErrorCode.USER_2611);
         }
 
         if (managedUser .getStatus() == User.Status.DELETED) { // 이미 탈퇴 처리된 회원
@@ -106,6 +110,59 @@ public class UserService {
 
     }
 
+    // 이메일 변경
+    @Transactional
+    public EmailChangeResponseDto changeEmail(Long userId, EmailChangeRequestDto req) {
+        // 입력 정규화
+        String newEmail = req.getNewEmail() == null ? null : req.getNewEmail().trim().toLowerCase();
+        String currentPw = req.getCurrentPassword() == null ? null : req.getCurrentPassword().trim();
+
+        // 필수값 / 형식 검증
+        if (newEmail == null || newEmail.isEmpty()) {
+            throw new CustomException(ErrorCode.USER_2604); // 이메일 형식이 올바르지 않습니다.
+        }
+        if (!isValidEmail(newEmail)) {
+            throw new CustomException(ErrorCode.USER_2604);
+        }
+        if (currentPw == null || currentPw.isEmpty()) {
+            throw new CustomException(ErrorCode.USER_2611); // 비밀번호가 일치하지 않습니다.
+        }
+
+        // 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_2622));
+
+        // 소셜 전용 계정은 이메일 변경 금지
+        if (user.isSocialOnly()) {
+            throw new CustomException(ErrorCode.USER_2615);
+        }
+
+        // 현재 비밀번호 확인
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new CustomException(ErrorCode.USER_2612); // 비번 없음(소셜/이상치)
+        }
+        if (!passwordEncoder.matches(currentPw, user.getPassword())) {
+            throw new CustomException(ErrorCode.USER_2611);
+        }
+
+        // 동일 이메일 방지
+        if (user.getEmail() != null && user.getEmail().equalsIgnoreCase(newEmail)) {
+            throw new CustomException(ErrorCode.USER_2616); // 기존 이메일과 동일합니다.
+        }
+
+        // 중복 이메일 검사
+        if (userRepository.existsByEmail(newEmail)) {
+            throw new CustomException(ErrorCode.USER_2601); // 이미 가입된 이메일
+        }
+
+        // 변경 + 리프레시 토큰 무효화
+        user.changeEmail(newEmail);
+        refreshTokenRepository.deleteByUserId(user.getUserId());
+
+        return new EmailChangeResponseDto(user.getEmail(), java.time.OffsetDateTime.now().toString());
+    }
+
+    // 비밀번호 변경
     @Transactional
     public PasswordChangeResponseDto changePassword(Long userId, PasswordChangeRequestDto request) {
 
@@ -192,7 +249,7 @@ public class UserService {
             // 닉네임 중복 검사 (자신의 현재 닉네임과 다른 경우에만)
             if (!request.getNickname().equals(managedUser.getNickname()) && 
                 userRepository.existsByNickname(request.getNickname())) {
-                throw new CustomException(ErrorCode.USER_2641);
+                throw new CustomException(ErrorCode.USER_2602);
             }
         }
 

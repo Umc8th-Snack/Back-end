@@ -33,6 +33,18 @@ public class UserController {
         );
     }
 
+    @Operation(summary = "내 이메일 변경", description = "현재 비밀번호를 확인 후 이메일을 변경합니다.")
+    @PatchMapping("/me/email")
+    public ResponseEntity<ApiResponse<EmailChangeResponseDto>> changeEmail(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody EmailChangeRequestDto request
+    ) {
+        EmailChangeResponseDto result = userService.changeEmail(userDetails.getUserId(), request);
+        return ResponseEntity.ok(
+                ApiResponse.onSuccess("USER_2550", "이메일이 성공적으로 변경되었습니다.", result)
+        );
+    }
+
     @Operation(summary = "내 비밀번호 변경", description = "현재 비밀번호와 새 비밀번호를 입력하여 비밀번호를 변경합니다.")
     @PatchMapping("/me/password")
     public ResponseEntity<ApiResponse<PasswordChangeResponseDto>> changePassword(@AuthenticationPrincipal CustomUserDetails userDetails,

@@ -12,7 +12,6 @@ import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.dto.MemoResponseDto;
 import umc.snack.service.memo.MemoCommandService;
 import umc.snack.service.memo.MemoQueryService;
-import umc.snack.service.memo.MemoQueryServiceImpl;
 
 @RestController
 @RequestMapping("/api/articles/{article_id}/memos")
@@ -73,17 +72,5 @@ public class MemoController {
                 "메모가 성공적으로 삭제되었습니다.",
                 null
         );
-    }
-
-    @Operation(summary = "특정 기사에 대한 내 메모 조회", description = "로그인한 사용자가 특정 기사에 작성한 메모 조회")
-    @GetMapping("/my-memo")
-    public ApiResponse<MemoResponseDto.ContentDto> getMyMemoForArticle(
-            @PathVariable("article_id") Long article_id,
-            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-
-        Long userId = customUserDetails.getUserId();
-        MemoResponseDto.ContentDto resultDto = memoQueryService.getMyMemoForArticle(article_id, userId);
-
-        return ApiResponse.onSuccess("MEMO_8505", "기사에 대한 메모 내용을 성공적으로 조회했습니다.", resultDto);
     }
 }
