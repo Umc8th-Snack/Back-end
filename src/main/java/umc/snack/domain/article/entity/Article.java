@@ -44,6 +44,8 @@ public class Article extends BaseEntity {
     }
 
     public void updateImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            this.imageUrl = imageUrl;
+        }
     }
 }

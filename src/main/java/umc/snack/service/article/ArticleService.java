@@ -29,6 +29,7 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final ArticleTermRepository articleTermRepository;
 
+    @Transactional(readOnly = true)
     public ArticleDto getArticleById(Long articleId) {
         // articleId가 null인 경우 예외 발생
         if (articleId == null) {
@@ -45,12 +46,6 @@ public class ArticleService {
                 .map(ac -> ac.getCategory().getCategoryName())
                 .orElse("미분류");
 
-        // 카테고리별 S3 아이콘 URL 생성 및 저장
-        String iconUrl = resolveCategoryIconUrl(categoryName);
-        if (iconUrl != null && !iconUrl.equals(a.getImageUrl())) {
-            a.updateImageUrl(iconUrl);
-            articleRepository.save(a);
-        }
 
         // ArticleDto 생성 및 반환
         return ArticleDto.builder()
@@ -61,7 +56,6 @@ public class ArticleService {
                 .articleUrl(a.getArticleUrl())         // 외부 URL
                 .snackUrl("/articles/" + a.getArticleId())
                 .category(categoryName)                 // 단일 카테고리
-                .imageUrl(iconUrl)
                 .build();
     }
 
@@ -89,24 +83,6 @@ public class ArticleService {
                     term.getCreatedAt()
             );
         }).collect(Collectors.toList());
-    }
-  
-    // 카테고리 이름을 받아 S3 아이콘 URL을 리턴 (필요에 맞게 매핑 수정)
-    private String resolveCategoryIconUrl(String categoryName) {
-        if (categoryName == null) return null;
-        // 예시: 버킷 경로 규칙에 맞게 스네이크/소문자화
-        String key;
-        switch (categoryName) {
-            case "정치": key = "icons/politics.png"; break;
-            case "경제": key = "icons/economy.png"; break;
-            case "사회": key = "icons/social.png"; break;
-            case "국제": key = "icons/world.png"; break;
-            case "IT": case "IT/과학": key = "icons/it.png"; break;
-            case "문화": key = "icons/culture.png"; break;
-            default: key = "icons/default.png"; break;
-        }
-        // 버킷 이름은 실제 환경에 맞게 수정하세요
-        return "https://snacknewsbucket.s3.amazonaws.com/" + key;
     }
 
     private static final int RELATED_ARTICLE_COUNT = 3; // 관련 기사 개수
