@@ -2,6 +2,7 @@ package umc.snack.controller.article;
 
 import umc.snack.domain.article.dto.ArticleDto;
 
+import umc.snack.domain.article.dto.RelatedArticleDto;
 import umc.snack.domain.article.entity.CrawledArticle;
 import umc.snack.domain.term.dto.TermResponseDto;
 import umc.snack.repository.article.CrawledArticleRepository;
@@ -89,8 +90,15 @@ public class ArticleController {
 
     @Operation(summary = "관련 기사 조회", description = "현재 보고 있는 기사와 카테고리가 같은 관련 기사를 추천합니다.")
     @GetMapping("/{articleId}/related-articles")
-    public ResponseEntity<?> getRelatedArticles(@PathVariable Long articleId) {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("관련 기사 조회 API - 개발 예정");
+    public ResponseEntity<ApiResponse<List<RelatedArticleDto>>> getRelatedArticles(@PathVariable Long articleId) {
+        List<RelatedArticleDto> relatedArticles = articleService.findRelatedArticles(articleId);
+        if (relatedArticles.isEmpty()) {
+            return ResponseEntity.ok(
+                    ApiResponse.onSuccess("ARTICLE_9004", "해당 기사와 관련된 기사가 없습니다.", List.of()));
+        } else {
+            return ResponseEntity.ok(
+                    ApiResponse.onSuccess("ARTICLE_9003", "관련 기사 조회에 성공하였습니다.", relatedArticles)
+            );
+        }
     }
 }
