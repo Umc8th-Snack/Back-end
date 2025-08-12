@@ -205,8 +205,8 @@ public class ArticleCrawlerService {
 
     // URL에서 sid 또는 sid1 값을 추출 (없으면 null)
     private String extractSidFromUrl(String url) {
-        if (url == null) return null;
+        if (url == null) return "000";
         java.util.regex.Matcher m = SID_PATTERN.matcher(url);
-        return m.find() ? m.group(1) : null;
+        return m.find() ? m.group(1) : "000";
     }
 }
