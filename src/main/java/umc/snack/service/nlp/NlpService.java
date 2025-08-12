@@ -250,6 +250,7 @@ public class NlpService {
         } catch (Exception e) {
             log.error("❌ FastAPI 사용자 프로필 업데이트 실패: {}", e.getMessage());
             // 에러를 던져서 상위 서비스에서 처리하도록 할 수도 있습니다.
+            throw new RuntimeException("FastAPI 사용자 프로필 업데이트 실패", e);
         }
     }
 
@@ -273,7 +274,8 @@ public class NlpService {
         } catch (Exception e) {
             log.error("❌ FastAPI 맞춤 피드 요청 실패: {}", e.getMessage());
             // 피드 생성 실패 시 비어있는 응답을 반환하거나 에러를 던질 수 있습니다.
-            return new FeedResponseDto(Collections.emptyList());
+            // return new FeedResponseDto(Collections.emptyList());
+            throw new RuntimeException("FastAPI 맞춤 피드 요청 실패", e);
         }
     }
 }

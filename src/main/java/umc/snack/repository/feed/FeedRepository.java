@@ -28,9 +28,15 @@ public interface FeedRepository extends JpaRepository<Article, Long> {
     Slice<Article> findByCategoryNameWithCursor(
             @Param("categoryNames") List<String> categoryNames, @Param("lastArticleId") Long lastArticleId, Pageable pageable);
 
-    @Query("SELECT DISTINCT a FROM Article a JOIN a.articleCategories ac WHERE ac.category.categoryId IN :categoryIds")
+    // @Query("SELECT DISTINCT a FROM Article a JOIN a.articleCategories ac WHERE ac.category.categoryId IN :categoryIds")
+    @Query("SELECT DISTINCT a FROM Article a JOIN a.articleCategories ac " +
+            "WHERE ac.category.categoryId IN :categoryIds " +
+            "ORDER BY a.articleId DESC")
     Slice<Article> findByCategoryId(@Param("categoryIds") List<Long> categoryIds, Pageable pageable);
 
-    @Query("SELECT DISTINCT a FROM Article a JOIN a.articleCategories ac WHERE ac.category.categoryId IN :categoryIds AND a.articleId < :lastArticleId")
+    // @Query("SELECT DISTINCT a FROM Article a JOIN a.articleCategories ac WHERE ac.category.categoryId IN :categoryIds AND a.articleId < :lastArticleId")
+    @Query("SELECT DISTINCT a FROM Article a JOIN a.articleCategories ac " +
+            "WHERE ac.category.categoryId IN :categoryIds AND a.articleId < :lastArticleId " +
+            "ORDER BY a.articleId DESC")
     Slice<Article> findByCategoryIdWithCursor(@Param("categoryIds") List<Long> categoryIds, @Param("lastArticleId") Long lastArticleId, Pageable pageable);
 }

@@ -87,7 +87,12 @@ public class FeedServiceImpl implements FeedService{
         List<UserCategoryScoreDto> topCategoriesScores = userPreferenceService.calculateCategoryScores(userId);
 
         if (topCategoriesScores.isEmpty()) {
-            return null; // 관심 카테고리가 없으면 빈 결과 반환
+            return ArticleInFeedDto.builder()
+                    .category("맞춤 피드")
+                    .hasNext(false)
+                    .nextCursorId(null)
+                    .articles(new ArrayList<>())
+                    .build();
         }
 
         // **** 1. DTO에서 Category ID 리스트를 추출 ****

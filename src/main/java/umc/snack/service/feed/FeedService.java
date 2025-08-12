@@ -8,6 +8,5 @@ import java.util.List;
 public interface FeedService {
     ArticleInFeedDto getMainFeedByCategories(List<String> categoryNames, Long lastArticleId, Long userId);
     SearchResponseDto searchArticlesByQuery(String query, int page, int size, double threshold);
-    // ArticleInFeedDto getPersonalizedFeed(Long userId, int page, int size);
     ArticleInFeedDto getPersonalizedFeed(Long userId, Long lastArticleId);
 }

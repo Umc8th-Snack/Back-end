@@ -49,26 +49,13 @@ public class FeedController {
             @RequestParam(defaultValue = "0.3") double threshold) {
 
         SearchResponseDto result = feedService.searchArticlesByQuery(query, page, size, threshold);
+
+        if (result.getArticles().isEmpty()) {
+            return ApiResponse.onSuccess("FEED_9808", "검색결과가 없습니다.", null);
+        }
         return ApiResponse.onSuccess("FEED_9702", "의미 기반 검색에 성공하였습니다", result);
     }
-/*
-    // **** 맞춤 피드 API 구현 ****
-    @Operation(summary = "맞춤 피드에서 기사 제공", description = "사용자에게 맞춤화된 기사를 무한스크롤 조회합니다.")
-    @Parameters({
-            @Parameter(name = "page", description = "조회할 페이지 번호 (0부터 시작)"),
-            @Parameter(name = "size", description = "한 페이지에 보여줄 기사 수")
-    })
-    @GetMapping("/personalized")
-    public ApiResponse<ArticleInFeedDto> getPersonalizedFeedArticles(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @AuthenticationPrincipal Long userId) {
 
-        ArticleInFeedDto responseDto = feedService.getPersonalizedFeed(userId, page, size);
-        return ApiResponse.onSuccess("FEED_9503", "맞춤 피드 조회에 성공하였습니다", responseDto);
-    }
-
- */
     @Operation(summary = "맞춤 피드에서 기사 제공", description = "사용자의 상위 관심 카테고리 3개에 대한 기사를 최신순으로 무한스크롤 조회합니다.")
     @Parameters({
             @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
@@ -79,9 +66,7 @@ public class FeedController {
             @AuthenticationPrincipal Long userId) {
 
         ArticleInFeedDto responseDto = feedService.getPersonalizedFeed(userId, lastArticleId);
-
-        // 명세서에 맞게 204 No Content 처리
-        if (responseDto == null || responseDto.getArticles() == null || responseDto.getArticles().isEmpty()) {
+        if (responseDto.getArticles().isEmpty()) {
             return ApiResponse.onSuccess("FEED_9504", "맞춤 피드의 기사를 찾을 수 없습니다.", null);
         }
 
