@@ -29,6 +29,7 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final ArticleTermRepository articleTermRepository;
 
+    @Transactional(readOnly = true)
     public ArticleDto getArticleById(Long articleId) {
         // articleId가 null인 경우 예외 발생
         if (articleId == null) {
@@ -44,6 +45,7 @@ public class ArticleService {
                 .findFirst()                            // 단 하나의 매핑 가져오기
                 .map(ac -> ac.getCategory().getCategoryName())
                 .orElse("미분류");
+
 
         // ArticleDto 생성 및 반환
         return ArticleDto.builder()

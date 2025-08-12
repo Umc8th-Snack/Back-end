@@ -42,4 +42,10 @@ public class Article extends BaseEntity {
     public void updateSummary(String summary) {
         this.summary = summary;
     }
+
+    public void updateImageUrl(String imageUrl) {
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            this.imageUrl = imageUrl;
+        }
+    }
 }
