@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,6 +48,31 @@ public class ReportController {
         return ResponseEntity.status(201).body(response);
     }
 
+    @Operation(summary = "퀴즈 신고 상태 조회", description = "사용자가 해당 기사 퀴즈 해설을 이미 신고했는지 여부를 반환합니다.")
+    @GetMapping("/quiz/status")
+    public ResponseEntity<ApiResponse<Object>> getQuizReportStatus(
+            @PathVariable("articleId") Long articleId,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        Long userIdFromToken = customUserDetails.getUserId();
+        boolean reported = quizReportService.hasReported(articleId, userIdFromToken);
+
+        // 응답 구조 생성
+        final boolean isReported = reported; // 변수명 충돌 방지
+        Object result = new Object() {
+            public final boolean reported = isReported;
+            public final String status = isReported ? "REPORTED" : "NOT_REPORTED";
+            public final String actionLabel = isReported ? "신고 완료" : "신고 가능";
+        };
+
+        ApiResponse<Object> response = ApiResponse.onSuccess(
+                "200",
+                "퀴즈 신고 상태 조회 성공",
+                result
+        );
+        return ResponseEntity.ok(response);
+    }
+
     @Operation(summary = "용어 신고하기", description = "기사에 포함된 용어 설명에 대해 신고를 생성합니다. 한 사용자는 같은 기사에 대해 한 번만 신고할 수 있습니다.")
     @PostMapping("/term")
     public ResponseEntity<ApiResponse<TermReportResponseDto>> reportTerm(
@@ -64,6 +90,29 @@ public class ReportController {
         );
         return ResponseEntity.status(201).body(response);
     }
+
+    @Operation(summary = "용어 신고 상태 조회", description = "사용자가 해당 기사 용어 설명을 이미 신고했는지 여부를 반환합니다.")
+    @GetMapping("/term/status")
+    public ResponseEntity<ApiResponse<Object>> getTermReportStatus(
+            @PathVariable("articleId") Long articleId,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        Long userIdFromToken = customUserDetails.getUserId();
+        boolean reported = termReportService.hasReported(articleId, userIdFromToken);
+
+        // 응답 구조 생성
+        final boolean isReported = reported; // 변수명 충돌 방지
+        Object result = new Object() {
+            public final boolean reported = isReported;
+            public final String status = isReported ? "REPORTED" : "NOT_REPORTED";
+            public final String actionLabel = isReported ? "신고 완료" : "신고 가능";
+        };
+
+        ApiResponse<Object> response = ApiResponse.onSuccess(
+                "200",
+                "용어 신고 상태 조회 성공",
+                result
+        );
+        return ResponseEntity.ok(response);
+    }
 }
-
-

@@ -30,12 +30,25 @@ public class QuizReport extends BaseEntity {
     @Column(name = "article_id", nullable = false)
     private Long articleId;
 
-    @Column(name = "reported", nullable = false)
+    @Column(name = "reported", nullable = false, columnDefinition = "TINYINT(1)")
     @Builder.Default
-    private Boolean reported = false;
+    private boolean reported = false;
 
     @Column(name = "reason", length = 1000)
     private String reason;
+
+    public boolean isReported() {
+        return reported;
+    }
+
+    public void setReported(boolean reported) {
+        this.reported = reported;
+    }
+
+    /** Allow setting via 0/1 semantics if needed */
+    public void setReportedInt(int value) {
+        this.reported = (value == 1);
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
