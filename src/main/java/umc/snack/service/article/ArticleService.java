@@ -31,6 +31,11 @@ public class ArticleService {
         Article a = articleRepository.findById(articleId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ARTICLE_9104_GET));
 
+        // summary가 null 또는 빈 문자열이면 노출하지 않음 (기사 부재와 동일 취급)
+        if (a.getSummary() == null || a.getSummary().isBlank()) {
+            throw new CustomException(ErrorCode.ARTICLE_9104_GET);
+        }
+
         // 첫 번째 카테고리 이름 추출, 없으면 "미분류"로 설정
         String categoryName = a.getArticleCategories().stream()
                 .findFirst()                            // 단 하나의 매핑 가져오기
