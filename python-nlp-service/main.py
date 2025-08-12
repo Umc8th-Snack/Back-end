@@ -274,7 +274,7 @@ async def vectorize_articles_from_db(article_ids: List[int]):
 
 @app.post("/api/nlp/vectorize/batch")
 async def batch_vectorize_articles(
-        limit: int = Query(100, description="한 번에 처리할 최대 기사 수"),
+        limit: int = Query(200, description="한 번에 처리할 최대 기사 수"),
         force_update: bool = Query(False, description="기존 벡터 재생성 여부")
 ):
     """
@@ -295,7 +295,8 @@ async def batch_vectorize_articles(
                 query = """
                     SELECT article_id 
                     FROM articles 
-                    ORDER BY created_at DESC 
+                    ORDER BY created_at DESC
+                     ORDER BY created_at
                     LIMIT %s
                 """
             else:
@@ -881,7 +882,7 @@ async def get_personalized_feed(user_id: int, page: int = 0, size: int = 20):
 
             return FeedResponse(articles=recommendations[start_idx:end_idx])
 
-    @app.post("/api/debug/sbert-only/{article_id}")
+@app.post("/api/debug/sbert-only/{article_id}")
 async def debug_sbert_and_db(article_id: int):
     """SBERT 벡터 생성과 DB 저장만 집중 디버깅"""
 
@@ -1076,6 +1077,81 @@ async def debug_sbert_and_db(article_id: int):
                 debug_info["global_traceback"] = traceback.format_exc()
 
     return debug_info
+
+@app.get("/api/debug/nlp-processor-detail")
+async def debug_nlp_processor_detail():
+    """NLP 프로세서 상세 상태 확인"""
+
+    status = {
+        "nlp_processor_imported": nlp_processor is not None,
+        "current_time": datetime.now().isoformat()
+    }
+
+    if nlp_processor:
+        # 각 함수들이 존재하는지 확인
+        status["has_extract_tfidf_keywords"] = hasattr(nlp_processor, 'extract_tfidf_keywords')
+        status["has_generate_sbert_vectors"] = hasattr(nlp_processor, 'generate_sbert_vectors')
+        status["has_is_service_ready"] = hasattr(nlp_processor, 'is_service_ready')
+
+        if hasattr(nlp_processor, 'is_service_ready'):
+            try:
+                status["is_service_ready"] = nlp_processor.is_service_ready()
+            except Exception as e:
+                status["is_service_ready_error"] = str(e)
+
+        # nlp_processor 모듈의 전역 변수들 확인
+        if hasattr(nlp_processor, 'service_ready'):
+            status["service_ready_flag"] = nlp_processor.service_ready
+        if hasattr(nlp_processor, 'sbert_model'):
+            status["sbert_model_loaded"] = nlp_processor.sbert_model is not None
+        if hasattr(nlp_processor, 'tfidf_vectorizer'):
+            status["tfidf_vectorizer_loaded"] = nlp_processor.tfidf_vectorizer is not None
+
+    return status
+
+@app.post("/api/debug/test-keywords")
+async def debug_test_keywords(keywords: List[str]):
+    """키워드 리스트로 SBERT 테스트"""
+
+    if not nlp_processor:
+        return {"error": "NLP 프로세서가 없음"}
+
+    result = {
+        "input_keywords": keywords,
+        "timestamp": datetime.now().isoformat(),
+        "steps": []
+    }
+
+    try:
+        result["steps"].append("1. SBERT 벡터 생성 시작...")
+        sbert_vectors = await nlp_processor.generate_sbert_vectors(keywords)
+
+        result["vector_count"] = len(sbert_vectors)
+        result["generated_for"] = list(sbert_vectors.keys())
+
+        if sbert_vectors:
+            first_keyword = list(sbert_vectors.keys())[0]
+            first_vector = sbert_vectors[first_keyword]
+            result["sample_vector"] = {
+                "keyword": first_keyword,
+                "dimension": len(first_vector),
+                "first_5_values": first_vector[:5],
+                "norm": float(np.linalg.norm(first_vector))
+            }
+            result["steps"].append(f"✅ 성공 - {len(sbert_vectors)}개 벡터 생성")
+            result["status"] = "SUCCESS"
+        else:
+            result["steps"].append("❌ 벡터가 생성되지 않음")
+            result["status"] = "NO_VECTORS"
+
+    except Exception as e:
+        result["steps"].append(f"❌ 오류: {str(e)}")
+        result["error"] = str(e)
+        result["status"] = "ERROR"
+        import traceback
+        result["traceback"] = traceback.format_exc()
+
+    return result
 
 # --- 메인 실행 ---
 
