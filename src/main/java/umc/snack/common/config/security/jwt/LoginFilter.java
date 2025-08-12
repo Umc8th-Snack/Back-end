@@ -30,6 +30,8 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 
+import static umc.snack.common.config.security.CookieUtil.createCookie;
+
 public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private final AuthenticationManager authenticationManager;
@@ -108,6 +110,10 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         response.setContentType("application/json; charset=UTF-8");
         response.setStatus(HttpStatus.OK.value());
+        // 헤더/쿠키 유지
+        response.setHeader("Authorization", "Bearer " + accessToken);
+        response.addCookie(createCookie("refresh", refreshToken));
+
         try {
             ObjectMapper mapper = new ObjectMapper();
             response.getWriter().write(mapper.writeValueAsString(apiResponse));
@@ -115,9 +121,6 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
             throw new RuntimeException(e);
         }
 
-        // 헤더/쿠키 유지
-        response.setHeader("Authorization", "Bearer " + accessToken);
-        response.addCookie(createCookie("refresh", refreshToken));
     }
 
     @Override
@@ -151,14 +154,5 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         }
     }
 
-    // 쿠키 생성 메서드
-    private Cookie createCookie(String key, String value) {
-        Cookie cookie = new Cookie(key, value);
-        cookie.setMaxAge(24 * 60 * 60);
-        cookie.setHttpOnly(true);
-//        cookie.setSecure(true);
-        cookie.setPath("/");
-        return cookie;
-    }
 
 }
