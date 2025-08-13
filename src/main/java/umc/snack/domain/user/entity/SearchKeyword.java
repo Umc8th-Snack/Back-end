@@ -3,11 +3,15 @@ package umc.snack.domain.user.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import umc.snack.global.BaseEntity;
-import umc.snack.domain.user.SearchKeywordId;
 
 @Entity
-@Table(name = "search_keywords")
-@IdClass(SearchKeywordId.class)
+@Table(name = "search_keywords", uniqueConstraints = {
+        // (user_id, keyword) 조합이 유니크하도록 제약조건 추가
+        @UniqueConstraint(
+                name = "search_keyword_uk",
+                columnNames = {"user_id", "keyword"}
+        )
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -15,17 +19,18 @@ import umc.snack.domain.user.SearchKeywordId;
 public class SearchKeyword extends BaseEntity {
 
     @Id
-    @Column(name = "search_id")
-    private Long searchId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "search_id") // DB 컬럼명은 스네이크 케이스로
+    private Long searchId;      // 필드명은 원하시는 대로 카멜 케이스로
 
-    @Id
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(nullable = false)
     private String keyword;
 
-    // 연관관계 맵핑 따로 추가 (선택)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
+
 }

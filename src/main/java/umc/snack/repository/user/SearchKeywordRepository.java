@@ -7,7 +7,7 @@ import umc.snack.domain.user.entity.SearchKeyword;
 import java.util.List;
 import java.util.Optional;
 
-public interface SearchKeywordRepository extends JpaRepository<SearchKeyword, SearchKeywordId> {
+public interface SearchKeywordRepository extends JpaRepository<SearchKeyword, Long> {
 
     Optional<SearchKeyword> findByUserIdAndKeyword(Long userId, String keyword);
 
