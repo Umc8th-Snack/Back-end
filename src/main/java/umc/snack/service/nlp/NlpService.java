@@ -26,7 +26,6 @@ public class NlpService {
 
     private final RestTemplate restTemplate;
 
-    // @Value("${fastapi.url:http://localhost:5000}")
     @Value("${fastapi.url:http://python:5000}")
     private String fastapiUrl;
 
