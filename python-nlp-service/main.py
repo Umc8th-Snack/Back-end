@@ -7,7 +7,6 @@ import logging
 from typing import List, Dict, Any, Optional
 import aiomysql
 import os
-from datetime import datetime
 from dotenv import load_dotenv
 import numpy as np
 import json

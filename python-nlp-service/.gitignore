@@ -36,3 +36,11 @@ Thumbs.db
 # 기타
 *.bak
 *.tmp
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Data files / Models
+# 특정 데이터 파일만 제외하고 싶을 경우
+python-nlp-service/data/tfidf_vectorizer.pkl
