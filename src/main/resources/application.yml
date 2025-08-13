@@ -64,7 +64,7 @@ google:
     redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI}
 
 fastapi:
-  url: http://localhost:5000
+  url: http://python:5000
 # AWS S3 설정
 aws:
   s3:
