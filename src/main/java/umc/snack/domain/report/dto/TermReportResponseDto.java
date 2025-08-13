@@ -11,6 +11,5 @@ import lombok.NoArgsConstructor;
 @Builder
 public class TermReportResponseDto {
     private Long reportId;
+    private boolean reported;
 }
-
-

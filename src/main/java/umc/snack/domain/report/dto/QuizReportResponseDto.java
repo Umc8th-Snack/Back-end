@@ -11,6 +11,5 @@ import lombok.NoArgsConstructor;
 @Builder
 public class QuizReportResponseDto {
     private Long reportId;
+    private boolean reported;
 }
-
-

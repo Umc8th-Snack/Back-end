@@ -201,7 +201,7 @@ async def health_check():
 # --- 벡터화 엔드포인트 ---
 # main.py의 수정된 벡터화 함수 부분
 
-@app.post("/api/nlp/vectorize/articles")
+@app.post("/api/vectorize/articles")
 async def vectorize_articles_from_db(article_ids: List[int]):
     if not article_ids:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="article_ids는 필수입니다.")
@@ -224,7 +224,7 @@ async def vectorize_articles_from_db(article_ids: List[int]):
 
                     tfidf_keywords = {}
                     sbert_vectors = {}
-                    representative_vector = [0.0] * 768
+                    representative_vector = [0.0] * 384
 
                     if not text.strip():
                         # summary가 비어있으면, 벡터와 키워드를 모두 빈 딕셔너리로 처리
@@ -273,7 +273,7 @@ async def vectorize_articles_from_db(article_ids: List[int]):
 
 @app.post("/api/nlp/vectorize/batch")
 async def batch_vectorize_articles(
-        limit: int = Query(100, description="한 번에 처리할 최대 기사 수"),
+        limit: int = Query(200, description="한 번에 처리할 최대 기사 수"),
         force_update: bool = Query(False, description="기존 벡터 재생성 여부")
 ):
     """
@@ -294,7 +294,7 @@ async def batch_vectorize_articles(
                 query = """
                     SELECT article_id 
                     FROM articles 
-                    ORDER BY created_at DESC 
+                    ORDER BY created_at DESC
                     LIMIT %s
                 """
             else:
@@ -453,8 +453,8 @@ async def search_articles_direct(
 async def search_articles_semantic(
         query: str = Query(..., description="검색할 단어"),
         page: int = Query(0, ge=0, description="페이지 번호"),
-        size: int = Query(10, ge=1, le=50, description="페이지 크기"),
-        threshold: float = Query(0.3, ge=0, le=1, description="최소 유사도 임계값")
+        size: int = Query(5, ge=1, le=50, description="페이지 크기"),
+        threshold: float = Query(0.7, ge=0, le=1, description="최소 유사도 임계값")
 ):
     """
     의미 기반 기사 검색 (키워드 벡터 직접 비교 방식)
@@ -879,6 +879,279 @@ async def get_personalized_feed(user_id: int, page: int = 0, size: int = 20):
             end_idx = start_idx + size
 
             return FeedResponse(articles=recommendations[start_idx:end_idx])
+
+@app.post("/api/debug/sbert-only/{article_id}")
+async def debug_sbert_and_db(article_id: int):
+    """SBERT 벡터 생성과 DB 저장만 집중 디버깅"""
+
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="데이터베이스 연결이 없습니다.")
+
+    debug_info = {
+        "article_id": article_id,
+        "timestamp": datetime.now().isoformat(),
+        "sbert_steps": [],
+        "db_steps": [],
+        "nlp_processor_available": nlp_processor is not None
+    }
+
+    async with db_pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cursor:
+            try:
+                # 1. 기사 조회
+                await cursor.execute("SELECT article_id, title, summary FROM articles WHERE article_id = %s", (article_id,))
+                article = await cursor.fetchone()
+
+                if not article:
+                    debug_info["error"] = "기사를 찾을 수 없음"
+                    return debug_info
+
+                text = article.get('summary') or ''
+                debug_info["summary_length"] = len(text)
+                debug_info["summary_preview"] = text[:200] + "..." if len(text) > 200 else text
+
+                if not text.strip():
+                    debug_info["error"] = "summary가 비어있음"
+                    return debug_info
+
+                if not nlp_processor:
+                    debug_info["error"] = "NLP 프로세서가 없음"
+                    return debug_info
+
+                # 2. TF-IDF 키워드 추출 (이미 잘 된다고 하셨으니 빠르게)
+                debug_info["sbert_steps"].append("1. TF-IDF 키워드 추출 시작")
+                tfidf_keywords = await nlp_processor.extract_tfidf_keywords(text, top_k=10)
+                debug_info["tfidf_keywords"] = tfidf_keywords
+                debug_info["sbert_steps"].append(f"✅ TF-IDF 완료 - {len(tfidf_keywords)}개 키워드: {list(tfidf_keywords.keys())}")
+
+                if not tfidf_keywords:
+                    debug_info["error"] = "키워드가 추출되지 않음"
+                    return debug_info
+
+                # 3. SBERT 벡터 생성 - 여기가 핵심!
+                debug_info["sbert_steps"].append("2. SBERT 벡터 생성 시작...")
+                top_keywords = list(tfidf_keywords.keys())
+                debug_info["keywords_for_sbert"] = top_keywords
+
+                MODEL_DIMENSION = 384
+
+                try:
+                    # NLP 프로세서 상태 재확인
+                    if hasattr(nlp_processor, 'is_service_ready'):
+                        is_ready = nlp_processor.is_service_ready()
+                        debug_info["nlp_processor_ready"] = is_ready
+                        debug_info["sbert_steps"].append(f"NLP 프로세서 준비 상태: {is_ready}")
+
+                    # SBERT 벡터 생성 시도
+                    debug_info["sbert_steps"].append("SBERT 벡터 생성 함수 호출...")
+                    sbert_vectors = await nlp_processor.generate_sbert_vectors(top_keywords)
+
+                    debug_info["sbert_result"] = {
+                        "vector_count": len(sbert_vectors),
+                        "keywords_processed": list(sbert_vectors.keys()) if sbert_vectors else []
+                    }
+
+                    if sbert_vectors:
+                        # 첫 번째 벡터 상세 분석
+                        first_keyword = list(sbert_vectors.keys())[0]
+                        first_vector = sbert_vectors[first_keyword]
+                        debug_info["first_vector_analysis"] = {
+                            "keyword": first_keyword,
+                            "vector_length": len(first_vector),
+                            "vector_type": str(type(first_vector)),
+                            "first_5_values": first_vector[:5],
+                            "vector_norm": float(np.linalg.norm(first_vector))
+                        }
+                        debug_info["sbert_steps"].append(f"✅ SBERT 벡터 생성 성공 - {len(sbert_vectors)}개")
+
+                        # 4. 대표 벡터 계산
+                        debug_info["sbert_steps"].append("3. 대표 벡터 계산 시작...")
+                        all_vectors = np.array(list(sbert_vectors.values()))
+                        debug_info["vector_array_info"] = {
+                            "shape": list(all_vectors.shape),
+                            "dtype": str(all_vectors.dtype)
+                        }
+
+                        avg_vector = np.mean(all_vectors, axis=0)
+                        norm = np.linalg.norm(avg_vector)
+                        debug_info["representative_vector_info"] = {
+                            "norm": float(norm),
+                            "length": len(avg_vector)
+                        }
+
+                        if norm > 0:
+                            representative_vector = (avg_vector / norm).tolist()
+                            debug_info["sbert_steps"].append(f"✅ 대표 벡터 계산 완료 - 차원: {len(representative_vector)}")
+                        else:
+                            representative_vector = [0.0] * MODEL_DIMENSION
+                            debug_info["sbert_steps"].append("⚠️ norm이 0이어서 기본 벡터 사용")
+
+                        # 5. DB 저장 과정 상세 디버깅
+                        debug_info["db_steps"].append("1. JSON 변환 시작...")
+
+                        try:
+                            vector_json_str = json.dumps(sbert_vectors)
+                            keywords_json_str = json.dumps(tfidf_keywords)
+                            rep_vector_str = json.dumps(representative_vector)
+
+                            debug_info["json_info"] = {
+                                "vector_json_length": len(vector_json_str),
+                                "keywords_json_length": len(keywords_json_str),
+                                "rep_vector_json_length": len(rep_vector_str),
+                                "vector_json_preview": vector_json_str[:200] + "..." if len(vector_json_str) > 200 else vector_json_str
+                            }
+                            debug_info["db_steps"].append("✅ JSON 변환 완료")
+
+                            # 기존 데이터 확인
+                            debug_info["db_steps"].append("2. 기존 데이터 확인...")
+                            await cursor.execute("SELECT article_id, model_version FROM article_semantic_vectors WHERE article_id = %s", (article_id,))
+                            existing = await cursor.fetchone()
+
+                            if existing:
+                                debug_info["existing_data"] = existing
+                                debug_info["db_steps"].append(f"기존 데이터 발견: {existing}")
+
+                                # UPDATE 실행
+                                debug_info["db_steps"].append("3. UPDATE 쿼리 실행...")
+                                await cursor.execute(
+                                    "UPDATE article_semantic_vectors SET vector = %s, keywords = %s, representative_vector = %s, model_version = %s, updated_at = NOW() WHERE article_id = %s",
+                                    (vector_json_str, keywords_json_str, rep_vector_str, "sbert-debug-v1", article_id)
+                                )
+                                debug_info["db_operation"] = "UPDATE"
+                                debug_info["db_steps"].append("✅ UPDATE 완료")
+                            else:
+                                debug_info["db_steps"].append("기존 데이터 없음 - INSERT 실행")
+
+                                # INSERT 실행
+                                debug_info["db_steps"].append("3. INSERT 쿼리 실행...")
+                                await cursor.execute(
+                                    "INSERT INTO article_semantic_vectors (article_id, vector, keywords, representative_vector, model_version, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, NOW(), NOW())",
+                                    (article_id, vector_json_str, keywords_json_str, rep_vector_str, "sbert-debug-v1")
+                                )
+                                debug_info["db_operation"] = "INSERT"
+                                debug_info["db_steps"].append("✅ INSERT 완료")
+
+                            # 저장 결과 확인
+                            debug_info["db_steps"].append("4. 저장 결과 확인...")
+                            await cursor.execute("""
+                                SELECT 
+                                    article_id,
+                                    JSON_LENGTH(vector) as vector_count,
+                                    JSON_LENGTH(keywords) as keyword_count,
+                                    LENGTH(representative_vector) as rep_vector_size,
+                                    model_version,
+                                    updated_at
+                                FROM article_semantic_vectors 
+                                WHERE article_id = %s
+                            """, (article_id,))
+
+                            saved_result = await cursor.fetchone()
+                            debug_info["saved_result"] = saved_result
+                            debug_info["db_steps"].append(f"✅ 저장 확인 완료: {saved_result}")
+
+                            debug_info["status"] = "SUCCESS"
+                            debug_info["final_message"] = "🎉 SBERT 벡터 생성과 DB 저장 모두 성공!"
+
+                        except Exception as db_error:
+                            debug_info["db_steps"].append(f"❌ DB 저장 오류: {str(db_error)}")
+                            debug_info["db_error"] = str(db_error)
+                            debug_info["status"] = "DB_ERROR"
+                            import traceback
+                            debug_info["db_traceback"] = traceback.format_exc()
+
+                    else:
+                        debug_info["sbert_steps"].append("❌ SBERT 벡터가 생성되지 않음")
+                        debug_info["status"] = "SBERT_EMPTY"
+
+                except Exception as sbert_error:
+                    debug_info["sbert_steps"].append(f"❌ SBERT 생성 오류: {str(sbert_error)}")
+                    debug_info["sbert_error"] = str(sbert_error)
+                    debug_info["status"] = "SBERT_ERROR"
+                    import traceback
+                    debug_info["sbert_traceback"] = traceback.format_exc()
+
+            except Exception as e:
+                debug_info["global_error"] = str(e)
+                debug_info["status"] = "GLOBAL_ERROR"
+                import traceback
+                debug_info["global_traceback"] = traceback.format_exc()
+
+    return debug_info
+
+@app.get("/api/debug/nlp-processor-detail")
+async def debug_nlp_processor_detail():
+    """NLP 프로세서 상세 상태 확인"""
+
+    status = {
+        "nlp_processor_imported": nlp_processor is not None,
+        "current_time": datetime.now().isoformat()
+    }
+
+    if nlp_processor:
+        # 각 함수들이 존재하는지 확인
+        status["has_extract_tfidf_keywords"] = hasattr(nlp_processor, 'extract_tfidf_keywords')
+        status["has_generate_sbert_vectors"] = hasattr(nlp_processor, 'generate_sbert_vectors')
+        status["has_is_service_ready"] = hasattr(nlp_processor, 'is_service_ready')
+
+        if hasattr(nlp_processor, 'is_service_ready'):
+            try:
+                status["is_service_ready"] = nlp_processor.is_service_ready()
+            except Exception as e:
+                status["is_service_ready_error"] = str(e)
+
+        # nlp_processor 모듈의 전역 변수들 확인
+        if hasattr(nlp_processor, 'service_ready'):
+            status["service_ready_flag"] = nlp_processor.service_ready
+        if hasattr(nlp_processor, 'sbert_model'):
+            status["sbert_model_loaded"] = nlp_processor.sbert_model is not None
+        if hasattr(nlp_processor, 'tfidf_vectorizer'):
+            status["tfidf_vectorizer_loaded"] = nlp_processor.tfidf_vectorizer is not None
+
+    return status
+
+@app.post("/api/debug/test-keywords")
+async def debug_test_keywords(keywords: List[str]):
+    """키워드 리스트로 SBERT 테스트"""
+
+    if not nlp_processor:
+        return {"error": "NLP 프로세서가 없음"}
+
+    result = {
+        "input_keywords": keywords,
+        "timestamp": datetime.now().isoformat(),
+        "steps": []
+    }
+
+    try:
+        result["steps"].append("1. SBERT 벡터 생성 시작...")
+        sbert_vectors = await nlp_processor.generate_sbert_vectors(keywords)
+
+        result["vector_count"] = len(sbert_vectors)
+        result["generated_for"] = list(sbert_vectors.keys())
+
+        if sbert_vectors:
+            first_keyword = list(sbert_vectors.keys())[0]
+            first_vector = sbert_vectors[first_keyword]
+            result["sample_vector"] = {
+                "keyword": first_keyword,
+                "dimension": len(first_vector),
+                "first_5_values": first_vector[:5],
+                "norm": float(np.linalg.norm(first_vector))
+            }
+            result["steps"].append(f"✅ 성공 - {len(sbert_vectors)}개 벡터 생성")
+            result["status"] = "SUCCESS"
+        else:
+            result["steps"].append("❌ 벡터가 생성되지 않음")
+            result["status"] = "NO_VECTORS"
+
+    except Exception as e:
+        result["steps"].append(f"❌ 오류: {str(e)}")
+        result["error"] = str(e)
+        result["status"] = "ERROR"
+        import traceback
+        result["traceback"] = traceback.format_exc()
+
+    return result
 
 # --- 메인 실행 ---
 

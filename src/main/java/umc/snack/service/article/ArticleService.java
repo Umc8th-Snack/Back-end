@@ -36,6 +36,7 @@ public class ArticleService {
             throw new CustomException(ErrorCode.ARTICLE_9104_GET);
         }
 
+
         // articleId로 Article 조회, 없으면 예외 발생
         Article a = articleRepository.findById(articleId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ARTICLE_9104_GET));

@@ -14,10 +14,13 @@ import umc.snack.global.BaseEntity;
                 columnNames = {"user_id","article_id"}),
         indexes = {
             @Index(name = "idx_tr_user", columnList = "user_id"),
-            @Index(name = "idx_tr_article", columnList = "article_id")
+            @Index(name = "idx_tr_article", columnList = "article_id"),
+            @Index(name = "idx_tr_user_article_reported", columnList = "user_id, article_id, reported")
         })
-@Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor @Builder
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 public class TermReport extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "report_id")
@@ -32,26 +35,16 @@ public class TermReport extends BaseEntity {
     private Article article;
 
     @Builder.Default
-    @Column(name="reported", nullable=false)
-    private Boolean reported = true;
-
-    // Temporary mirror to satisfy legacy column 'is_reported' if present in DB
-    @Column(name = "is_reported", nullable = false)
-    private Boolean isReportedMirror;
+    @Column(name = "reported", nullable = false, columnDefinition = "TINYINT(1)")
+    private boolean reported = true;
 
     @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
 
-    @PrePersist
-    public void syncReportedBeforeInsert() {
-        if (reported == null) {
-            reported = true;
-        }
-        isReportedMirror = reported;
+    // Explicit accessors to ensure service layer calls compile
+    public boolean isReported() {
+        return reported;
     }
 
-    @PreUpdate
-    public void syncReportedBeforeUpdate() {
-        isReportedMirror = reported;
-    }
+
 }
