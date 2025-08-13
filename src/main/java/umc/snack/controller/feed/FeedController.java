@@ -8,12 +8,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.feed.dto.ArticleInFeedDto;
 import umc.snack.domain.nlp.dto.SearchResponseDto;
+import umc.snack.repository.user.SearchKeywordRepository;
 import umc.snack.service.feed.FeedService;
 import umc.snack.service.nlp.NlpService;
+import umc.snack.service.user.SearchKeywordService;
 
 import java.util.List;
 
@@ -24,6 +27,7 @@ import java.util.List;
 public class FeedController {
     private final FeedService feedService;
     private final NlpService nlpService;
+    private final SearchKeywordService searchKeywordService;
     // 카테고리 다중 선택
     @Operation(summary = "메인 피드에서 기사 제공", description = "메인 피드에서 특정 카테고리의 기사를 무한스크롤 조회합니다.")
     @Parameters({
@@ -40,13 +44,21 @@ public class FeedController {
     }
 
 
-    @Operation(summary = "의미 기반 기사 검색", description = "검색어를 기반으로 의미적으로 유사한 기사를 조회합니다.")
+    @Operation(summary = "의미 기반 기사 검색", description = "검색어를 기반으로 의미적으로 유사한 기사를 조회합니다.\n\n" +
+            "※ 로그인한 경우에만 검색어가 저장됩니다.")
     @GetMapping("articles/search")
     public ApiResponse<SearchResponseDto> searchArticles(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size,
-            @RequestParam(defaultValue = "0.7") double threshold) {
+            @RequestParam(defaultValue = "0.7") double threshold,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        // 로그인한 경우에만 저장
+        if (userDetails != null) {
+            Long userId = userDetails.getUser().getUserId();
+            searchKeywordService.saveKeyword(userId, query);
+        }
 
         SearchResponseDto result = feedService.searchArticlesByQuery(query, page, size, threshold);
 
