@@ -30,6 +30,8 @@ services:
     container_name: spring
     expose:
       - "8080"
+    depends_on:
+      - python
     env_file:
       - .env
 
