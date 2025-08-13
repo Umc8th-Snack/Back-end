@@ -11,6 +11,11 @@ import umc.snack.global.BaseEntity;
         name = "quiz_reports",
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = {"user_id", "article_id"})
+        },
+        indexes = {
+                @Index(name = "idx_qr_user", columnList = "user_id"),
+                @Index(name = "idx_qr_article", columnList = "article_id"),
+                @Index(name = "idx_qr_user_article_reported", columnList = "user_id, article_id, reported")
         }
 )
 @Getter
@@ -30,12 +35,16 @@ public class QuizReport extends BaseEntity {
     @Column(name = "article_id", nullable = false)
     private Long articleId;
 
-    @Column(name = "reported", nullable = false)
+    @Column(name = "reported", nullable = false, columnDefinition = "TINYINT(1)")
     @Builder.Default
-    private Boolean reported = false;
+    private boolean reported = true;
 
     @Column(name = "reason", length = 1000)
     private String reason;
+
+    public boolean isReported() {
+        return reported;
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)

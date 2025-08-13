@@ -59,6 +59,15 @@ public class QuizReportServiceImpl implements QuizReportService {
                 .reportId(saved.getReportId())
                 .build();
     }
+
+    @Transactional(readOnly = true)
+    @Override
+    public boolean hasReported(Long articleId, Long userIdFromToken) {
+        if (userIdFromToken == null || articleId == null) {
+            throw new CustomException(ErrorCode.REPORT_8803);
+        }
+        return quizReportRepository.existsByUserIdAndArticleIdAndReportedTrue(userIdFromToken, articleId);
+    }
 }
 
 
