@@ -1,7 +1,6 @@
 package umc.snack.repository.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import umc.snack.domain.user.SearchKeywordId;
 import umc.snack.domain.user.entity.SearchKeyword;
 
 import java.util.List;
