@@ -59,38 +59,38 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Prune ECR (keep prod/staging-latest + recent SHAs)
-        env:
-          REGION: ${{ env.AWS_REGION }}
-          KEEP_N: ${{ env.KEEP_N }}
-          EXTRA_PROTECT: ${{ env.EXTRA_PROTECT }}
-        run: |
-          set -euo pipefail
-          for REPO in spring python; do
-            DETAILS=$(aws ecr describe-images --repository-name "$REPO" --region "$REGION" \
-              --query 'reverse(sort_by(imageDetails,& imagePushedAt))' --output json)
-            PROTECT_TAGS='["prod-latest","staging-latest"]'
-            RECENT_SHAS=$(echo "$DETAILS" | jq -r --argjson N "$KEEP_N" '
-              [ .[] | (.imageTags // [])[] | select(test("^[0-9a-fA-F]{7,40}$")) ][0:$N]')
-            EXTRA_JSON=${EXTRA_PROTECT:+$(printf '%s' "$EXTRA_PROTECT" | awk -F, '{printf("["); for(i=1;i<=NF;i++){gsub(/^ +| +$/,"",$i); printf("%s\"%s\"", (i>1?",":""), $i)} printf("]")}')}
-            [ -z "$EXTRA_JSON" ] && EXTRA_JSON='[]'
-            ALL_PROTECT=$(jq -c -n --argjson a "$PROTECT_TAGS" --argjson b "$RECENT_SHAS" --argjson c "$EXTRA_JSON" '(a+b+c)|unique')
-            DELETE_LIST=$(echo "$DETAILS" | jq -c --argjson KEEP "$ALL_PROTECT" '
-              [ .[] as $img
-                | ($img.imageTags // []) as $tags
-                | if ($tags|length)==0 then {imageDigest:$img.imageDigest}
-                  else if [ $tags[] | select(. as $t | $KEEP | index($t)) ] | length > 0
-                       then empty
-                       else {imageDigest:$img.imageDigest}
-                       end
-                  end ]')
-            if [ "$(echo "$DELETE_LIST" | jq 'length')" -gt 0 ]; then
-              echo "$DELETE_LIST" > /tmp/delete.json
-              aws ecr batch-delete-image --repository-name "$REPO" --region "$REGION" --image-ids file:///tmp/delete.json || true
-            else
-              echo "Nothing to delete in $REPO"
-            fi
-          done
+      # - name: Prune ECR (keep prod/staging-latest + recent SHAs)
+      #   env:
+      #     REGION: ${{ env.AWS_REGION }}
+      #     KEEP_N: ${{ env.KEEP_N }}
+      #     EXTRA_PROTECT: ${{ env.EXTRA_PROTECT }}
+      #   run: |
+      #     set -euo pipefail
+      #     for REPO in spring python; do
+      #       DETAILS=$(aws ecr describe-images --repository-name "$REPO" --region "$REGION" \
+      #         --query 'reverse(sort_by(imageDetails,& imagePushedAt))' --output json)
+      #       PROTECT_TAGS='["prod-latest","staging-latest"]'
+      #       RECENT_SHAS=$(echo "$DETAILS" | jq -r --argjson N "$KEEP_N" '
+      #         [ .[] | (.imageTags // [])[] | select(test("^[0-9a-fA-F]{7,40}$")) ][0:$N]')
+      #       EXTRA_JSON=${EXTRA_PROTECT:+$(printf '%s' "$EXTRA_PROTECT" | awk -F, '{printf("["); for(i=1;i<=NF;i++){gsub(/^ +| +$/,"",$i); printf("%s\"%s\"", (i>1?",":""), $i)} printf("]")}')}
+      #       [ -z "$EXTRA_JSON" ] && EXTRA_JSON='[]'
+      #       ALL_PROTECT=$(jq -c -n --argjson a "$PROTECT_TAGS" --argjson b "$RECENT_SHAS" --argjson c "$EXTRA_JSON" '(a+b+c)|unique')
+      #       DELETE_LIST=$(echo "$DETAILS" | jq -c --argjson KEEP "$ALL_PROTECT" '
+      #         [ .[] as $img
+      #           | ($img.imageTags // []) as $tags
+      #           | if ($tags|length)==0 then {imageDigest:$img.imageDigest}
+      #             else if [ $tags[] | select(. as $t | $KEEP | index($t)) ] | length > 0
+      #                  then empty
+      #                  else {imageDigest:$img.imageDigest}
+      #                  end
+      #             end ]')
+      #       if [ "$(echo "$DELETE_LIST" | jq 'length')" -gt 0 ]; then
+      #         echo "$DELETE_LIST" > /tmp/delete.json
+      #         aws ecr batch-delete-image --repository-name "$REPO" --region "$REGION" --image-ids file:///tmp/delete.json || true
+      #       else
+      #         echo "Nothing to delete in $REPO"
+      #       fi
+      #     done
 
   deploy:
     runs-on: ubuntu-latest
