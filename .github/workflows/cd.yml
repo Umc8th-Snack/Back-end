@@ -1,6 +1,6 @@
-name: CD on main (spring+python → prod, prune)
+name: CD
 
-on:
+on:  
   push:
     branches: [ main ]
 
