@@ -89,17 +89,31 @@
 ## 📂 프로젝트 구조
 
 ```plaintext
-src/
-└── main/
-    ├── java/umc/snack/
-    │   ├── common/          # 공통 설정, 예외, 응답
-    │   ├── controller/      # API 엔드포인트
-    │   ├── service/         # 비즈니스 로직
-    │   ├── repository/      # DB 접근
-    │   ├── domain/          # 엔티티 & DTO
-    │   └── SnackApplication.java
-    └── resources/
-        └── application.yml
+Back-end/
+ ├── infra/
+ │    └── nginx/             # 배포용 Nginx 설정
+ ├── python-nlp-service/     # NLP 서버
+ │    ├── main.py
+ │    ├── nlp_processor.py
+ │    ├── config.py
+ │    ├── requirements.txt
+ │    ├── .env               # python 환경변수
+ │    └── Dockerfile
+ ├── src/
+ │    ├── Dockerfile
+ │    └── main/
+ │         ├── java/umc/snack/
+ │         │    ├── common/
+ │         │    ├── controller/
+ │         │    ├── service/
+ │         │    ├── repository/
+ │         │    └── domain/
+ │         └── resources/
+ │              └── application.yml
+ ├── docker-compose.yml
+ └── .env                   # spring 환경변수
+
+* .env 파일은 gitignore로 관리, github 레포에 업로드 하지 않음
 ```
 
 ## 🌱 브랜치 전략
