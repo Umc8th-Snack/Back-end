@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.DefaultResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
 
@@ -14,26 +15,21 @@ import java.time.Duration;
 public class RestTemplateConfig {
 
     @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(Duration.ofSeconds(10))
-                .setReadTimeout(Duration.ofSeconds(10))
-                .additionalInterceptors((request, body, execution) -> {
-                    return execution.execute(request, body);
-                })
-                .errorHandler(new DefaultResponseErrorHandler())
-                .build();
+    @Qualifier("fastApiRestTemplate")
+    public RestTemplate fastApiRestTemplate() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(5000); // 연결시간 5000ms = 5s
+        requestFactory.setReadTimeout(10000); // 읽는 시간 10초
+
+        return new RestTemplate(requestFactory);
     }
 
     @Bean
-    @Qualifier("fastApiRestTemplate")
-    public RestTemplate fastApiRestTemplate(
-            @Value("${fastapi.url}") String baseUrl,
-            RestTemplateBuilder builder) {
-        return builder
-                .rootUri(baseUrl)
-                .setConnectTimeout(Duration.ofSeconds(10))
-                .setReadTimeout(Duration.ofSeconds(10))
-                .build();
+    @Qualifier("longTimeoutRestTemplate")
+    public RestTemplate longTimeoutRestTemplate() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(10000); // 연결시간 10초
+        requestFactory.setReadTimeout(300000); // 읽는 시간 5분...
+        return new RestTemplate(requestFactory);
     }
 }

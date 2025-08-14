@@ -69,14 +69,18 @@ public class FeedController {
     }
 
     @Operation(summary = "맞춤 피드에서 기사 제공", description = "사용자의 상위 관심 카테고리 3개에 대한 기사를 최신순으로 무한스크롤 조회합니다.")
-
-    @Parameters({
-            @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
-    })
+    @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
     @GetMapping("feeds/personalized")
     public ApiResponse<ArticleInFeedDto> getPersonalizedFeedArticles(
-            @RequestParam(required = false) Long lastArticleId,
-            @AuthenticationPrincipal Long userId) {
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) Long lastArticleId) {
+
+        if (userDetails == null) {
+            // LOGIN_REQUIRED 등 적절한 에러 코드로 변경해주세요.
+            return ApiResponse.onFailure("FEED_9604", "로그인이 필요한 서비스입니다.", null);
+        }
+
+        Long userId = userDetails.getUserId();
 
         ArticleInFeedDto responseDto = feedService.getPersonalizedFeed(userId, lastArticleId);
         if (responseDto.getArticles().isEmpty()) {

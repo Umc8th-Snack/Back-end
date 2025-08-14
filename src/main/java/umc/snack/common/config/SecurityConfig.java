@@ -97,12 +97,12 @@ public class SecurityConfig {
                                 "/api/articles/search",
                                 "/api/articles/main",
                                 "/api/feeds/main/**",
+                                "/api/nlp/search/**",
                                 // 관리자 공개 api -> 개발 단계에서는 전체 공개
                                 "/api/share/**",
                                 "/api/articles/crawl/status",
                                 "/api/articles/*/summarize",
                                 "/api/terms",
-                                "/api/nlp/*",
                                 //캐시 액츄에이터
                                 "/actuator/**"
                         ).permitAll()
