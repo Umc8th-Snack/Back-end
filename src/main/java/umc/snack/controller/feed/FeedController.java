@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
@@ -28,7 +29,6 @@ public class FeedController {
     private final FeedService feedService;
     private final NlpService nlpService;
     private final SearchKeywordService searchKeywordService;
-    // 카테고리 다중 선택
     @Operation(summary = "메인 피드에서 기사 제공", description = "메인 피드에서 특정 카테고리의 기사를 무한스크롤 조회합니다.")
     @Parameters({
             @Parameter(name = "category", description = "조회할 카테고리 이름들 (예: category=IT/과학&category=정치)", required = true),
@@ -39,7 +39,9 @@ public class FeedController {
             @RequestParam List<String> category,
             @RequestParam(required = false) Long lastArticleId,
             @AuthenticationPrincipal Long userId) {
+
         ArticleInFeedDto responseDto = feedService.getMainFeedByCategories(category, lastArticleId, userId);
+
         return ApiResponse.onSuccess("FEED_9501", "메인 피드 조회에 성공하였습니다", responseDto);
     }
 
@@ -62,9 +64,6 @@ public class FeedController {
 
         SearchResponseDto result = feedService.searchArticlesByQuery(query, page, size, threshold);
 
-        if (result.getArticles().isEmpty()) {
-            return ApiResponse.onSuccess("FEED_9808", "검색결과가 없습니다.", null);
-        }
         return ApiResponse.onSuccess("FEED_9702", "의미 기반 검색에 성공하였습니다", result);
     }
 
@@ -76,7 +75,6 @@ public class FeedController {
             @RequestParam(required = false) Long lastArticleId) {
 
         if (userDetails == null) {
-            // LOGIN_REQUIRED 등 적절한 에러 코드로 변경해주세요.
             return ApiResponse.onFailure("FEED_9604", "로그인이 필요한 서비스입니다.", null);
         }
 

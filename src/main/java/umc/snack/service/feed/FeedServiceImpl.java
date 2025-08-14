@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import umc.snack.common.dto.ApiResponse;
 import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
 import umc.snack.converter.feed.FeedConverter;
@@ -45,19 +47,24 @@ class FeedServiceImpl implements FeedService {
 
     private static final int PAGE_SIZE = 16;
 
+    // 메인피드
     @Override
     public ArticleInFeedDto getMainFeedByCategories(List<String> categoryNames, Long lastArticleId, Long userId) {
-        // 카테고리 다중 선택
-        // 유효하지 않은 커서 값에 대한 예외처리
-        if (lastArticleId != null && lastArticleId <= 0) {
-            throw new CustomException(ErrorCode.FEED_9603);
-        }
-
         // 유효하지 않은 카테고리에 대한 예외처리
         for (String categoryName : categoryNames) {
             if (!categoryRepository.existsByCategoryName(categoryName)) {
                 throw new CustomException(ErrorCode.FEED_9601);
             }
+        }
+
+        // 카테고리 누락
+        if (categoryNames == null || categoryNames.isEmpty()) {
+            throw new CustomException(ErrorCode.FEED_9602);
+        }
+
+        // 유효하지 않은 커서 값에 대한 예외처리
+        if (lastArticleId != null && lastArticleId <= 0) {
+            throw new CustomException(ErrorCode.FEED_9603);
         }
 
         Pageable pageable = PageRequest.of(0, PAGE_SIZE, Sort.by("publishedAt").descending()
@@ -78,12 +85,17 @@ class FeedServiceImpl implements FeedService {
     @Override
     @Transactional(readOnly = true)
     public ArticleInFeedDto getPersonalizedFeed(Long userId, Long lastArticleId) {
-
+        // 커서값이 유효하지 않은 경우
         if (lastArticleId != null && lastArticleId <= 0) {
             throw new CustomException(ErrorCode.FEED_9603);
         }
 
-        // 1. 사용자의 최근 행동로그 조회
+        // 로그인 안 한 경우
+        if (userId == null) {
+            throw new CustomException(ErrorCode.FEED_9604);
+        }
+
+        // 사용자의 최근 행동로그 조회
         List<UserScrap> scraps = userScrapRepository.findTop20ByUserIdOrderByCreatedAtDesc(userId);
         List<UserClicks> clicks = userClickRepository.findTop15ByUserIdOrderByCreatedAtDesc(userId);
         List<SearchKeyword> searches = searchKeywordRepository.findTop10ByUserIdOrderByCreatedAtDesc(userId);
@@ -159,12 +171,37 @@ class FeedServiceImpl implements FeedService {
         return feedConverter.toArticleInFeedDto("맞춤 피드", hasNext, nextCursorId, sortedArticles);
     }
 
+    // 키워드 기반 검색
     @Override
     public SearchResponseDto searchArticlesByQuery(String query, int page, int size, double threshold) {
-        return nlpService.searchArticles(query, page, size, threshold);
+        // 쿼리 누락
+        if(!StringUtils.hasText(query)) {
+            throw new CustomException(ErrorCode.NLP_9801);
+        }
+
+        // size 파라미터
+        if (size < 1 || size > 100) {
+            throw new CustomException(ErrorCode.REQ_3104);
+        }
+
+        SearchResponseDto result;
+
+        // 서버 내부 오류
+        try {
+            result = nlpService.searchArticles(query, page, size, threshold);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.NLP_9899);
+        }
+
+        // 검색 결과 없음
+        if (result == null || result.getArticles().isEmpty()) {
+            throw new CustomException(ErrorCode.NLP_9808);
+        }
+        return result;
     }
 
     private ArticleInFeedDto buildFeedResponse(String categoryName, Slice<Article> articleSlice) {
+        // 메인피드 - 해당 카테고리의 기사가 없는 경우
         if (!articleSlice.hasContent()) {
             throw new CustomException(ErrorCode.FEED_9502);
         }
