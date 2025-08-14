@@ -242,12 +242,25 @@ public class NlpService {
 
         try {
             FeedResponseDto response = fastApiRestTemplate.getForObject(uri, FeedResponseDto.class);
+
+            // FastAPI 응답 본문이 비정상적인 경우
+            if (response == null || response.getArticles() == null) {
+                log.warn("FastAPI 맞춤 피드 응답이 비어있습니다: userId={}", userId);
+                throw new CustomException(ErrorCode.NLP_9899); // NLP 내부 서버 오류
+            }
+
             log.info("FastAPI 맞춤 피드 수신 완료: {}개 기사", response.getArticles().size());
             return response;
+
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            // FastAPI가 4xx, 5xx 에러를 명확히 반환한 경우
+            log.error("FastAPI HTTP 오류: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new CustomException(ErrorCode.NLP_9899); // NLP 내부 서버 오류
+
         } catch (Exception e) {
-            log.error("FastAPI 맞춤 피드 요청 실패: {}", e.getMessage());
-            // 피드 생성 실패 시 비어있는 응답을 반환하거나 에러를 던질 수 있습니다.
-            throw new RuntimeException("FastAPI 맞춤 피드 요청 실패", e);
+            // 네트워크 연결 실패, 타임아웃 등 RestTemplate 호출 자체가 실패한 경우
+            log.error("FastAPI 맞춤 피드 요청 실패: {}", e.getMessage(), e);
+            throw new CustomException(ErrorCode.SERVER_5102); // 외부 서비스 응답 지연
         }
     }
 }

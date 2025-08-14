@@ -91,7 +91,7 @@ class FeedServiceImpl implements FeedService {
         List<UserInteractionDto> interactions = new ArrayList<>();
         scraps.forEach(scrap -> interactions.add(new UserInteractionDto(scrap.getArticle().getArticleId(), "scrap")));
         clicks.forEach(click -> interactions.add(new UserInteractionDto(click.getArticle().getArticleId(), "click")));
-        searches.forEach(search -> interactions.add(new UserInteractionDto(search.getArticleId(), "search")));
+        searches.forEach(search -> interactions.add(new UserInteractionDto("search", search.getKeyword())));
 
         if (!interactions.isEmpty()) {
             nlpService.updateUserProfile(userId, interactions);
@@ -139,6 +139,9 @@ class FeedServiceImpl implements FeedService {
                 .map(articlesMap::get)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+        if (sortedArticles.isEmpty()) {
+            return feedConverter.toArticleInFeedDto("맞춤 피드", false, null, new ArrayList<>());
+        }
 
         boolean hasNext;
         if (lastArticleId == null) {

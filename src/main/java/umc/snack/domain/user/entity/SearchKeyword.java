@@ -33,6 +33,4 @@ public class SearchKeyword extends BaseEntity {
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
 
-    @Column(name = "article_id", nullable = true)
-    private Long articleId;
 }
