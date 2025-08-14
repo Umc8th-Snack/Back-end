@@ -1,13 +1,28 @@
-name: CD to ECR
+name: CD on main (spring+python → prod, prune)
 
-on:  
+on:
   push:
     branches: [ main ]
   workflow_dispatch: {}
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region:     ${{ secrets.AWS_REGION }}
+          role-session-name: snacknews-cd
+
+      - name: Who am I?
+        run: aws sts get-caller-identity
     env:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
