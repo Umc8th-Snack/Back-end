@@ -76,7 +76,7 @@ class FeedServiceImpl implements FeedService {
     }
 
     @Override
-    @Transactional(readOnly = true) // readOnly 추가
+    @Transactional(readOnly = true)
     public ArticleInFeedDto getPersonalizedFeed(Long userId, Long lastArticleId) {
 
         if (lastArticleId != null && lastArticleId <= 0) {
@@ -108,7 +108,6 @@ class FeedServiceImpl implements FeedService {
                 .map(RecommendedArticleDto::getArticleId)
                 .collect(Collectors.toList());
 
-        // ✅ 새로 추가: 커서 기반 필터링
         List<Long> filteredIds;
         if (lastArticleId == null) {
             // 첫 페이지: 처음 PAGE_SIZE개만 가져오기

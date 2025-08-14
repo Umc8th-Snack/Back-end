@@ -97,7 +97,7 @@ public class SecurityConfig {
                                 "/api/articles/search",
                                 "/api/articles/main",
                                 "/api/feeds/main/**",
-                                "/api/nlp/*",
+                                "/api/nlp/search/**",
                                 // 관리자 공개 api -> 개발 단계에서는 전체 공개
                                 "/api/share/**",
                                 "/api/articles/crawl/status",

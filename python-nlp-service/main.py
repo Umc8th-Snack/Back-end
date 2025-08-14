@@ -97,8 +97,9 @@ class SearchResponse(BaseModel):
     articles: List[ArticleSearchResult]
 
 class UserInteraction(BaseModel):
-    articleId: int
+    articleId: Optional[int] = None
     action: str # "click" or "scrap"
+    keyword: Optional[str] = None
 
 class UserProfileRequest(BaseModel):
     userId: int
@@ -723,6 +724,7 @@ async def test_search(query: str):
 ACTION_WEIGHTS = {
     "click": 1.0,
     "scrap": 1.5,  # 스크랩에 더 높은 가중치 부여
+    "search": 0.8
 }
 
 async def _get_representative_vectors(article_ids: List[int]) -> Dict[int, np.ndarray]:
@@ -745,34 +747,42 @@ async def _get_representative_vectors(article_ids: List[int]) -> Dict[int, np.nd
 async def _calculate_user_profile_vector(interactions: List[UserInteraction]) -> Optional[np.ndarray]:
     """ 행동 로그를 기반으로 사용자 프로필 벡터 계산 """
     article_ids = [interaction.articleId for interaction in interactions]
-    article_vectors = await _get_representative_vectors(article_ids)
+    search_keywords = [inter.keyword for inter in interactions if inter.keyword is not None]
 
-    if not article_vectors:
+    # 기사 벡터와 검색어 벡터를 모두 가져옴
+    article_vectors_map = await _get_representative_vectors(article_ids)
+    keyword_vectors_map = {}
+    if search_keywords and nlp_processor:
+        keyword_vectors_map = await nlp_processor.generate_sbert_vectors(search_keywords)
+
+    if not article_vectors_map and not keyword_vectors_map:
         return None
 
     weighted_vectors = []
     total_weight = 0
 
     for interaction in interactions:
-        article_id = interaction.articleId
         action = interaction.action
+        weight = ACTION_WEIGHTS.get(action, 0.0)
+        vector = None
 
-        if article_id in article_vectors:
-            vector = article_vectors[article_id]
-            weight = ACTION_WEIGHTS.get(action, 0.0)
+        if interaction.keyword and interaction.keyword in keyword_vectors_map:
+            vector = np.array(keyword_vectors_map[interaction.keyword])
+        elif interaction.articleId and interaction.articleId in article_vectors_map:
+            vector = article_vectors_map[interaction.articleId]
 
+        if vector is not None:
             weighted_vectors.append(vector * weight)
             total_weight += weight
 
-    if not weighted_vectors:
+    if not weighted_vectors or total_weight == 0:
         return None
 
     # 가중 평균 계산
     avg_vector = np.sum(weighted_vectors, axis=0) / total_weight
     norm = np.linalg.norm(avg_vector)
-    if norm > 0:
-        return avg_vector / norm
-    return avg_vector
+    return avg_vector / norm if norm > 0 else avg_vector
+
 
 
 # --- 맞춤 피드 엔드포인트 ---

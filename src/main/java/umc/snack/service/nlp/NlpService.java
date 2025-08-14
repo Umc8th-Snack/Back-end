@@ -13,6 +13,8 @@ import org.springframework.web.client.HttpServerErrorException;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.web.util.UriComponentsBuilder;
+import umc.snack.common.exception.CustomException;
+import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.nlp.dto.FeedResponseDto;
 import umc.snack.domain.nlp.dto.SearchResponseDto;
 import umc.snack.domain.nlp.dto.UserInteractionDto;
@@ -57,7 +59,7 @@ public class NlpService {
                 return true;
             }
         } catch (Exception e) {
-            log.error("FastAPI 서버 연결 실패: {}", e.getMessage());
+            throw new CustomException(ErrorCode.SERVER_5102);
         }
         return false;
     }
