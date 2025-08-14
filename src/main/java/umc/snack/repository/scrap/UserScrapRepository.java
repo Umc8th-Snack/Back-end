@@ -20,4 +20,5 @@ public interface UserScrapRepository extends JpaRepository<UserScrap, Long> {
     List<UserScrap> findByUserIdAndCreatedAtAfter(Long userId, LocalDateTime createdAt);
 
     void deleteByUserId(Long userId);
+    List<UserScrap> findTop20ByUserIdOrderByCreatedAtDesc(Long userId);
 }

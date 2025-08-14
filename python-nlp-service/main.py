@@ -97,8 +97,9 @@ class SearchResponse(BaseModel):
     articles: List[ArticleSearchResult]
 
 class UserInteraction(BaseModel):
-    articleId: int
+    articleId: Optional[int] = None
     action: str # "click" or "scrap"
+    keyword: Optional[str] = None
 
 class UserProfileRequest(BaseModel):
     userId: int
@@ -407,26 +408,6 @@ async def get_article_vector(article_id: int):
 
             return result
 
-# --- 검색 엔드포인트 ---
-'''
-@app.get("/api/articles/search/{keyword}")
-async def search_articles_direct(
-        keyword: str,
-        page: int = Query(0, ge=0),
-        size: int = Query(10, ge=1, le=50),
-        threshold: float = Query(0.3, description="최소 유사도 임계값")
-):
-    """키워드를 벡터화하고 DB의 벡터들과 직접 비교하여 유사한 기사를 찾습니다."""
-
-    if not keyword or not keyword.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="keyword는 필수입니다."
-        )
-
-    # 간단한 구현 (실제로는 nlp_processor 사용)
-    return SearchArticleResponseDto(articles=[])
-'''
 @app.get("/api/articles/search")
 async def search_articles_semantic(
         query: str = Query(..., description="검색할 단어"),
@@ -743,6 +724,7 @@ async def test_search(query: str):
 ACTION_WEIGHTS = {
     "click": 1.0,
     "scrap": 1.5,  # 스크랩에 더 높은 가중치 부여
+    "search": 0.8
 }
 
 async def _get_representative_vectors(article_ids: List[int]) -> Dict[int, np.ndarray]:
@@ -765,44 +747,48 @@ async def _get_representative_vectors(article_ids: List[int]) -> Dict[int, np.nd
 async def _calculate_user_profile_vector(interactions: List[UserInteraction]) -> Optional[np.ndarray]:
     """ 행동 로그를 기반으로 사용자 프로필 벡터 계산 """
     article_ids = [interaction.articleId for interaction in interactions]
-    article_vectors = await _get_representative_vectors(article_ids)
+    search_keywords = [inter.keyword for inter in interactions if inter.keyword is not None]
 
-    if not article_vectors:
+    # 기사 벡터와 검색어 벡터를 모두 가져옴
+    article_vectors_map = await _get_representative_vectors(article_ids)
+    keyword_vectors_map = {}
+    if search_keywords and nlp_processor:
+        keyword_vectors_map = await nlp_processor.generate_sbert_vectors(search_keywords)
+
+    if not article_vectors_map and not keyword_vectors_map:
         return None
 
     weighted_vectors = []
     total_weight = 0
 
     for interaction in interactions:
-        article_id = interaction.articleId
         action = interaction.action
+        weight = ACTION_WEIGHTS.get(action, 0.0)
+        vector = None
 
-        if article_id in article_vectors:
-            vector = article_vectors[article_id]
-            weight = ACTION_WEIGHTS.get(action, 0.0)
+        if interaction.keyword and interaction.keyword in keyword_vectors_map:
+            vector = np.array(keyword_vectors_map[interaction.keyword])
+        elif interaction.articleId and interaction.articleId in article_vectors_map:
+            vector = article_vectors_map[interaction.articleId]
 
+        if vector is not None:
             weighted_vectors.append(vector * weight)
             total_weight += weight
 
-    if not weighted_vectors:
+    if not weighted_vectors or total_weight == 0:
         return None
 
     # 가중 평균 계산
     avg_vector = np.sum(weighted_vectors, axis=0) / total_weight
     norm = np.linalg.norm(avg_vector)
-    if norm > 0:
-        return avg_vector / norm
-    return avg_vector
+    return avg_vector / norm if norm > 0 else avg_vector
+
 
 
 # --- 맞춤 피드 엔드포인트 ---
 
 @app.post("/api/nlp/user-profile", status_code=status.HTTP_201_CREATED)
 async def update_user_profile(request: UserProfileRequest):
-    """
-    사용자의 행동 로그를 받아 프로필 벡터를 생성/업데이트합니다.
-    (Spring 백엔드에서 호출)
-    """
     user_id = request.userId
     user_profile_vector = await _calculate_user_profile_vector(request.interactions)
 
@@ -830,26 +816,35 @@ async def get_personalized_feed(user_id: int, page: int = 0, size: int = 20):
     """
     저장된 사용자 프로필 벡터를 기반으로 맞춤 기사를 추천합니다.
     """
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="데이터베이스 연결이 없습니다.")
+
     async with db_pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cursor:
             # 1. 사용자 벡터 조회
             await cursor.execute("SELECT vector FROM user_vectors WHERE user_id = %s", (user_id,))
             user_row = await cursor.fetchone()
             if not user_row or not user_row['vector']:
-                raise HTTPException(status_code=404, detail="사용자 프로필 벡터를 찾을 수 없습니다. 프로필을 먼저 생성해주세요.")
+                raise HTTPException(status_code=404, detail=f"사용자 ID {user_id}의 프로필 벡터를 찾을 수 없습니다.")
             user_vector = np.array(json.loads(user_row['vector']))
 
-            # 2. 모든 기사의 대표 벡터 조회
-            await cursor.execute("SELECT article_id, representative_vector FROM article_semantic_vectors")
+            # 2. 모든 기사의 대표 벡터 조회 (NULL이 아닌 것만)
+            await cursor.execute("SELECT article_id, representative_vector FROM article_semantic_vectors WHERE representative_vector IS NOT NULL")
             all_articles = await cursor.fetchall()
 
             # 3. 코사인 유사도 계산
             recommendations = []
             for article in all_articles:
-                if article['representative_vector']:
-                    article_vector = np.array(json.loads(article['representative_vector']))
-                    score = cosine_similarity(user_vector, article_vector)
-                    recommendations.append(RecommendedArticle(articleId=article['article_id'], score=score))
+                try:
+                    if article['representative_vector']:
+                        article_vector = np.array(json.loads(article['representative_vector']))
+                        # 벡터 차원이 맞는지 확인 (안전장치)
+                        if user_vector.shape == article_vector.shape:
+                            score = cosine_similarity(user_vector, article_vector)
+                            recommendations.append(RecommendedArticle(articleId=article['article_id'], score=score))
+                except Exception as e:
+                    logger.warning(f"기사 ID {article.get('article_id')} 유사도 계산 중 오류: {e}")
+                    continue
 
             # 4. 유사도 순 정렬 및 페이징
             recommendations.sort(key=lambda x: x.score, reverse=True)
@@ -857,7 +852,6 @@ async def get_personalized_feed(user_id: int, page: int = 0, size: int = 20):
             end_idx = start_idx + size
 
             return FeedResponse(articles=recommendations[start_idx:end_idx])
-
 # --- 메인 실행 ---
 
 if __name__ == "__main__":
