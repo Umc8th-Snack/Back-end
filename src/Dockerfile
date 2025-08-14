@@ -19,7 +19,7 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # 필요 시 타임존:
-# RUN apk add --no-cache tzdata && ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+ RUN apk add --no-cache tzdata && ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 
 # 산출물 복사 (단일 JAR 가정)
 COPY --from=builder /app/build/libs/*.jar /app/app.jar
