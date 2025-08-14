@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.common.exception.CustomException;
@@ -54,7 +55,7 @@ public class AuthController {
 
     @Operation(summary = "구글 소셜 로그인 콜백", description = "구글 인증 서버로부터 받은 인가 코드로 소셜 로그인을 처리합니다.")
     @GetMapping("/google/callback")
-    public ResponseEntity<ApiResponse<SocialLoginResponseDto>> googleCallback(@RequestParam(required = false) String code) {
+    public ResponseEntity<?> googleCallback(@RequestParam(required = false) String code, HttpServletResponse response) {
         try {
             // 인가 코드 누락 체크
             if (code == null || code.trim().isEmpty()) {
@@ -63,11 +64,16 @@ public class AuthController {
             }
 
             // 구글 OAuth 처리
-            SocialLoginResponseDto response = googleOAuthService.processGoogleCallback(code);
-            
-            return ResponseEntity.ok(
-                    ApiResponse.onSuccess("AUTH_2020", "소셜 로그인에 성공하였습니다.", response)
-            );
+            SocialLoginResponseDto tokens = googleOAuthService.processGoogleCallback(code);
+
+            // 토큰 설정: access -> Authorization 헤더, refresh -> HttpOnly 쿠키
+            response.setHeader("Authorization", "Bearer " + tokens.getAccessToken());
+            response.addCookie(umc.snack.common.config.security.CookieUtil.createCookie("refresh", tokens.getRefreshToken()));
+
+            // 302 리다이렉트 to 홈
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, "/")
+                    .build();
             
         } catch (CustomException e) {
             // 서비스에서 발생한 커스텀 예외 처리
