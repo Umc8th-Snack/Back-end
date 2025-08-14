@@ -12,57 +12,48 @@ permissions:
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_REGION:     ${{ secrets.AWS_REGION }}
+      SPRING_REPO:    spring
+      PY_REPO:        python
+      ENV_TAG:        prod-latest
+      KEEP_N:         "5"
+      EXTRA_PROTECT:  ""
     steps:
       - uses: actions/checkout@v4
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region:     ${{ secrets.AWS_REGION }}
+          role-to-assume:    ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region:        ${{ secrets.AWS_REGION }}
           role-session-name: snacknews-cd
 
       - name: Who am I?
         run: aws sts get-caller-identity
-    env:
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      ROLE_ARN: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-      SHA: ${{ github.sha }}
-      SPRING_REPO: spring
-      PY_REPO: python
-      ENV_TAG: prod-latest
-      KEEP_N: "5"
-      EXTRA_PROTECT: ""
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
 
       - uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build spring
         run: |
           URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${SPRING_REPO}
-          docker build -t ${URI}:${SHA} -t ${URI}:${ENV_TAG} .
+          docker build -f src/Dockerfile -t ${URI}:${{ github.sha }} -t ${URI}:${ENV_TAG} .
 
       - name: Build python
         run: |
           URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PY_REPO}
-          docker build -t ${URI}:${SHA} -t ${URI}:${ENV_TAG} ./python-nlp-service
+          docker build -t ${URI}:${{ github.sha }} -t ${URI}:${ENV_TAG} ./python-nlp-service
 
       - name: Push spring
         run: |
           URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${SPRING_REPO}
-          docker push ${URI}:${SHA}
+          docker push ${URI}:${{ github.sha }}
           docker push ${URI}:${ENV_TAG}
 
       - name: Push python
         run: |
           URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PY_REPO}
-          docker push ${URI}:${SHA}
+          docker push ${URI}:${{ github.sha }}
           docker push ${URI}:${ENV_TAG}
 
       - name: Install jq
@@ -80,14 +71,9 @@ jobs:
               --query 'reverse(sort_by(imageDetails,& imagePushedAt))' --output json)
             PROTECT_TAGS='["prod-latest","staging-latest"]'
             RECENT_SHAS=$(echo "$DETAILS" | jq -r --argjson N "$KEEP_N" '
-              [ .[] | {tags:(.imageTags // [])} | .tags[] | select(test("^[0-9a-fA-F]{7,40}$")) ][0:$N]')
-            if [ -n "$EXTRA_PROTECT" ]; then
-              EXTRA_JSON=$(printf '%s' "$EXTRA_PROTECT" | awk -F, '{
-                printf("["); for(i=1;i<=NF;i++){ gsub(/^ +| +$/,"",$i); printf("%s\"%s\"", (i>1?",":""), $i) } printf("]")
-              }')
-            else
-              EXTRA_JSON='[]'
-            fi
+              [ .[] | (.imageTags // [])[] | select(test("^[0-9a-fA-F]{7,40}$")) ][0:$N]')
+            EXTRA_JSON=${EXTRA_PROTECT:+$(printf '%s' "$EXTRA_PROTECT" | awk -F, '{printf("["); for(i=1;i<=NF;i++){gsub(/^ +| +$/,"",$i); printf("%s\"%s\"", (i>1?",":""), $i)} printf("]")}')}
+            [ -z "$EXTRA_JSON" ] && EXTRA_JSON='[]'
             ALL_PROTECT=$(jq -c -n --argjson a "$PROTECT_TAGS" --argjson b "$RECENT_SHAS" --argjson c "$EXTRA_JSON" '(a+b+c)|unique')
             DELETE_LIST=$(echo "$DETAILS" | jq -c --argjson KEEP "$ALL_PROTECT" '
               [ .[] as $img
@@ -111,14 +97,14 @@ jobs:
     needs: build_and_push
     env:
       REMOTE_DIR: /home/ubuntu/Back-end
-      ENV_TAG: prod-latest
+      ENV_TAG:    prod-latest
     steps:
       - name: SSH & deploy (prod)
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.SSH_HOST_STG }}   # 서버 한 대면 여기 사용
+          host:     ${{ secrets.SSH_HOST_STG }}
           username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          key:      ${{ secrets.SSH_PRIVATE_KEY }}
           script_stop: true
           script: |
             set -e
@@ -127,7 +113,6 @@ jobs:
             AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
             TAG="${{ env.ENV_TAG }}"
 
-            # awscli 없으면 설치 (최초 1회 대비)
             if ! command -v aws >/dev/null 2>&1; then
               sudo apt update && sudo apt install -y unzip curl
               ARCH=$(uname -m)
@@ -135,16 +120,14 @@ jobs:
               curl -fsSL "$URL" -o awscliv2.zip
               unzip -q awscliv2.zip
               sudo ./aws/install
-              aws --version
             fi
 
             aws ecr get-login-password --region "$AWS_REGION" \
               | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
-            # 배포 변수 파일 업데이트 (spring + python 둘 다)
             touch .deploy.env
             grep -q '^AWS_ACCOUNT_ID=' .deploy.env || echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> .deploy.env
-            grep -q '^AWS_REGION=' .deploy.env || echo "AWS_REGION=$AWS_REGION" >> .deploy.env
+            grep -q '^AWS_REGION='     .deploy.env || echo "AWS_REGION=$AWS_REGION"         >> .deploy.env
             if grep -q '^IMAGE_TAG=' .deploy.env; then sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$TAG/" .deploy.env; else echo "IMAGE_TAG=$TAG" >> .deploy.env; fi
             if grep -q '^PYTHON_IMAGE_TAG=' .deploy.env; then sed -i "s/^PYTHON_IMAGE_TAG=.*/PYTHON_IMAGE_TAG=$TAG/" .deploy.env; else echo "PYTHON_IMAGE_TAG=$TAG" >> .deploy.env; fi
 
