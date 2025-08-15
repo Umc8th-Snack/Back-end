@@ -72,9 +72,9 @@ public class AuthController {
 
             // 302 리다이렉트 to 홈
             return ResponseEntity.status(302)
-                    .header(HttpHeaders.LOCATION, "/")
+                    .header(HttpHeaders.LOCATION, "https://snacknews.vercel.app/")
                     .build();
-            
+
         } catch (CustomException e) {
             // 서비스에서 발생한 커스텀 예외 처리
             ErrorCode errorCode = e.getErrorCode();
