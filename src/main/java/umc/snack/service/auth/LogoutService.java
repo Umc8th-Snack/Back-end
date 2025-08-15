@@ -83,8 +83,8 @@ public class LogoutService {
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         cookie.setMaxAge(0);
-        cookie.setSecure(true);
-        cookie.setAttribute("SameSite", "Strict");
+//        cookie.setSecure(true);
+//        cookie.setAttribute("SameSite", "Strict");
         response.addCookie(cookie);
     }
 
