@@ -7,7 +7,7 @@ public class CookieUtil {
     public static Cookie createCookie(String key, String value) {
         Cookie cookie = new Cookie(key, value);
 //        cookie.setMaxAge(24 * 60 * 60);
-        cookie.setMaxAge(10 * 60);
+        cookie.setMaxAge(3 * 10 * 60);  // 개발 단계
         cookie.setHttpOnly(true);
 //        cookie.setSecure(true);  // 배포 환경에서만 활성화
         cookie.setPath("/");
