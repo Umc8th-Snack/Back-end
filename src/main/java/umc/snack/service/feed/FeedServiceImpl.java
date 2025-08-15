@@ -183,15 +183,17 @@ class FeedServiceImpl implements FeedService {
         }
 
         SearchResponseDto result;
-
-        // 서버 내부 오류
         try {
             result = nlpService.searchArticles(query, page, size, threshold);
         } catch (Exception e) {
             throw new CustomException(ErrorCode.NLP_9899);
         }
 
-        return (result != null) ? result : SearchResponseDto.empty(query);
+        if (result == null || result.getArticles().isEmpty()) {
+            throw new CustomException(ErrorCode.NLP_9808);
+        }
+
+        return result;
     }
 
     private ArticleInFeedDto buildFeedResponse(String categoryName, Slice<Article> articleSlice) {

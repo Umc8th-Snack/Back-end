@@ -1,5 +1,3 @@
-# nlp_processor.py에 추가/수정할 함수들
-
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sentence_transformers import SentenceTransformer
@@ -28,20 +26,9 @@ async def initialize_nlp_service():
 
     # SBERT 모델 (한국어 지원)
     sbert_model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
-
     return True
 
 async def extract_tfidf_keywords(text: str, top_k: int = 10) -> Dict[str, float]:
-    """
-    텍스트에서 TF-IDF 기반 상위 키워드 추출
-
-    Args:
-        text: 분석할 텍스트
-        top_k: 추출할 키워드 개수
-
-    Returns:
-        {키워드: TF-IDF 점수} 딕셔너리
-    """
     global okt
 
     if not okt:
@@ -79,15 +66,6 @@ async def extract_tfidf_keywords(text: str, top_k: int = 10) -> Dict[str, float]
     return result
 
 async def generate_sbert_vectors(keywords: List[str]) -> Dict[str, List[float]]:
-    """
-    키워드들에 대한 SBERT 벡터 생성
-
-    Args:
-        keywords: 벡터화할 키워드 리스트
-
-    Returns:
-        {키워드: 벡터} 딕셔너리
-    """
     global sbert_model
 
     if not sbert_model:
@@ -107,12 +85,6 @@ async def generate_sbert_vectors(keywords: List[str]) -> Dict[str, List[float]]:
     return result
 
 async def vectorize_text(text: str) -> Tuple[Dict[str, float], Dict[str, List[float]]]:
-    """
-    텍스트를 TF-IDF와 SBERT로 벡터화
-
-    Returns:
-        (TF-IDF 키워드, SBERT 벡터) 튜플
-    """
     # TF-IDF로 상위 키워드 추출
     tfidf_keywords = await extract_tfidf_keywords(text, top_k=10)
 

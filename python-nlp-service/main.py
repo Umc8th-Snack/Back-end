@@ -328,51 +328,163 @@ async def search_articles_semantic(
         query: str = Query(..., description="검색할 단어"),
         page: int = Query(0, ge=0, description="페이지 번호"),
         size: int = Query(5, ge=1, le=50, description="페이지 크기"),
-        threshold: float = Query(0.7, ge=0, le=1, description="최소 유사도 임계값")
+        threshold: float = Query(0.3, ge=0, le=1, description="최소 유사도 임계값")
 ):
+    """한국어 검색 기능 (개선된 에러 처리)"""
+
+    # 입력 검증
+    if not query or not query.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="검색어를 입력해주세요."
+        )
+
     if not db_pool:
-        raise HTTPException(status_code=503, detail="데이터베이스 연결이 없습니다.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="데이터베이스 연결이 없습니다."
+        )
 
-    logger.info(f"의미 기반 검색 시작 - 검색어: '{query}'")
-    query_vector = await vectorize_raw_query(query)
-    if query_vector is None:
-        return SearchResponse(query=query, totalCount=0, articles=[])
+    # NLP 프로세서 확인
+    if not nlp_processor:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="NLP 서비스가 초기화되지 않았습니다."
+        )
 
-    async with db_pool.acquire() as conn:
-        async with conn.cursor(aiomysql.DictCursor) as cursor:
-            await cursor.execute(
-                "SELECT a.article_id, a.title, a.summary, a.published_at, asv.vector, asv.keywords "
-                "FROM articles a INNER JOIN article_semantic_vectors asv ON a.article_id = asv.article_id "
-                "WHERE asv.vector IS NOT NULL AND JSON_LENGTH(asv.vector) > 0"
-            )
-            all_articles = await cursor.fetchall()
-            if not all_articles:
-                return SearchResponse(query=query, totalCount=0, articles=[])
+    logger.info(f"의미 기반 검색 시작 - 검색어: '{query}', 페이지: {page}, 크기: {size}")
 
-            search_results = []
-            for article in all_articles:
-                try:
-                    keyword_vectors = json.loads(article['vector'])
-                    similarities = [cosine_similarity(query_vector, np.array(vec)) for vec in keyword_vectors.values()]
-                    max_similarity = max(similarities) if similarities else 0.0
+    try:
+        # 1. 검색어 벡터화 (에러 처리 강화)
+        query_vector = await vectorize_raw_query(query)
+        if query_vector is None:
+            logger.error(f"검색어 벡터화 실패: {query}")
+            return SearchResponse(query=query, totalCount=0, articles=[])
 
-                    if max_similarity >= threshold:
-                        search_results.append({
-                            'article_id': article['article_id'],
-                            'title': article['title'],
-                            'summary': article['summary'],
-                            'score': float(max_similarity),
-                            'publishedAt': article['published_at'].isoformat() if article['published_at'] else None
-                        })
-                except Exception:
-                    continue
+        # 2. DB에서 모든 기사와 벡터 조회
+        async with db_pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                await cursor.execute("""
+                    SELECT 
+                        a.article_id,
+                        a.title,
+                        a.summary,
+                        a.published_at,
+                        asv.vector,
+                        asv.keywords
+                    FROM articles a
+                    INNER JOIN article_semantic_vectors asv 
+                        ON a.article_id = asv.article_id
+                    WHERE asv.vector IS NOT NULL 
+                        AND asv.vector != '{}'
+                        AND JSON_LENGTH(asv.vector) > 0
+                """)
 
-            search_results.sort(key=lambda x: x['score'], reverse=True)
-            paginated_results = search_results[page * size : (page + 1) * size]
+                all_articles = await cursor.fetchall()
 
-            articles_response = [ArticleSearchResult(**{k: v for k, v in res.items() if k != 'keywords'}) for res in paginated_results]
+                if not all_articles:
+                    logger.warning("벡터화된 기사가 없습니다.")
+                    return SearchResponse(query=query, totalCount=0, articles=[])
 
-            return SearchResponse(query=query, totalCount=len(search_results), articles=articles_response)
+                # 3. 코사인 유사도 계산
+                search_results = []
+                for article in all_articles:
+                    try:
+                        # JSON 파싱 시 에러 처리
+                        vector_data = article.get('vector')
+                        if not vector_data:
+                            continue
+
+                        keyword_vectors = json.loads(vector_data)
+                        if not keyword_vectors:
+                            continue
+
+                        # 각 키워드 벡터와 검색어 벡터의 유사도 계산
+                        similarities = []
+                        for keyword, vector_list in keyword_vectors.items():
+                            if vector_list and len(vector_list) > 0:
+                                similarity = cosine_similarity(query_vector, np.array(vector_list))
+                                similarities.append(similarity)
+
+                        if not similarities:
+                            continue
+
+                        # 가장 높은 유사도를 최종 점수로 사용
+                        max_similarity = max(similarities)
+
+                        if max_similarity >= threshold:
+                            search_results.append({
+                                'article_id': article['article_id'],
+                                'title': article['title'],
+                                'summary': article['summary'],
+                                'score': float(max_similarity),
+                                'publishedAt': article['published_at'].isoformat() if article['published_at'] else None
+                            })
+
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"기사 {article['article_id']} JSON 파싱 오류: {e}")
+                        continue
+                    except Exception as e:
+                        logger.warning(f"기사 {article['article_id']} 처리 중 오류: {e}")
+                        continue
+
+                # 4. 유사도 기준 내림차순 정렬
+                search_results.sort(key=lambda x: x['score'], reverse=True)
+
+                # 5. 페이징 처리
+                total_count = len(search_results)
+                start_idx = page * size
+                end_idx = start_idx + size
+                paginated_results = search_results[start_idx:end_idx]
+
+                # 6. 응답 형식으로 변환
+                articles = []
+                for result in paginated_results:
+                    articles.append(ArticleSearchResult(
+                        article_id=result['article_id'],
+                        title=result['title'],
+                        summary=result['summary'],
+                        score=result['score'],
+                        publishedAt=result['publishedAt']
+                    ))
+
+                logger.info(f"검색 완료 - 전체: {total_count}개, 반환: {len(articles)}개")
+
+                return SearchResponse(
+                    query=query,
+                    totalCount=total_count,
+                    articles=articles
+                )
+
+    except Exception as e:
+        logger.error(f"검색 중 오류 발생: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"검색 처리 중 오류가 발생했습니다: {str(e)}"
+        )
+
+async def vectorize_raw_query(query: str) -> Optional[np.ndarray]:
+    """검색어 벡터화 (에러 처리 강화)"""
+    if not nlp_processor:
+        logger.error("NLP 프로세서가 초기화되지 않았습니다.")
+        return None
+
+    try:
+        # 한국어 텍스트 전처리
+        query = query.strip()
+        if not query:
+            return None
+
+        vector_dict = await nlp_processor.generate_sbert_vectors([query])
+        if not vector_dict or query not in vector_dict:
+            logger.error(f"검색어 '{query}'에 대한 SBERT 벡터 생성 실패")
+            return None
+
+        return np.array(vector_dict[query])
+
+    except Exception as e:
+        logger.error(f"검색어 벡터화 중 오류: {e}", exc_info=True)
+        return None
 
 # --- 헬퍼 함수 ---
 async def calculate_weighted_average(

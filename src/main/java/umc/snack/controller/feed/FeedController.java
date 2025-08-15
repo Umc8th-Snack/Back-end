@@ -30,10 +30,6 @@ public class FeedController {
     private final NlpService nlpService;
     private final SearchKeywordService searchKeywordService;
     @Operation(summary = "메인 피드에서 기사 제공", description = "메인 피드에서 특정 카테고리의 기사를 무한스크롤 조회합니다.")
-    @Parameters({
-            @Parameter(name = "category", description = "조회할 카테고리 이름들 (예: category=IT/과학&category=정치)", required = true),
-            @Parameter(name = "lastArticleId", description = "마지막으로 조회한 기사의 ID. 첫번째 조회시에는 생략")
-    })
     @GetMapping("/feeds/main")
     public ApiResponse<ArticleInFeedDto> getMainFeedArticles(
             @RequestParam(value = "category", required = false) List<String> category,
