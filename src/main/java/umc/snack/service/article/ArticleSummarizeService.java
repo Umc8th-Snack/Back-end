@@ -48,7 +48,7 @@ public class ArticleSummarizeService {
                         
              [규칙]
              1. 요약: 한글 기준 공백 제외 700자 이내로 간결하게.
-             2. 퀴즈: 기사 내용 기반 4지선다 객관식 2문항 작성.
+             2. 퀴즈: 요약된 기사 내용 기반 4지선다 객관식 2문항 작성.
                 - 각 문항은 반드시 다음 키를 포함: question, options(1~4 id 포함), answer, explanation.
                 - answer 형식: "{보기번호}. {보기내용}"
              3. 용어: 중·고등학생이 이해하기 어려울 만한 단어 4개 선정.
