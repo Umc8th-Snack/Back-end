@@ -36,7 +36,7 @@ public class FeedController {
     })
     @GetMapping("/feeds/main")
     public ApiResponse<ArticleInFeedDto> getMainFeedArticles(
-            @RequestParam List<String> category,
+            @RequestParam(value = "category", required = false) List<String> category,
             @RequestParam(required = false) Long lastArticleId,
             @AuthenticationPrincipal Long userId) {
 
@@ -50,10 +50,10 @@ public class FeedController {
             "※ 로그인한 경우에만 검색어가 저장됩니다.")
     @GetMapping("articles/search")
     public ApiResponse<SearchResponseDto> searchArticles(
-            @RequestParam String query,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size,
-            @RequestParam(defaultValue = "0.7") double threshold,
+            @RequestParam(value = "query", required = false) String query,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "5") int size,
+            @RequestParam(value = "threshold", defaultValue = "0.7") double threshold,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         // 로그인한 경우에만 저장

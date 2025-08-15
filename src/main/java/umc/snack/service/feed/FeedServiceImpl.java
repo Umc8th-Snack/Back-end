@@ -43,20 +43,11 @@ class FeedServiceImpl implements FeedService {
     private final SearchKeywordRepository searchKeywordRepository;
     private final ArticleRepository articleRepository;
 
-    private final UserPreferenceService userPreferenceService;
-
     private static final int PAGE_SIZE = 16;
 
     // 메인피드
     @Override
     public ArticleInFeedDto getMainFeedByCategories(List<String> categoryNames, Long lastArticleId, Long userId) {
-        // 유효하지 않은 카테고리에 대한 예외처리
-        for (String categoryName : categoryNames) {
-            if (!categoryRepository.existsByCategoryName(categoryName)) {
-                throw new CustomException(ErrorCode.FEED_9601);
-            }
-        }
-
         // 카테고리 누락
         if (categoryNames == null || categoryNames.isEmpty()) {
             throw new CustomException(ErrorCode.FEED_9602);
@@ -65,6 +56,13 @@ class FeedServiceImpl implements FeedService {
         // 유효하지 않은 커서 값에 대한 예외처리
         if (lastArticleId != null && lastArticleId <= 0) {
             throw new CustomException(ErrorCode.FEED_9603);
+        }
+
+        // 유효하지 않은 카테고리에 대한 예외처리
+        for (String categoryName : categoryNames) {
+            if (!categoryRepository.existsByCategoryName(categoryName)) {
+                throw new CustomException(ErrorCode.FEED_9601);
+            }
         }
 
         Pageable pageable = PageRequest.of(0, PAGE_SIZE, Sort.by("publishedAt").descending()
@@ -193,11 +191,7 @@ class FeedServiceImpl implements FeedService {
             throw new CustomException(ErrorCode.NLP_9899);
         }
 
-        // 검색 결과 없음
-        if (result == null || result.getArticles().isEmpty()) {
-            throw new CustomException(ErrorCode.NLP_9808);
-        }
-        return result;
+        return (result != null) ? result : SearchResponseDto.empty(query);
     }
 
     private ArticleInFeedDto buildFeedResponse(String categoryName, Slice<Article> articleSlice) {
@@ -210,9 +204,4 @@ class FeedServiceImpl implements FeedService {
         return feedConverter.toArticleInFeedDto(categoryName, articleSlice.hasNext(), nextCursorId, articles);
     }
 
-    @Override
-    @Transactional
-    public void updateUserProfile(UserProfileRequestDto requestDto) {
-        nlpService.updateUserProfile(requestDto.getUserId(), requestDto.getInteractions());
-    }
 }

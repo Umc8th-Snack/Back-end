@@ -48,36 +48,6 @@ except ImportError:
     logger.warning("nlp_processor 모듈을 찾을 수 없습니다. 기본 기능만 사용합니다.")
     nlp_processor = None
 
-# --- Pydantic 모델 정의 ---
-
-class ArticleVectorizeRequestDto(BaseModel):
-    articleId: int
-    title: str
-    summary: str
-
-class ArticleVectorizeListRequestDto(BaseModel):
-    articles: List[ArticleVectorizeRequestDto]
-
-class ArticleKeywordDto(BaseModel):
-    word: str
-    tfidf: float
-
-class ArticleVectorizeResponseDto(BaseModel):
-    articleId: int
-    vector: List[float]
-    keywords: List[ArticleKeywordDto]
-
-class ArticleVectorizeListResponseDto(BaseModel):
-    results: List[ArticleVectorizeResponseDto]
-
-class ArticleDto(BaseModel):
-    articleId: int
-    title: str
-    summary: str
-
-class SearchArticleResponseDto(BaseModel):
-    articles: List[ArticleDto]
-
 # DTO 모델 정의
 class KeywordScore(BaseModel):
     word: str
@@ -112,8 +82,6 @@ class RecommendedArticle(BaseModel):
 class FeedResponse(BaseModel):
     articles: List[RecommendedArticle]
 
-# --- 애플리케이션 이벤트 핸들러 ---
-
 @app.on_event("startup")
 async def startup_event():
     """애플리케이션 시작 시 실행"""
@@ -129,27 +97,27 @@ async def startup_event():
             minsize=5,
             maxsize=20
         )
-        logger.info("✅ DB 연결 풀 생성 성공")
+        logger.info("DB 연결 풀 생성 성공")
 
         # 연결 테스트
         async with db_pool.acquire() as conn:
             async with conn.cursor() as cursor:
                 await cursor.execute("SELECT 1")
                 result = await cursor.fetchone()
-                logger.info(f"✅ DB 연결 테스트 성공: {result}")
+                logger.info(f"DB 연결 테스트 성공: {result}")
 
         # NLP 모델 초기화
         if nlp_processor:
             await nlp_processor.initialize_nlp_service()
-            logger.info("✅ NLP 모델 로드 성공")
+            logger.info("NLP 모델 로드 성공")
         else:
-            logger.warning("⚠️ NLP 모델이 로드되지 않았습니다.")
+            logger.warning("NLP 모델이 로드되지 않았습니다.")
 
         logger.info("=" * 50)
-        logger.info("🚀 서비스 준비 완료!")
+        logger.info("서비스 준비 완료!")
 
     except Exception as e:
-        logger.error(f"❌ 초기화 실패: {e}")
+        logger.error(f"초기화 실패: {e}")
         logger.error("서버는 계속 실행되지만 기능이 제한될 수 있습니다.")
 
 @app.on_event("shutdown")
@@ -163,22 +131,68 @@ async def shutdown_event():
         await db_pool.wait_closed()
         logger.info("DB 연결 풀 종료 완료")
 
-# --- 헬스체크 엔드포인트 ---
-
 @app.get("/")
 async def root():
-    """루트 엔드포인트"""
     return {
         "service": "NLP Microservice",
         "version": "1.0.0",
         "status": "running"
     }
 
+# --- 헬스체크 엔드포인트 ---
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
 
 # --- 벡터화 엔드포인트 ---
+@app.post("/api/nlp/vectorize/batch")
+async def batch_vectorize_articles(
+        limit: int = Query(200, description="한 번에 처리할 최대 기사 수"),
+        force_update: bool = Query(False, description="기존 벡터 재생성 여부")
+):
+    if not db_pool:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="데이터베이스 연결이 없습니다."
+        )
+
+    async with db_pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cursor:
+            # 벡터화되지 않은 기사 찾기
+            if force_update:
+                # 강제 업데이트: 모든 기사 대상
+                query = """
+                    SELECT article_id 
+                    FROM articles 
+                    ORDER BY created_at DESC
+                    LIMIT %s
+                """
+            else:
+                # 벡터가 없는 기사만 선택
+                query = """
+                    SELECT a.article_id 
+                    FROM articles a
+                    LEFT JOIN article_semantic_vectors asv 
+                        ON a.article_id = asv.article_id
+                    WHERE asv.article_id IS NULL
+                    ORDER BY a.created_at DESC
+                    LIMIT %s
+                """
+
+            await cursor.execute(query, (limit,))
+            articles = await cursor.fetchall()
+
+            if not articles:
+                return {
+                    "status": "no_articles",
+                    "message": "처리할 기사가 없습니다."
+                }
+
+            article_ids = [a['article_id'] for a in articles]
+            logger.info(f"벡터화할 기사 {len(article_ids)}개 발견: {article_ids[:10]}...")  # 처음 10개만 로그
+
+            # 벡터화 수행
+            return await vectorize_articles_from_db(article_ids)
 
 @app.post("/api/vectorize/articles")
 async def vectorize_articles_from_db(article_ids: List[int]):
@@ -237,8 +251,8 @@ async def vectorize_articles_from_db(article_ids: List[int]):
                         logger.info(f"기사 {article_id} 키워드 및 대표 벡터 업데이트 완료")
                     else:
                         await cursor.execute(
-                            "INSERT INTO article_semantic_vectors (article_id, vector, keywords, representative_vector, model_version, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, NOW(), NOW())",
-                            (article_id, vector_json_str, keywords_json_str, rep_vector_str, "sbert-keywords-v4")
+                            "INSERT INTO article_semantic_vectors (vector_id, article_id, vector, keywords, representative_vector, model_version, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())",
+                            (article_id, article_id, vector_json_str, keywords_json_str, rep_vector_str, "sbert-keywords-v4")
                         )
                         logger.info(f"기사 {article_id} 키워드 및 대표 벡터 신규 저장 완료")
 
@@ -249,59 +263,6 @@ async def vectorize_articles_from_db(article_ids: List[int]):
                     failed_ids.append(article_id)
                     continue
         return {"status": "completed", "total_requested": len(article_ids), "processed": processed_count, "failed": failed_ids}
-
-@app.post("/api/nlp/vectorize/batch")
-async def batch_vectorize_articles(
-        limit: int = Query(200, description="한 번에 처리할 최대 기사 수"),
-        force_update: bool = Query(False, description="기존 벡터 재생성 여부")
-):
-    """
-    벡터화되지 않은 기사들을 자동으로 찾아서 처리합니다.
-    """
-
-    if not db_pool:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="데이터베이스 연결이 없습니다."
-        )
-
-    async with db_pool.acquire() as conn:
-        async with conn.cursor(aiomysql.DictCursor) as cursor:
-            # 벡터화되지 않은 기사 찾기
-            if force_update:
-                # 강제 업데이트: 모든 기사 대상
-                query = """
-                    SELECT article_id 
-                    FROM articles 
-                    ORDER BY created_at DESC
-                    LIMIT %s
-                """
-            else:
-                # 벡터가 없는 기사만 선택
-                query = """
-                    SELECT a.article_id 
-                    FROM articles a
-                    LEFT JOIN article_semantic_vectors asv 
-                        ON a.article_id = asv.article_id
-                    WHERE asv.article_id IS NULL
-                    ORDER BY a.created_at DESC
-                    LIMIT %s
-                """
-
-            await cursor.execute(query, (limit,))
-            articles = await cursor.fetchall()
-
-            if not articles:
-                return {
-                    "status": "no_articles",
-                    "message": "처리할 기사가 없습니다."
-                }
-
-            article_ids = [a['article_id'] for a in articles]
-            logger.info(f"벡터화할 기사 {len(article_ids)}개 발견: {article_ids[:10]}...")  # 처음 10개만 로그
-
-            # 벡터화 수행
-            return await vectorize_articles_from_db(article_ids)
 
 # 테이블 스키마 확인 엔드포인트
 @app.get("/api/db/check-schema")
@@ -362,52 +323,6 @@ async def check_db_schema():
 
             return result
 
-# 테스트용 엔드포인트 - 특정 기사의 벡터 확인
-@app.get("/api/vectors/{article_id}")
-async def get_article_vector(article_id: int):
-    """특정 기사의 벡터 정보를 조회합니다."""
-
-    if not db_pool:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="데이터베이스 연결이 없습니다."
-        )
-
-    async with db_pool.acquire() as conn:
-        async with conn.cursor(aiomysql.DictCursor) as cursor:
-            # 기사 정보 조회
-            await cursor.execute("""
-                SELECT a.article_id, a.title, a.summary,
-                       asv.vector, asv.keywords, asv.model_version,
-                       asv.created_at, asv.updated_at
-                FROM articles a
-                LEFT JOIN article_semantic_vectors asv 
-                    ON a.article_id = asv.article_id
-                WHERE a.article_id = %s
-            """, (article_id,))
-
-            result = await cursor.fetchone()
-
-            if not result:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"기사 ID {article_id}를 찾을 수 없습니다."
-                )
-
-            # 벡터가 있으면 길이 계산
-            if result['vector']:
-                vector_str = result['vector'].strip('[]')
-                vector_length = len(vector_str.split(',')) if vector_str else 0
-                result['vector_length'] = vector_length
-                # 벡터 내용은 처음 10개만 표시
-                vector_preview = ','.join(vector_str.split(',')[:10])
-                result['vector_preview'] = f"[{vector_preview},...]"
-            else:
-                result['vector_length'] = 0
-                result['vector_preview'] = None
-
-            return result
-
 @app.get("/api/articles/search")
 async def search_articles_semantic(
         query: str = Query(..., description="검색할 단어"),
@@ -415,13 +330,10 @@ async def search_articles_semantic(
         size: int = Query(5, ge=1, le=50, description="페이지 크기"),
         threshold: float = Query(0.7, ge=0, le=1, description="최소 유사도 임계값")
 ):
-    """
-    의미 기반 기사 검색 (키워드 벡터 직접 비교 방식)
-    """
     if not db_pool:
         raise HTTPException(status_code=503, detail="데이터베이스 연결이 없습니다.")
 
-    logger.info(f"🔍 의미 기반 검색 시작 - 검색어: '{query}'")
+    logger.info(f"의미 기반 검색 시작 - 검색어: '{query}'")
     query_vector = await vectorize_raw_query(query)
     if query_vector is None:
         return SearchResponse(query=query, totalCount=0, articles=[])
@@ -458,19 +370,15 @@ async def search_articles_semantic(
             search_results.sort(key=lambda x: x['score'], reverse=True)
             paginated_results = search_results[page * size : (page + 1) * size]
 
-            # 키워드는 반환하지 않으므로 ArticleSearchResult 생성 시 keywords 제외
             articles_response = [ArticleSearchResult(**{k: v for k, v in res.items() if k != 'keywords'}) for res in paginated_results]
 
             return SearchResponse(query=query, totalCount=len(search_results), articles=articles_response)
 
 # --- 헬퍼 함수 ---
-
 async def calculate_weighted_average(
         sbert_vectors: dict,
         tfidf_scores: dict
 ) -> List[float]:
-    """TF-IDF 점수를 가중치로 사용하여 SBERT 벡터들의 가중 평균 계산"""
-
     if not sbert_vectors:
         return [0.0] * 384
 
@@ -509,15 +417,6 @@ async def search_articles_semantic(
         size: int = Query(10, ge=1, le=50, description="페이지 크기"),
         threshold: float = Query(0.3, ge=0, le=1, description="최소 유사도 임계값")
 ):
-    """
-    의미 기반 기사 검색
-    1. 검색어를 TF-IDF로 키워드 추출
-    2. 키워드들의 SBERT 벡터 생성
-    3. TF-IDF 가중 평균으로 쿼리 벡터 생성
-    4. DB의 모든 기사 벡터와 코사인 유사도 계산
-    5. 유사도 높은 순으로 정렬하여 반환
-    """
-
     if not query or not query.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -530,7 +429,7 @@ async def search_articles_semantic(
             detail="데이터베이스 연결이 없습니다."
         )
 
-    logger.info(f"🔍 의미 기반 검색 시작 - 검색어: '{query}', 페이지: {page}, 크기: {size}")
+    logger.info(f"의미 기반 검색 시작 - 검색어: '{query}', 페이지: {page}, 크기: {size}")
 
     try:
         # 1. 검색어 벡터화
@@ -625,7 +524,7 @@ async def search_articles_semantic(
                         publishedAt=result['publishedAt']
                     ))
 
-                logger.info(f"✅ 검색 완료 - 전체: {total_count}개, 반환: {len(articles)}개")
+                logger.info(f"검색 완료 - 전체: {total_count}개, 반환: {len(articles)}개")
 
                 return SearchResponse(
                     query=query,
@@ -693,33 +592,7 @@ def parse_keywords(keywords_str: str) -> List[KeywordScore]:
                 ))
     except Exception as e:
         logger.warning(f"키워드 파싱 오류: {e}")
-
     return keywords
-
-# 테스트용 엔드포인트
-@app.get("/api/test/search/{query}")
-async def test_search(query: str):
-    """간단한 검색 테스트"""
-    try:
-        result = await search_articles_semantic(query, page=0, size=5)
-        return {
-            "status": "success",
-            "query": query,
-            "found": result.totalCount,
-            "top_results": [
-                {
-                    "id": article.article_id,
-                    "title": article.title[:50],
-                    "score": article.score
-                }
-                for article in result.articles
-            ]
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
 
 ACTION_WEIGHTS = {
     "click": 1.0,
