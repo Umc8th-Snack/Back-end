@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +32,9 @@ public class AuthController {
     private final ReissueService reissueService;
     private final LogoutService logoutService;
     private final GoogleOAuthService googleOAuthService;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     public AuthController(JWTUtil jwtUtil, ReissueService reissueService, LogoutService logoutService, GoogleOAuthService googleOAuthService) {
         this.jwtUtil = jwtUtil;
@@ -66,29 +70,33 @@ public class AuthController {
             // 구글 OAuth 처리
             SocialLoginResponseDto tokens = googleOAuthService.processGoogleCallback(code);
 
-            // 토큰 설정: access -> Authorization 헤더, refresh -> HttpOnly 쿠키
-            response.setHeader("Authorization", "Bearer " + tokens.getAccessToken());
-            response.addCookie(umc.snack.common.config.security.CookieUtil.createCookie("refresh", tokens.getRefreshToken()));
+            // Cross-Domain 환경을 위한 쿠키 설정
+            umc.snack.common.config.security.CookieUtil.createCookie("refresh", tokens.getRefreshToken(), response);
 
-            // 302 리다이렉트 to 홈
+            // 토큰 설정: access -> Authorization 헤더, refresh -> Secure HttpOnly 쿠키
             return ResponseEntity.status(302)
-                    .header(HttpHeaders.LOCATION, "https://snacknews.vercel.app/")
+                    .header(HttpHeaders.LOCATION, frontendUrl + "/auth/success")
+                    .header("Authorization", "Bearer " + tokens.getAccessToken())
                     .build();
-
+            
         } catch (CustomException e) {
             // 서비스에서 발생한 커스텀 예외 처리
             ErrorCode errorCode = e.getErrorCode();
             if (errorCode == ErrorCode.AUTH_2112 || errorCode == ErrorCode.AUTH_2113 || errorCode == ErrorCode.AUTH_2114) {
-                return ResponseEntity.status(401)
-                        .body(ApiResponse.onFailure("AUTH_2122", "유효하지 않은 토큰입니다.", null));
+                // 에러 발생 시 프론트엔드 에러 페이지로 리다이렉트
+                return ResponseEntity.status(302)
+                        .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=AUTH_2122")
+                        .build();
             } else {
-                return ResponseEntity.status(errorCode.getStatus())
-                        .body(ApiResponse.onFailure(errorCode.name(), errorCode.getMessage(), null));
+                return ResponseEntity.status(302)
+                        .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=" + errorCode.name())
+                        .build();
             }
         } catch (Exception e) {
-            // 예상치 못한 오류
-            return ResponseEntity.status(401)
-                    .body(ApiResponse.onFailure("AUTH_2122", "유효하지 않은 토큰입니다.", null));
+            // 예상치 못한 오류 - 프론트엔드 에러 페이지로 리다이렉트
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=AUTH_2122")
+                    .build();
         }
     }
 

@@ -1,16 +1,33 @@
 package umc.snack.common.config.security;
 
-import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 
 public class CookieUtil {
-    // 쿠키 생성 메서드
-    public static Cookie createCookie(String key, String value) {
-        Cookie cookie = new Cookie(key, value);
-//        cookie.setMaxAge(24 * 60 * 60);
-        cookie.setMaxAge(3 * 10 * 60);  // 개발 단계
-        cookie.setHttpOnly(true);
-//        cookie.setSecure(true);  // 배포 환경에서만 활성화
-        cookie.setPath("/");
-        return cookie;
+    // Cross-Domain 환경을 지원하는 쿠키 생성 메서드 (ResponseCookie 사용)
+    public static void createCookie(String key, String value, HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from(key, value)
+                .maxAge(3 * 10 * 60)  // 개발 단계: 30분
+                .httpOnly(true)
+                .secure(true)  // HTTPS 환경에서만 전송
+                .path("/")
+                .sameSite("None")  // Cross-Domain 허용
+                .build();
+        
+        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+    
+    // 쿠키 삭제를 위한 메서드
+    public static void deleteCookie(String key, HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from(key, "")
+                .maxAge(0)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .sameSite("None")
+                .build();
+        
+        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }
