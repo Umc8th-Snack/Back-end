@@ -46,7 +46,7 @@ public class ShareServiceImpl implements ShareService {
 
         articleShareRepository.save(articleShare);
 
-        String sharedUrl = "https://snack.com/share/" + uuid;
+        String sharedUrl = "https://app.snacknews.site/share/" + uuid;
         return new ShareResultDto(uuid, sharedUrl);
     }
 
