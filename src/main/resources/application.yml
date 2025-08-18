@@ -39,7 +39,7 @@ management:
 
 # 프론트엔드 URL 설정
 frontend:
-  url: ${FRONTEND_URL:http://localhost:3000}
+  url: ${FRONTEND_URL:https://app.snacknews.site}
 
 server:
   port: 8080
