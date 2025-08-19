@@ -72,7 +72,7 @@ public class ArticleSummarizeService {
                      { "id": 3, "text": "…" },
                      { "id": 4, "text": "…" }
                    ],
-                   "answer": { "id": 1, "text": "…" },
+                   "answer": { "id": "…", "text": "…" },
                    "explanation": "…"
                  },
                  {
@@ -83,7 +83,7 @@ public class ArticleSummarizeService {
                      { "id": 3, "text": "…" },
                      { "id": 4, "text": "…" }
                    ],
-                   "answer": { "id": 2, "text": "…" },
+                   "answer": { "id": "…", "text": "…" },
                    "explanation": "…"
                  }
                ],
