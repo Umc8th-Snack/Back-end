@@ -42,7 +42,7 @@ public class ArticleScheduler {
     // 초(*/30), 분(*), 시(*), 일(*), 월(*), 요일(*)
     //@Scheduled(cron = "*/30 * * * * *", zone = "Asia/Seoul") (테스트용)
     @Scheduled(cron = "0 0 10,18 * * *", zone = "Asia/Seoul")
-//    @Scheduled(cron = "0 */5 * * * *", zone = "Asia/Seoul")
+//    @Scheduled(cron = "0 */10 * * * *", zone = "Asia/Seoul")
     public void autoCrawl() {
         log.info("✅ 스케쥴러 실행 확인 > {}", LocalDateTime.now());
         try {
@@ -62,7 +62,7 @@ public class ArticleScheduler {
      * cron: "0 30 10,18 * * *"
      */
     @Scheduled(cron = "0 10 10,18 * * *", zone = "Asia/Seoul")
-//    @Scheduled(cron = "0 */5 * * * *", zone = "Asia/Seoul")
+//    @Scheduled(cron = "0 */10 * * * *", zone = "Asia/Seoul")
     public void autoSummarize() {
         log.info("✅ 스케쥴러 Gemini 기사 요약 시작: {}", LocalDateTime.now());
         try {

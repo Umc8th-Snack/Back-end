@@ -43,7 +43,7 @@ public class NlpService {
     // application.yml 파일에서 fastapi.url 가져오기!!
     public NlpService(@Qualifier("fastApiRestTemplate") RestTemplate fastApiRestTemplate,
                       @Qualifier("longTimeoutRestTemplate") RestTemplate longTimeoutRestTemplate,
-                      @Value("${fastapi.url}") String fastapiUrl) {
+                      @Value("${fastapi.url}") String fastapiUrl){
         this.fastApiRestTemplate = fastApiRestTemplate;
         this.longTimeoutRestTemplate = longTimeoutRestTemplate;
         this.fastapiUrl = fastapiUrl;

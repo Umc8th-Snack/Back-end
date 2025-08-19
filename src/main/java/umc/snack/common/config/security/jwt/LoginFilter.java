@@ -110,9 +110,9 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         response.setContentType("application/json; charset=UTF-8");
         response.setStatus(HttpStatus.OK.value());
-        // 헤더/쿠키 유지
+        // 헤더/쿠키 설정
         response.setHeader("Authorization", "Bearer " + accessToken);
-        response.addCookie(createCookie("refresh", refreshToken));
+        createCookie("refresh", refreshToken, response);
 
         try {
             ObjectMapper mapper = new ObjectMapper();
