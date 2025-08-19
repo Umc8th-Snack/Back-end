@@ -72,7 +72,7 @@ public class ArticleSummarizeService {
                      { "id": 3, "text": "…" },
                      { "id": 4, "text": "…" }
                    ],
-                   "answer": { "id": "…", "text": "…" },
+                   "answer": { "id": 1, "text": "…" },
                    "explanation": "…"
                  },
                  {
@@ -83,7 +83,7 @@ public class ArticleSummarizeService {
                      { "id": 3, "text": "…" },
                      { "id": 4, "text": "…" }
                    ],
-                   "answer": { "id": "…", "text": "…" },
+                   "answer": { "id": 2, "text": "…" },
                    "explanation": "…"
                  }
                ],
@@ -189,69 +189,5 @@ public class ArticleSummarizeService {
         }
     }
 
-    // 기존 서비스 로직
-//    public void getCompletion() {
-//        List<Article> articles = articleRepository.findBySummaryIsNull();
-//
-//        if (articles.isEmpty()) {
-//            log.info("요약이 필요한 기사가 없습니다.");
-//            return;
-//        }
-//
-//        int batchSize = 5;
-////        int total = articles.size();
-//        int total = Math.min(articles.size(), 20); // 최신 기사 20개까지만 실행(테스트용)
-//
-//        for (int i = 0; i < total; i += batchSize) {
-//            int end = Math.min(i + batchSize, total);
-//            List<Article> batch = articles.subList(i, end);
-//
-//            for (Article article : batch) {
-//
-//                CrawledArticle crawled = crawledArticleRepository.findByArticleId(article.getArticleId()).orElse(null);
-//
-//                log.info("CrawledArticle 조회 결과: {}", crawled); // 디버깅용 추가
-//
-////                if (crawled == null) continue;
-//                if (crawled == null) {
-//                    log.warn("CrawledArticle이 없음 - {}", article.getArticleId());
-//                    continue;
-//                } // 디버깅용 추가
-//
-//                String content = crawled.getContent(); // 디버깅용 추가
-//
-//                if (content == null || content.trim().isEmpty()) {
-//                    log.warn("기사 본문이 없음 - {}", article.getArticleId());
-//                    continue;
-//                } // 디버깅용 추가
-//
-//                String prompt = promptTemplate + crawled.getContent();
-//                log.info("Gemini 호출 직전 - articleId: {}", article.getArticleId()); // 디버깅용 추가
-//                String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
-//                log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), result); // 디버깅용
-//                log.info("=========================================================");
-//
-//                geminiParsingService.updateArticleSummary(article.getArticleId(), result);
-//
-//                // 1개 처리 후 10초 대기 (overload 방지)
-//                try {
-//                    Thread.sleep(10_000); // 고정 10초 대기
-//                } catch (InterruptedException e) {
-//                    Thread.currentThread().interrupt();
-//                    return;
-//                }
-//
-//                Article updatedArticle = articleRepository.findById(article.getArticleId()).orElse(null);
-//                Assert.notNull(updatedArticle.getSummary(), "요약이 생성되어야 합니다.");            }
-//
-//            // 5개마다 추가 대기
-//            try {
-//                log.info("== 5개 처리 후 잠시 대기 ==");
-//                Thread.sleep(10_000);
-//            } catch (InterruptedException e) {
-//                Thread.currentThread().interrupt();
-//                return;
-//            }
-//        }
-//    }
+
 }
