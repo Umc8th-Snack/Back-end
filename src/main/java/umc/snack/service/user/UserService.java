@@ -183,7 +183,7 @@ public class UserService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622)); // 존재하지 않는 회원
 
         // password가 null이면 로컬 비번 미설정 상태로 간주
-        if (user.getPassword() == null || user.getPassword() == "SOCIAL_LOGIN_USER" || user.getPassword().isBlank()) {
+        if (user.getPassword() == null || user.isSocialOnly() || user.getPassword().isBlank()) {
             throw new CustomException(ErrorCode.USER_2612); // 소셜 계정은 비밀번호 변경 불가
         }
 
