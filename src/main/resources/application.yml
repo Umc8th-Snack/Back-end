@@ -7,6 +7,17 @@ spring:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: ${DB_USER}
     password: ${DB_PASSWORD}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
   jpa:
     hibernate:
@@ -18,12 +29,12 @@ spring:
     token:
       secretKey: ${JWT_SECRET_KEY}
       expiration:
-#        access: 1800000 # 30분
-#        refresh: 86400000 # 1일
+        access: 1800000 # 30분
+        refresh: 86400000 # 1일
 #        access: 60000 # 1분
 #        refresh: 180000 # 3분
-        access: 1200000 # 20분
-        refresh: 1800000 # 30분
+#        access: 1200000 # 20분
+#        refresh: 1800000 # 30분
 
   cache:
     type: caffeine # 사용할 캐시 엔진 : 카페인
@@ -65,6 +76,7 @@ google:
 
 fastapi:
   url: http://python:5000
+
 # AWS S3 설정
 aws:
 

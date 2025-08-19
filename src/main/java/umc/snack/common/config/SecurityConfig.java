@@ -89,15 +89,14 @@ public class SecurityConfig {
                                 // 전체 공개 api
                                 "/api/users/signup",
                                 "/api/auth/login",
-                                "/api/auth/kakao",
                                 "/api/auth/google/callback",
                                 "/api/auth/reissue",
-                                "/auth/kakao/callback",
                                 "/api/articles/*/related-articles",
                                 "/api/articles/search",
                                 "/api/articles/main",
                                 "/api/feeds/main/**",
                                 "/api/nlp/search/**",
+                                "/api/users/password-reset/**",
                                 // 관리자 공개 api -> 개발 단계에서는 전체 공개
                                 "/api/share/**",
                                 "/api/articles/crawl/status",

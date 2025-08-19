@@ -58,6 +58,10 @@ dependencies {
 	implementation 'com.github.ben-manes.caffeine:caffeine'
 	// 캐시 모니터링 액츄에이터
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	// 이메일에 코드 전송
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+
 }
 
 tasks.named('test') {
