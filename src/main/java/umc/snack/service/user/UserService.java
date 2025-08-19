@@ -316,6 +316,8 @@ public class UserService {
 
         // 4. 새로운 비밀번호를 암호화하여 저장
         user.changePassword(passwordEncoder.encode(request.getNewPassword()));
+        // 모든 기기 로그아웃
+        refreshTokenRepository.deleteByUserId(user.getUserId());
     }
 
 
