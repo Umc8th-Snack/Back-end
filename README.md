@@ -13,9 +13,9 @@
 ---
 ## 팀원 소개
 
-| <img src="image/img_4.png" width="120"/> <br> **크롤링 · 스크랩** <br> [@chaewon](https://github.com/chaewon) | <img src="image/img_3.png" width="120"/> <br> **피드 · 검색 · 메모** <br> [@padoz3](https://github.com/padoz3) |
+| <img src="image/img_4.png" width="120"/> <br> **크롤링 · 스크랩 · 신고** <br> [@chaewon](https://github.com/chaewon) | <img src="image/img_3.png" width="120"/> <br> **피드 · 검색 · 메모** <br> [@padoz3](https://github.com/padoz3) |
 |---|---|
-| <img src="image/img_1.png" width="120"/> <br> **인증 · 사용자 · AI** <br> [@danaggero](https://github.com/danaggero) | <img src="image/img_5.png" width="120"/> <br> **소셜 로그인 · 퀴즈** <br> [@LABYRINTH3](https://github.com/LABYRINTH3) |
+| <img src="image/img_1.png" width="120"/> <br> **인증 · 사용자 · AI** <br> [@danaggero](https://github.com/danaggero) | <img src="image/img_5.png" width="120"/> <br> **소셜 로그인 · 퀴즈 · 신고** <br> [@LABYRINTH3](https://github.com/LABYRINTH3) |
 | <img src="image/img_2.png" width="120"/> <br> **피드 · 검색 · 인프라** <br> [@weeeeestern](https://github.com/weeeeestern) |  |
 
 ## 🛠 기술 스택
