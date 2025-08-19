@@ -7,8 +7,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 
@@ -21,8 +24,13 @@ import umc.snack.domain.nlp.dto.SearchResponseDto;
 import umc.snack.domain.nlp.dto.UserInteractionDto;
 import umc.snack.domain.nlp.dto.UserProfileRequestDto;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.util.*;
+
+import static org.springframework.http.HttpStatus.*;
+
 
 @Slf4j
 @Service
@@ -44,7 +52,7 @@ public class NlpService {
     @PostConstruct
     public void initialize() {
         log.info("NLP 서비스 초기화 - FastAPI URL: {}", fastapiUrl);
-        checkFastApiHealth();
+        // checkFastApiHealth();
     }
 
     /**
@@ -84,7 +92,7 @@ public class NlpService {
                 return response.getBody();
             }
             // 응답 본문이 null인 경우
-            throw new CustomException(ErrorCode.NLP_9899);
+            throw new CustomException(ErrorCode.NLP_9808);
         } catch (ResourceAccessException e) {
             log.error("FastAPI 연결 시간 초과: {}", url, e);
             throw new CustomException(ErrorCode.SERVER_5102);
@@ -118,7 +126,6 @@ public class NlpService {
             throw new CustomException(ErrorCode.SERVER_5102);
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             log.error("FastAPI HTTP 오류: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
-            // 명세서에 따라 더 구체적인 오류 매핑 가능
             throw new CustomException(ErrorCode.NLP_9806);
         } catch (Exception e) {
             log.error("벡터화 실패: {}", e.getMessage(), e);
@@ -127,37 +134,93 @@ public class NlpService {
     }
 
     /**
-     * 의미 기반 검색 (수정된 부분)
-     * @return SearchResponseDto
+     * 의미 기반 검색
      */
-    public SearchResponseDto searchArticles(String query, int page, int size, double threshold) {
-        log.info("기사 검색 요청 - 검색어: '{}', 페이지: {}, 크기: {}", query, page, size);
+    public SearchResponseDto searchArticles(String cleanedQuery, int page, int size, double threshold) {
 
-        URI uri = UriComponentsBuilder.fromHttpUrl(fastapiUrl)
-                .path("/api/articles/search")
-                .queryParam("query", query)
-                .queryParam("page", page)
-                .queryParam("size", size)
-                .queryParam("threshold", threshold)
-                .build(true).toUri();
+        if (!StringUtils.hasText(cleanedQuery)) {
+            throw new CustomException(ErrorCode.NLP_9807);
+        }
+
+        log.info("FastAPI 검색 요청 - 정리된 검색어: '{}', 페이지: {}, 크기: {}", cleanedQuery, page, size);
 
         try {
+            String encodedQuery = URLEncoder.encode(cleanedQuery, "UTF-8");
+            String url = String.format("%s/api/articles/search?query=%s&page=%d&size=%d&threshold=%.1f",
+                    fastapiUrl, encodedQuery, page, size, threshold);
+
+            log.info("FastAPI 호출 URL: {}", url);
+
+            // URI 객체 생성
+            URI uri = URI.create(url);
+
+            // FastAPI 호출
             ResponseEntity<SearchResponseDto> response = fastApiRestTemplate.getForEntity(uri, SearchResponseDto.class);
+
+            // 응답 검증
             if (response.getBody() == null) {
-                throw new CustomException(ErrorCode.NLP_9899);
+                log.warn("FastAPI 응답 본문이 null - 검색어: '{}'", cleanedQuery);
+                throw new CustomException(ErrorCode.NLP_9808);
             }
-            return response.getBody();
+
+            SearchResponseDto result = response.getBody();
+
+            if (result.getArticles() == null || result.getArticles().isEmpty()) {
+                log.info("검색 결과 없음 - 검색어: '{}', 전체 개수: {}", cleanedQuery, result.getTotalCount());
+                throw new CustomException(ErrorCode.NLP_9808);
+            }
+
+            log.info("FastAPI 검색 성공 - 검색어: '{}', 결과: {}/{}", cleanedQuery, result.getArticles().size(), result.getTotalCount());
+            return result;
+
+        } catch (UnsupportedEncodingException e) {
+            log.error("URL 인코딩 실패 - 검색어: '{}', 오류: {}", cleanedQuery, e.getMessage());
+            throw new CustomException(ErrorCode.REQ_3102);
+
         } catch (ResourceAccessException e) {
-            log.error("FastAPI 연결 시간 초과: {}", uri, e);
+            log.error("FastAPI 연결 시간 초과 - URL: {}, 오류: {}", fastapiUrl, e.getMessage());
             throw new CustomException(ErrorCode.SERVER_5102);
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("FastAPI 검색 HTTP 오류: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new CustomException(ErrorCode.NLP_9899);
+
+        } catch (HttpClientErrorException e) {
+            log.error("FastAPI 클라이언트 오류 - 상태: {}, 응답: {}", e.getStatusCode(), e.getResponseBodyAsString());
+
+            HttpStatus status = HttpStatus.valueOf(e.getStatusCode().value());
+
+            switch (status) {
+                case BAD_REQUEST:
+                    throw new CustomException(ErrorCode.NLP_9801);
+                case NOT_FOUND:
+                    log.info("FastAPI에서 검색 결과 없음 반환 - 검색어: '{}'", cleanedQuery);
+                    throw new CustomException(ErrorCode.NLP_9808);
+                case UNPROCESSABLE_ENTITY:
+                    throw new CustomException(ErrorCode.NLP_9807);
+                default:
+                    throw new CustomException(ErrorCode.NLP_9899);
+            }
+
+        } catch (HttpServerErrorException e) {
+            log.error("FastAPI 서버 오류 - 상태: {}, 응답: {}", e.getStatusCode(), e.getResponseBodyAsString());
+
+            HttpStatus status = HttpStatus.valueOf(e.getStatusCode().value());
+
+            switch (status) {
+                case SERVICE_UNAVAILABLE:
+                    throw new CustomException(ErrorCode.SERVER_5103);
+                case GATEWAY_TIMEOUT:
+                    throw new CustomException(ErrorCode.SERVER_5102);
+                default:
+                    throw new CustomException(ErrorCode.NLP_9899);
+            }
+
+        } catch (CustomException e) {
+            throw e;
+
         } catch (Exception e) {
-            log.error("FastAPI 검색 호출 중 알 수 없는 오류: {}", e.getMessage(), e);
+            log.error("FastAPI 검색 호출 중 예상치 못한 오류 - 검색어: '{}', 오류: {}", cleanedQuery, e.getMessage(), e);
             throw new CustomException(ErrorCode.SERVER_5101);
         }
     }
+
 
 
     public void updateUserProfile(Long userId, List<UserInteractionDto> interactions) {
@@ -198,7 +261,7 @@ public class NlpService {
 
             if (response == null || response.getArticles() == null) {
                 log.warn("FastAPI 맞춤 피드 응답 본문이 비어있습니다: userId={}", userId);
-                throw new CustomException(ErrorCode.NLP_9899);
+                throw new CustomException(ErrorCode.NLP_9808);
             }
 
             log.info("FastAPI 맞춤 피드 수신 완료: {}개 기사", response.getArticles().size());

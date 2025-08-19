@@ -1,7 +1,10 @@
 package umc.snack.service.feed;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -23,6 +26,8 @@ import umc.snack.repository.scrap.UserScrapRepository;
 import umc.snack.repository.user.SearchKeywordRepository;
 import umc.snack.service.nlp.NlpService;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +37,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 class FeedServiceImpl implements FeedService {
     private final FeedRepository feedRepository;
     private final CategoryRepository categoryRepository;
@@ -109,7 +115,8 @@ class FeedServiceImpl implements FeedService {
 
         // FastAPI한테 맞춤피드 페이지 요청
         // 메인 피드와 달리, 맞춤피드는 FastAPI를 이용해 기사를 가져오는 거라서 한번에 많이씩 가져오도록 구현했어요
-        FeedResponseDto recommendedFeed = nlpService.getPersonalizedFeed(userId, 0, 48);
+        // -> 자꾸 오류 뜬다고 해서 한번에 가져오는 기사 개수를 48 -> 16으로 감소
+        FeedResponseDto recommendedFeed = nlpService.getPersonalizedFeed(userId, 0, 16);
         if (recommendedFeed == null || recommendedFeed.getArticles().isEmpty()) {
             return feedConverter.toArticleInFeedDto("맞춤 피드", false, null, new ArrayList<>());
         }
@@ -169,31 +176,63 @@ class FeedServiceImpl implements FeedService {
         return feedConverter.toArticleInFeedDto("맞춤 피드", hasNext, nextCursorId, sortedArticles);
     }
 
-    // 키워드 기반 검색
+
     @Override
     public SearchResponseDto searchArticlesByQuery(String query, int page, int size, double threshold) {
-        // 쿼리 누락
-        if(!StringUtils.hasText(query)) {
-            throw new CustomException(ErrorCode.NLP_9801);
-        }
 
-        // size 파라미터
-        if (size < 1 || size > 100) {
-            throw new CustomException(ErrorCode.REQ_3104);
-        }
-
-        SearchResponseDto result;
         try {
-            result = nlpService.searchArticles(query, page, size, threshold);
+            // URL 디코딩 처리
+            String decodedQuery;
+            try {
+                decodedQuery = URLDecoder.decode(query, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                log.error("URL 디코딩 실패: {}", e.getMessage());
+                throw new CustomException(ErrorCode.REQ_3102);
+            }
+
+            // 검색어 정리
+            String cleanedQuery = decodedQuery.replaceAll("[^가-힣a-zA-Z0-9\\s]", " ")
+                    .trim()
+                    .replaceAll("\\s+", " ");
+
+            // 검증
+            if (!StringUtils.hasText(cleanedQuery)) {
+                throw new CustomException(ErrorCode.NLP_9807);
+            }
+            if (cleanedQuery.length() < 2) {
+                throw new CustomException(ErrorCode.ARTICLE_9102_SEARCH);
+            }
+            if (page < 0) {
+                throw new CustomException(ErrorCode.ARTICLE_9103_SEARCH);
+            }
+            if (size < 1 || size > 100) {
+                throw new CustomException(ErrorCode.ARTICLE_9104_SEARCH);
+            }
+            log.info("검색 요청 처리 - 원본: '{}', 디코딩: '{}', 정리: '{}'", query, decodedQuery, cleanedQuery);
+
+            // NLP 서비스 호출
+            SearchResponseDto result = nlpService.searchArticles(cleanedQuery, page, size, threshold);
+
+            if (result == null || result.getArticles() == null || result.getArticles().isEmpty()) {
+                log.info("검색 결과 없음 - 검색어: '{}'", cleanedQuery);
+
+                // 빈 결과 객체 반환
+                return SearchResponseDto.builder()
+                        .query(cleanedQuery)
+                        .totalCount(0)
+                        .articles(new ArrayList<>())
+                        .build();
+            }
+
+            log.info("검색 완료 - 검색어: '{}', 결과: {}/{}", cleanedQuery, result.getArticles().size(), result.getTotalCount());
+            return result;
+
+        } catch (CustomException e) {
+            throw e;
         } catch (Exception e) {
+            log.error("검색 처리 중 예상치 못한 오류 - 검색어: '{}', 오류: {}", query, e.getMessage(), e);
             throw new CustomException(ErrorCode.NLP_9899);
         }
-
-        if (result == null || result.getArticles().isEmpty()) {
-            throw new CustomException(ErrorCode.NLP_9808);
-        }
-
-        return result;
     }
 
     private ArticleInFeedDto buildFeedResponse(String categoryName, Slice<Article> articleSlice) {

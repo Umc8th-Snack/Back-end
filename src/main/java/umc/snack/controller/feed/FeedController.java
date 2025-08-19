@@ -5,12 +5,14 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
+import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.feed.dto.ArticleInFeedDto;
 import umc.snack.domain.nlp.dto.SearchResponseDto;
@@ -27,7 +29,6 @@ import java.util.List;
 @Tag(name = "Feed", description = "피드 관련 API")
 public class FeedController {
     private final FeedService feedService;
-    private final NlpService nlpService;
     private final SearchKeywordService searchKeywordService;
     @Operation(summary = "메인 피드에서 기사 제공", description = "메인 피드에서 특정 카테고리의 기사를 무한스크롤 조회합니다.")
     @GetMapping("/feeds/main")
@@ -45,11 +46,11 @@ public class FeedController {
     @Operation(summary = "의미 기반 기사 검색", description = "검색어를 기반으로 의미적으로 유사한 기사를 조회합니다.\n\n" +
             "※ 로그인한 경우에만 검색어가 저장됩니다.")
     @GetMapping("articles/search")
-    public ApiResponse<SearchResponseDto> searchArticles(
-            @RequestParam(value = "query", required = false) String query,
+    public ResponseEntity<ApiResponse<SearchResponseDto>> searchArticles(
+            @RequestParam(value = "query") String query,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "5") int size,
-            @RequestParam(value = "threshold", defaultValue = "0.7") double threshold,
+            @RequestParam(value = "threshold", defaultValue = "0.9") double threshold,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         // 로그인한 경우에만 저장
@@ -60,7 +61,18 @@ public class FeedController {
 
         SearchResponseDto result = feedService.searchArticlesByQuery(query, page, size, threshold);
 
-        return ApiResponse.onSuccess("FEED_9702", "의미 기반 검색에 성공하였습니다", result);
+        if (result.getArticles() == null || result.getArticles().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                    .body(ApiResponse.onFailure(
+                            ErrorCode.NLP_9808.name(),
+                            ErrorCode.NLP_9808.getMessage(),
+                            result
+                    ));
+        }
+
+        return ResponseEntity.ok(
+                ApiResponse.onSuccess("FEED_9702", "의미 기반 검색에 성공하였습니다", result)
+        );
     }
 
     @Operation(summary = "맞춤 피드에서 기사 제공", description = "사용자의 상위 관심 카테고리 3개에 대한 기사를 최신순으로 무한스크롤 조회합니다.")

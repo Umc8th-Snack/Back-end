@@ -1,5 +1,7 @@
 package umc.snack.service.feed;
 
+import org.springframework.http.ResponseEntity;
+import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.feed.dto.ArticleInFeedDto;
 import umc.snack.domain.nlp.dto.SearchResponseDto;
 import umc.snack.domain.nlp.dto.UserProfileRequestDto;
