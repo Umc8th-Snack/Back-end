@@ -63,11 +63,8 @@ google:
     client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
     redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI}
 
-#fastapi:
-  #url: http://python:5000
 fastapi:
-  url: http://localhost:5000   # 실제 안 켜도 됨
-  fail-on-boot: false          # 부팅 실패 안 나게 함
+  url: http://python:5000
 # AWS S3 설정
 aws:
 
