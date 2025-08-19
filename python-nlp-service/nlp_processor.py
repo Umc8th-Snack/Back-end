@@ -45,7 +45,7 @@ async def generate_sbert_vectors(keywords: List[str]) -> Dict[str, List[float]]:
     global sbert_model
 
     if not sbert_model:
-        raise RuntimeError("SBERT model is not initialized. Please run initialize_nlp_service() first.")
+        raise RuntimeError("SBERT model이 아직 초기화되지 않았습니다. initialize_nlp_service() 부터 실행해주세요. ")
 
     if not keywords:
         return {}
