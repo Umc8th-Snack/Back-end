@@ -15,7 +15,7 @@ public class CookieUtil {
                 .sameSite("None")  // Cross-Domain 허용
                 .build();
         
-        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
     
     // 쿠키 삭제를 위한 메서드
@@ -28,6 +28,6 @@ public class CookieUtil {
                 .sameSite("None")
                 .build();
         
-        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }
