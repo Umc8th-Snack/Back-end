@@ -13,6 +13,8 @@ import umc.snack.common.exception.ErrorCode;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.repository.auth.RefreshTokenRepository;
 
+import static umc.snack.common.config.security.CookieUtil.deleteCookie;
+
 @Service
 @RequiredArgsConstructor
 public class LogoutService {
@@ -28,7 +30,7 @@ public class LogoutService {
 
         if (refreshToken == null) {
             // [AUTH_2163] 쿠키에 refresh token 없음
-            expireRefreshCookie(response);
+            deleteCookie("refresh", response);
             return buildFail(ErrorCode.AUTH_2163);
         }
 
@@ -36,7 +38,7 @@ public class LogoutService {
         var foundOpt = refreshTokenRepository.findByRefreshToken(refreshToken);
         if (foundOpt.isEmpty()) {
             // [AUTH_2132] 이미 로그아웃/없는 토큰
-            expireRefreshCookie(response);
+            deleteCookie("refresh", response);
             return buildFail(ErrorCode.AUTH_2132);
         }
 
@@ -46,13 +48,13 @@ public class LogoutService {
         } catch (ExpiredJwtException e) {
             // [AUTH_2164] 만료된 토큰
             refreshTokenRepository.deleteByRefreshToken(refreshToken);
-            expireRefreshCookie(response);
+            deleteCookie("refresh", response);
             return buildFail(ErrorCode.AUTH_2164);
         }
 
         // 4. 정상 로그아웃 (refresh token 삭제 + 쿠키 만료)
         refreshTokenRepository.deleteByRefreshToken(refreshToken);
-        expireRefreshCookie(response);
+        deleteCookie("refresh", response);
 
         // 5. 성공 응답
         return ResponseEntity.ok(
@@ -77,18 +79,7 @@ public class LogoutService {
         return null;
     }
 
-    // refresh 쿠키 만료 처리
-    private void expireRefreshCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie("refresh", null);
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(0);
-        cookie.setSecure(true);
-        cookie.setAttribute("SameSite", "Strict");
-        response.addCookie(cookie);
-    }
-
-    // 실패 응답 빌더
+    // 실패 응답 빌더 (사용하지 않지만 호환성 유지)
     private ResponseEntity<ApiResponse<Object>> buildFail(ErrorCode errorCode) {
         return ResponseEntity
                 .status(errorCode.getStatus())

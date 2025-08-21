@@ -95,9 +95,8 @@ public class ReissueService {
                         .build()
         );
 
-        // access 토큰은 header, refresh 토큰은 쿠키
-        response.setHeader("Authorization", "Bearer " + newAccess);
-        response.addCookie(createCookie("refresh", newRefresh));
+        // Cross-Domain 환경을 위한 쿠키 설정
+        createCookie("refresh", newRefresh, response);
 
         // 응답 Dto 만들기
         TokenReissueResponseDto dto = TokenReissueResponseDto.builder()
@@ -106,6 +105,9 @@ public class ReissueService {
                 .nickname(user.getNickname())
                 .build();
 
+        // access 토큰은 header, refresh 토큰은 Secure HttpOnly 쿠키로 설정
+        response.setHeader("Authorization", "Bearer " + newAccess);
+        
         return ResponseEntity.ok(
                 ApiResponse.onSuccess(
                         "AUTH_2060",
