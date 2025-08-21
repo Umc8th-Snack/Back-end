@@ -12,8 +12,6 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -30,7 +28,6 @@ import java.net.URLEncoder;
 import java.util.*;
 
 import static org.springframework.http.HttpStatus.*;
-
 
 @Slf4j
 @Service

@@ -328,7 +328,7 @@ async def search_articles_semantic(
         query: str = Query(..., description="검색할 단어"),
         page: int = Query(0, ge=0, description="페이지 번호"),
         size: int = Query(5, ge=1, le=50, description="페이지 크기"),
-        threshold: float = Query(0.9, ge=0, le=1, description="최소 유사도 임계값")
+        threshold: float = Query(0.7, ge=0, le=1, description="최소 유사도 임계값")
 ):
     try:
         cleaned_query = query.strip()
@@ -362,41 +362,39 @@ async def search_articles_semantic(
             logger.warning(f"검색어 벡터화 실패: {cleaned_query}")
             return SearchResponse(query=cleaned_query, totalCount=0, articles=[])
 
-        # DB에서 검색 수행
+        query_vector = await vectorize_raw_query(cleaned_query)
+        if query_vector is None:
+            logger.warning(f"검색어 벡터화 실패: {cleaned_query}")
+            return SearchResponse(query=cleaned_query, totalCount=0, articles=[])
+
         async with db_pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cursor:
-                await cursor.execute(
-                    "SELECT a.article_id, a.title, a.summary, a.published_at, asv.vector, asv.keywords "
-                    "FROM articles a INNER JOIN article_semantic_vectors asv ON a.article_id = asv.article_id "
-                    "WHERE asv.vector IS NOT NULL AND JSON_LENGTH(asv.vector) > 0"
-                )
+                # 대표벡터를 사용한 빠른 검색
+                await cursor.execute("""
+                    SELECT a.article_id, a.title, a.summary, a.published_at, 
+                           asv.representative_vector
+                    FROM articles a 
+                    INNER JOIN article_semantic_vectors asv ON a.article_id = asv.article_id
+                    WHERE asv.representative_vector IS NOT NULL
+                """)
+
                 all_articles = await cursor.fetchall()
-
-                if not all_articles:
-                    logger.warning("벡터화된 기사가 없습니다.")
-                    return SearchResponse(query=cleaned_query, totalCount=0, articles=[])
-
                 search_results = []
+
                 for article in all_articles:
                     try:
-                        keyword_vectors = json.loads(article['vector'])
-                        if not keyword_vectors:
-                            continue
+                        rep_vector = np.array(json.loads(article['representative_vector']))
+                        similarity = cosine_similarity(query_vector, rep_vector)
 
-                        similarities = [
-                            cosine_similarity(query_vector, np.array(vec))
-                            for vec in keyword_vectors.values()
-                        ]
-                        max_similarity = max(similarities) if similarities else 0.0
-
-                        if max_similarity >= threshold:
+                        if similarity >= threshold:
                             search_results.append({
                                 'article_id': article['article_id'],
                                 'title': article['title'],
                                 'summary': article['summary'],
-                                'score': float(max_similarity),
+                                'score': float(similarity),
                                 'publishedAt': article['published_at'].isoformat() if article['published_at'] else None
                             })
+
                     except json.JSONDecodeError as e:
                         logger.warning(f"기사 {article['article_id']} JSON 파싱 오류: {e}")
                         continue
@@ -613,7 +611,7 @@ async def update_user_profile(request: UserProfileRequest):
 
 @app.get("/api/nlp/feed/{user_id}", response_model=FeedResponse)
 async def get_personalized_feed(user_id: int, page: int = 0, size: int = 20):
-    # 맞춤 피
+    # 맞춤 피드
     if not db_pool:
         raise HTTPException(status_code=503, detail="데이터베이스 연결이 없습니다.")
 

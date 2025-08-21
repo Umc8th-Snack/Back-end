@@ -190,8 +190,8 @@ class FeedServiceImpl implements FeedService {
                 throw new CustomException(ErrorCode.REQ_3102);
             }
 
-            // 검색어 정리
-            String cleanedQuery = decodedQuery.replaceAll("[^가-힣a-zA-Z0-9\\s]", " ")
+            // 한글, 영문, 숫자, 공백, 일부 특수문자(+, #, -, ., _) 허용
+            String cleanedQuery = decodedQuery.replaceAll("[^가-힣a-zA-Z0-9\\s+#\\-._]", " ")
                     .trim()
                     .replaceAll("\\s+", " ");
 
