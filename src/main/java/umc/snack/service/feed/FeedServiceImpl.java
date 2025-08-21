@@ -178,7 +178,7 @@ class FeedServiceImpl implements FeedService {
 
 
     @Override
-    public SearchResponseDto searchArticlesByQuery(String query, int page, int size, double threshold) {
+    public SearchResponseDto searchArticlesByQuery(String query, int page, int size, String searchMode) {
 
         try {
             // URL 디코딩 처리
@@ -211,7 +211,7 @@ class FeedServiceImpl implements FeedService {
             log.info("검색 요청 처리 - 원본: '{}', 디코딩: '{}', 정리: '{}'", query, decodedQuery, cleanedQuery);
 
             // NLP 서비스 호출
-            SearchResponseDto result = nlpService.searchArticles(cleanedQuery, page, size, threshold);
+            SearchResponseDto result = nlpService.searchArticles(cleanedQuery, page, size, searchMode);
 
             if (result == null || result.getArticles() == null || result.getArticles().isEmpty()) {
                 log.info("검색 결과 없음 - 검색어: '{}'", cleanedQuery);

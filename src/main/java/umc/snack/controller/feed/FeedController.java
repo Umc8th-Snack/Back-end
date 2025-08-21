@@ -50,7 +50,8 @@ public class FeedController {
             @RequestParam(value = "query") String query,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "5") int size,
-            @RequestParam(value = "threshold", defaultValue = "0.9") double threshold,
+            // @RequestParam(value = "threshold", defaultValue = "0.9") double threshold,
+            @RequestParam(value = "searchMode", defaultValue = "smart") String searchMode,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         // 로그인한 경우에만 저장
@@ -59,7 +60,7 @@ public class FeedController {
             searchKeywordService.saveKeyword(userId, query);
         }
 
-        SearchResponseDto result = feedService.searchArticlesByQuery(query, page, size, threshold);
+        SearchResponseDto result = feedService.searchArticlesByQuery(query, page, size, searchMode);
 
         if (result.getArticles() == null || result.getArticles().isEmpty()) {
             return ResponseEntity.status(HttpStatus.NO_CONTENT)

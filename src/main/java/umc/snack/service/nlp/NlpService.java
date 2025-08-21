@@ -133,7 +133,7 @@ public class NlpService {
     /**
      * 의미 기반 검색
      */
-    public SearchResponseDto searchArticles(String cleanedQuery, int page, int size, double threshold) {
+    public SearchResponseDto searchArticles(String cleanedQuery, int page, int size, String searchMode) {
 
         if (!StringUtils.hasText(cleanedQuery)) {
             throw new CustomException(ErrorCode.NLP_9807);
@@ -143,9 +143,8 @@ public class NlpService {
 
         try {
             String encodedQuery = URLEncoder.encode(cleanedQuery, "UTF-8");
-            String url = String.format("%s/api/articles/search?query=%s&page=%d&size=%d&threshold=%.1f",
-                    fastapiUrl, encodedQuery, page, size, threshold);
-
+            String url = String.format("%s/api/articles/search?query=%s&page=%d&size=%d&searchMode=%s",
+                    fastapiUrl, encodedQuery, page, size, searchMode);
             log.info("FastAPI 호출 URL: {}", url);
 
             // URI 객체 생성

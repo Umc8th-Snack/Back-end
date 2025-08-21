@@ -189,12 +189,13 @@ async def batch_vectorize_articles(
                 }
 
             article_ids = [a['article_id'] for a in articles]
-            logger.info(f"벡터화할 기사 {len(article_ids)}개 발견: {article_ids[:10]}...")  # 처음 10개만 로그
+            logger.info(f"벡터화할 기사 {len(article_ids)}개 발견: {article_ids[:5]}...")  # 상위 5개만 로그
 
             # 벡터화 수행
             return await vectorize_articles_from_db(article_ids)
 
 @app.post("/api/vectorize/articles")
+# 시맨틱 기반 -> 키워드 기반으로 수정
 async def vectorize_articles_from_db(article_ids: List[int]):
     if not article_ids:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="article_ids는 필수입니다.")
@@ -214,17 +215,21 @@ async def vectorize_articles_from_db(article_ids: List[int]):
                         continue
 
                     text = article.get('summary') or ''
-
                     tfidf_keywords = {}
-                    sbert_vectors = {}
-                    representative_vector = [0.0] * 384
+                    # sbert_vectors = {}
+                    # representative_vector = [0.0] * 384
 
                     if not text.strip():
                         # summary가 비어있으면, 벡터와 키워드를 모두 빈 딕셔너리로 처리
                         logger.info(f"기사 {article_id}는 summary가 없어 빈 값으로 처리합니다.")
                     elif nlp_processor:
                         # summary가 있을 때만 NLP 처리
-                        tfidf_keywords = await nlp_processor.extract_tfidf_keywords(text, top_k=10)
+                        tfidf_keywords = await nlp_processor.extract_tfidf_keywords(text, top_k=5)
+
+                    # 키워드만 저장, 키워드의 벡터 저장 X
+                    keywords_json_str = json.dumps(tfidf_keywords)
+
+                    '''
                         top_keywords = list(tfidf_keywords.keys())
                         if top_keywords:
                             sbert_vectors = await nlp_processor.generate_sbert_vectors(top_keywords)
@@ -240,21 +245,28 @@ async def vectorize_articles_from_db(article_ids: List[int]):
                     vector_json_str = json.dumps(sbert_vectors)
                     keywords_json_str = json.dumps(tfidf_keywords)
                     rep_vector_str = json.dumps(representative_vector)
+                    '''
 
                     await cursor.execute("SELECT article_id FROM article_semantic_vectors WHERE article_id = %s", (article_id,))
                     existing = await cursor.fetchone()
                     if existing:
                         await cursor.execute(
-                            "UPDATE article_semantic_vectors SET vector = %s, keywords = %s, representative_vector = %s, model_version = %s, updated_at = NOW() WHERE article_id = %s",
-                            (vector_json_str, keywords_json_str, rep_vector_str, "sbert-keywords-v4", article_id)
+                            # "UPDATE article_semantic_vectors SET vector = %s, keywords = %s, representative_vector = %s, model_version = %s, updated_at = NOW() WHERE article_id = %s",
+                            # (vector_json_str, keywords_json_str, rep_vector_str, "sbert-avg-1", article_id)
+                            "UPDATE article_semantic_vectors SET keywords = %s, vector = NULL, representative_vector = NULL, model_version = %s, updated_at = NOW() WHERE article_id = %s",
+                            (keywords_json_str, "keyword-only-v1", article_id)
                         )
-                        logger.info(f"기사 {article_id} 키워드 및 대표 벡터 업데이트 완료")
+                        # logger.info(f"기사 {article_id} 키워드 및 대표 벡터 업데이트 완료")
+                        logger.info(f"기사 {article_id} 키워드 업데이트 완료")
                     else:
-                        await cursor.execute(
-                            "INSERT INTO article_semantic_vectors (vector_id, article_id, vector, keywords, representative_vector, model_version, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())",
-                            (article_id, article_id, vector_json_str, keywords_json_str, rep_vector_str, "sbert-keywords-v4")
-                        )
-                        logger.info(f"기사 {article_id} 키워드 및 대표 벡터 신규 저장 완료")
+                            await cursor.execute(
+                                # "INSERT INTO article_semantic_vectors (vector_id, article_id, vector, keywords, representative_vector, model_version, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())",
+                                # (article_id, article_id, vector_json_str, keywords_json_str, rep_vector_str, "sbert-avg-v1")
+                                "INSERT INTO article_semantic_vectors (vector_id, article_id, vector, keywords, representative_vector, model_version, created_at, updated_at) VALUES (%s, %s, NULL, %s, NULL, %s, NOW(), NOW())",
+                                (article_id, article_id, keywords_json_str, "keyword-only-v1")
+                            )
+                            # logger.info(f"기사 {article_id} 키워드 및 대표 벡터 신규 저장 완료")
+                            logger.info(f"기사 {article_id} 키워드 저장 완료")
 
                     processed_count += 1
 
@@ -262,7 +274,7 @@ async def vectorize_articles_from_db(article_ids: List[int]):
                     logger.error(f"기사 {article_id} 처리 중 오류: {e}", exc_info=True)
                     failed_ids.append(article_id)
                     continue
-        return {"status": "completed", "total_requested": len(article_ids), "processed": processed_count, "failed": failed_ids}
+            return {"status": "completed", "total_requested": len(article_ids), "processed": processed_count, "failed": failed_ids}
 
 # 테이블 스키마 확인 엔드포인트
 @app.get("/api/db/check-schema")
@@ -328,141 +340,141 @@ async def search_articles_semantic(
         query: str = Query(..., description="검색할 단어"),
         page: int = Query(0, ge=0, description="페이지 번호"),
         size: int = Query(5, ge=1, le=50, description="페이지 크기"),
-        threshold: float = Query(0.7, ge=0, le=1, description="최소 유사도 임계값")
+        search_mode: str = Query("smart", description="검색 모드: smart, title, summary, keyword")
 ):
-    try:
-        cleaned_query = query.strip()
+    cleaned_query = query.strip()
+    logger.info(f"검색 요청 - 검색어: '{cleaned_query}', 페이지: {page}, 크기: {size}")
 
-        logger.info(f"검색 요청 - 검색어: '{cleaned_query}', 페이지: {page}, 크기: {size}")
+    if not cleaned_query:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="유효한 검색어를 입력해주세요.")
 
-        # 빈 검색어 체크
-        if not cleaned_query:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="유효한 검색어를 입력해주세요."
-            )
+    if not db_pool:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="데이터베이스 연결이 없습니다.")
 
-        if not db_pool:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="데이터베이스 연결이 없습니다."
-            )
+    async with db_pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cursor:
+            search_results = []
 
-        # NLP 서비스 준비 상태 확인
-        if not nlp_processor:
-            logger.error("NLP 프로세서가 로드되지 않았습니다.")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="NLP 서비스가 준비되지 않았습니다."
-            )
-
-        # 검색어 벡터화
-        query_vector = await vectorize_raw_query(cleaned_query)
-        if query_vector is None:
-            logger.warning(f"검색어 벡터화 실패: {cleaned_query}")
-            return SearchResponse(query=cleaned_query, totalCount=0, articles=[])
-
-        query_vector = await vectorize_raw_query(cleaned_query)
-        if query_vector is None:
-            logger.warning(f"검색어 벡터화 실패: {cleaned_query}")
-            return SearchResponse(query=cleaned_query, totalCount=0, articles=[])
-
-        async with db_pool.acquire() as conn:
-            async with conn.cursor(aiomysql.DictCursor) as cursor:
-                # 대표벡터를 사용한 빠른 검색
+            if search_mode == "title":
+                # 제목에서만 검색
                 await cursor.execute("""
-                    SELECT a.article_id, a.title, a.summary, a.published_at, 
-                           asv.representative_vector
+                    SELECT a.article_id, a.title, a.summary, a.published_at
                     FROM articles a 
-                    INNER JOIN article_semantic_vectors asv ON a.article_id = asv.article_id
-                    WHERE asv.representative_vector IS NOT NULL
-                """)
+                    WHERE a.title LIKE %s
+                    ORDER BY a.created_at DESC
+                """, (f"%{cleaned_query}%",))
 
-                all_articles = await cursor.fetchall()
-                search_results = []
+            elif search_mode == "summary":
+                # 요약에서만 검색
+                await cursor.execute("""
+                    SELECT a.article_id, a.title, a.summary, a.published_at
+                    FROM articles a 
+                    WHERE a.summary LIKE %s
+                    ORDER BY a.created_at DESC
+                """, (f"%{cleaned_query}%",))
 
-                for article in all_articles:
-                    try:
-                        rep_vector = np.array(json.loads(article['representative_vector']))
-                        similarity = cosine_similarity(query_vector, rep_vector)
+            elif search_mode == "keyword":
+                # 키워드에서만 검색
+                await cursor.execute("""
+                    SELECT a.article_id, a.title, a.summary, a.published_at
+                    FROM articles a 
+                    LEFT JOIN article_semantic_vectors asv ON a.article_id = asv.article_id
+                    WHERE asv.keywords LIKE %s
+                    ORDER BY a.created_at DESC
+                """, (f"%{cleaned_query}%",))
 
-                        if similarity >= threshold:
-                            search_results.append({
-                                'article_id': article['article_id'],
-                                'title': article['title'],
-                                'summary': article['summary'],
-                                'score': float(similarity),
-                                'publishedAt': article['published_at'].isoformat() if article['published_at'] else None
-                            })
+            else:  # smart 모드 (기본)
+                # 제목, 요약, 키워드 모두 검색 + 가중치 적용
+                await cursor.execute("""
+                    SELECT DISTINCT a.article_id, a.title, a.summary, a.published_at, a.created_at,
+                        CASE 
+                            WHEN a.title LIKE %s THEN 100
+                            WHEN a.title LIKE %s THEN 80
+                            WHEN a.summary LIKE %s THEN 60
+                            WHEN asv.keywords LIKE %s THEN 40
+                            ELSE 10
+                        END as match_score
+                    FROM articles a 
+                    LEFT JOIN article_semantic_vectors asv ON a.article_id = asv.article_id
+                    WHERE (
+                        a.title LIKE %s OR 
+                        a.summary LIKE %s OR 
+                        asv.keywords LIKE %s
+                    )
+                    ORDER BY match_score DESC, a.created_at DESC
+                """, (
+                    f"{cleaned_query}%",      # 제목 시작 매치
+                    f"%{cleaned_query}%",     # 제목 부분 매치
+                    f"%{cleaned_query}%",     # 요약 매치
+                    f"%{cleaned_query}%",     # 키워드 매치
+                    f"%{cleaned_query}%",     # WHERE 조건들
+                    f"%{cleaned_query}%",
+                    f"%{cleaned_query}%"
+                ))
 
-                    except json.JSONDecodeError as e:
-                        logger.warning(f"기사 {article['article_id']} JSON 파싱 오류: {e}")
-                        continue
-                    except Exception as e:
-                        logger.warning(f"기사 {article['article_id']} 처리 중 오류: {e}")
-                        continue
+            articles = await cursor.fetchall()
 
-                # 정렬 및 페이징
-                search_results.sort(key=lambda x: x['score'], reverse=True)
-                paginated_results = search_results[page * size : (page + 1) * size]
+            for article in articles:
+                # 매치 타입 결정
+                match_type = "none"
+                final_score = 1.0
 
-                articles_response = [
-                    ArticleSearchResult(**{k: v for k, v in res.items() if k != 'keywords'})
-                    for res in paginated_results
-                ]
+                if search_mode == "smart":
+                    final_score = article.get('match_score', 10) / 100.0
 
-                logger.info(f"검색 완료 - 전체: {len(search_results)}개, 반환: {len(articles_response)}개")
+                    if cleaned_query.lower() in article['title'].lower():
+                        match_type = "title"
+                    elif cleaned_query.lower() in (article['summary'] or "").lower():
+                        match_type = "summary"
+                    else:
+                        match_type = "keyword"
+                else:
+                    match_type = search_mode
 
-                return SearchResponse(
-                    query=cleaned_query,
-                    totalCount=len(search_results),
-                    articles=articles_response
+                search_results.append({
+                    'article_id': article['article_id'],
+                    'title': article['title'],
+                    'summary': article['summary'],
+                    'score': final_score,
+                    'publishedAt': article['published_at'].isoformat() if article['published_at'] else None
+                })
+
+            # 페이징
+            total_count = len(search_results)
+            paginated_results = search_results[page * size:(page + 1) * size]
+
+            articles_response = [
+                ArticleSearchResult(
+                    article_id=res['article_id'],
+                    title=res['title'],
+                    summary=res['summary'],
+                    score=res['score'],
+                    publishedAt=res['publishedAt']
                 )
+                for res in paginated_results
+            ]
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"검색 중 오류 발생: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"검색 처리 중 오류가 발생했습니다: {str(e)}"
-        )
+            logger.info(f"검색 완료 - 모드: {search_mode}, 총 {total_count}개, 반환: {len(articles_response)}개")
+
+            return SearchResponse(
+                query=cleaned_query,
+                totalCount=total_count,
+                articles=articles_response
+            )
 
 # --- 헬퍼 함수 ---
-async def calculate_weighted_average(
-        sbert_vectors: dict,
-        tfidf_scores: dict
-) -> List[float]:
+
+def calculate_average_vector(sbert_vectors: dict) -> List[float]:
     if not sbert_vectors:
-        return [0.0] * 384
+        return [0.0] * 768
 
-    vectors = []
-    weights = []
+    all_vectors = np.array(list(sbert_vectors.values()))
+    avg_vectors = np.mean(all_vectors, axis = 0)
 
-    for keyword in sbert_vectors:
-        if keyword in tfidf_scores:
-            vectors.append(sbert_vectors[keyword])
-            weights.append(tfidf_scores[keyword])
-
-    if not vectors:
-        return [0.0] * 384
-
-    # numpy 배열로 변환
-    vectors = np.array(vectors)
-    weights = np.array(weights)
-
-    # 가중치 정규화
-    weights = weights / weights.sum()
-
-    # 가중 평균 계산
-    weighted_avg = np.average(vectors, axis=0, weights=weights)
-
-    # 벡터 정규화
-    norm = np.linalg.norm(weighted_avg)
+    norm = np.linalg.norm(avg_vectors)
     if norm > 0:
-        weighted_avg = weighted_avg / norm
-
-    return weighted_avg.tolist()
+        avg_vectors = avg_vectors / norm
+    return avg_vectors.tolist()
 
 async def vectorize_raw_query(query: str) -> Optional[np.ndarray]:
     """검색어 전체를 하나의 벡터로 변환"""

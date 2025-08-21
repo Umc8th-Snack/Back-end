@@ -18,8 +18,14 @@ public class SearchResponseDto {
     @JsonIgnoreProperties("total_count")
     private int totalCount;
     private List<ArticleSearchResultDto> articles;
+    private String searchMode;
 
     public static SearchResponseDto empty(String query) {
-        return new SearchResponseDto(query, 0, new ArrayList<>());
+        return SearchResponseDto.builder()
+                .query(query)
+                .totalCount(0)
+                .articles(new ArrayList<>())
+                .searchMode("smart") // 기본값
+                .build();
     }
 }
