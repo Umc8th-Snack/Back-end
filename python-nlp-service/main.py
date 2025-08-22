@@ -383,7 +383,7 @@ async def search_articles_semantic(
                     ORDER BY a.created_at DESC
                 """, (f"%{cleaned_query}%",))
 
-            else:  # smart 모드 (기본)
+            else:
                 # 제목, 요약, 키워드 모두 검색 + 가중치 적용
                 await cursor.execute("""
                     SELECT DISTINCT a.article_id, a.title, a.summary, a.published_at, a.created_at,
