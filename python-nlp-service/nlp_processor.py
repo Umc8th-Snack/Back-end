@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple
 from keybert import KeyBERT
 import os
 import pandas as pd
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +23,16 @@ def _load_stopwords(file_path: str) -> set:
 
     try:
         if os.path.exists(file_path):
-            df = pd.read_csv(file_path, header=None)
-            stopwords_set = set(df[0].tolist())
+            df = pd.read_csv(file_path, header=None, encoding="utf-8")
+            series = df[0].dropna().astype(str).str.strip()
+            stopwords_set = set(s for s in series if s)
             logger.info(f"{len(stopwords_set)}개의 불용어를 '{file_path}'에서 로드했습니다.")
             return stopwords_set
         else:
             logger.warning(f"불용어 파일 '{file_path}'를 찾을 수 없습니다. 기본 불용어를 사용합니다.")
             return default_stopwords
     except Exception as e:
-        logger.error(f"불용어 파일 로드 중 오류 발생: {e}. 기본 불용어를 사용합니다.")
+        logger.error(f"불용어 파일 로드 중 오류 발생: {e}. 기본 불용어를 사용합니다.", exc_info=True)
         return default_stopwords
 
 class NLPProcessor:
@@ -41,19 +43,23 @@ class NLPProcessor:
         self.keybert_model: KeyBERT = None
         self.okt: Okt = None
         self.stopwords: set = _load_stopwords(stopwords_path)
-
+        self._init_lock = asyncio.Lock()
     async def initialize_nlp_service(self):
-        if self.keyword_model is None or self.vectorizer_model is None:
+        if self.keyword_model and self.vectorizer_model:
+            return
+        async with self._init_lock:
+            if self.keyword_model and self.vectorizer_model:
+                return
             # 1. 키워드 추출용 모델 로드
             kw_model_name = 'jhgan/ko-sroberta-multitask'
             logger.info(f"Loading Keyword-Extractor Model: {kw_model_name}...")
-            self.keyword_model = SentenceTransformer(kw_model_name)
+            self.keyword_model = await asyncio.to_thread(SentenceTransformer, kw_model_name)
             self.keybert_model = KeyBERT(self.keyword_model)
 
             # 2. 의미 벡터 변환용 모델 로드
             vec_model_name = 'jhgan/ko-sbert-sts'
             logger.info(f"Loading Vectorizer Model: {vec_model_name}...")
-            self.vectorizer_model = SentenceTransformer(vec_model_name)
+            self.vectorizer_model = await asyncio.to_thread(SentenceTransformer, vec_model_name)
 
             self.okt = Okt()
             logger.info("모든 NLP 모델이 초기화되었습니다.")

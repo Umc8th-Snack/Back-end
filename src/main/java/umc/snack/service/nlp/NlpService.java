@@ -164,7 +164,7 @@ public class NlpService {
 
             if (result.getArticles() == null || result.getArticles().isEmpty()) {
                 log.info("검색 결과 없음 - 검색어: '{}', 전체 개수: {}", cleanedQuery, result.getTotalCount());
-                throw new CustomException(ErrorCode.NLP_9808);
+                return result;
             }
 
             log.info("FastAPI 검색 성공 - 검색어: '{}', 결과: {}/{}", cleanedQuery, result.getArticles().size(), result.getTotalCount());

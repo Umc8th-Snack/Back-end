@@ -117,7 +117,9 @@ class FeedServiceImpl implements FeedService {
         // 메인 피드와 달리, 맞춤피드는 FastAPI를 이용해 기사를 가져오는 거라서 한번에 많이씩 가져오도록 구현했어요
         // -> 자꾸 오류 뜬다고 해서 한번에 가져오는 기사 개수를 48 -> 16으로 감소
         FeedResponseDto recommendedFeed = nlpService.getPersonalizedFeed(userId, 0, 16);
+
         if (recommendedFeed == null || recommendedFeed.getArticles().isEmpty()) {
+            log.warn("맞춤 추천 결과가 없어 빈 피드를 반환합니다.");
             return feedConverter.toArticleInFeedDto("맞춤 피드", false, null, new ArrayList<>());
         }
 
@@ -184,9 +186,9 @@ class FeedServiceImpl implements FeedService {
             // URL 디코딩 처리
             String decodedQuery;
             try {
-                decodedQuery = URLDecoder.decode(query, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                log.error("URL 디코딩 실패: {}", e.getMessage());
+                decodedQuery = URLDecoder.decode(query, java.nio.charset.StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException e) {
+                log.error("URL 디코딩 실패(잘못된 퍼센트 인코딩): {}", e.getMessage());
                 throw new CustomException(ErrorCode.REQ_3102);
             }
 
@@ -215,13 +217,7 @@ class FeedServiceImpl implements FeedService {
 
             if (result == null || result.getArticles() == null || result.getArticles().isEmpty()) {
                 log.info("검색 결과 없음 - 검색어: '{}'", cleanedQuery);
-
-                // 빈 결과 객체 반환
-                return SearchResponseDto.builder()
-                        .query(cleanedQuery)
-                        .totalCount(0)
-                        .articles(new ArrayList<>())
-                        .build();
+                throw new CustomException(ErrorCode.NLP_9808);
             }
 
             log.info("검색 완료 - 검색어: '{}', 결과: {}/{}", cleanedQuery, result.getArticles().size(), result.getTotalCount());

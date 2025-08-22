@@ -21,6 +21,7 @@ import java.util.Arrays;
 @Table(name = "article_semantic_vectors")
 public class ArticleSemanticVector extends BaseEntity {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "vector_id")
     private Long vectorId;
 

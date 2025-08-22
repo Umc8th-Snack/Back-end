@@ -238,16 +238,15 @@ async def vectorize_articles_from_db(article_ids: List[int]):
                     model_version = "keybert-multitask-v1"
 
                     await cursor.execute("""
-                        INSERT INTO article_semantic_vectors (vector_id, article_id, vector, keywords, representative_vector, model_version)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        AS new_values
-                        ON DUPLICATE KEY UPDATE
-                            vector = new_values.vector,
-                            keywords = new_values.keywords,
-                            representative_vector = new_values.representative_vector,
-                            model_version = new_values.model_version,
-                            updated_at = NOW()
-                    """, (article_id, article_id, vector_json_str, keywords_json_str, rep_vector_str, model_version))
+                            INSERT INTO article_semantic_vectors (vector_id, article_id, vector, keywords, representative_vector, model_version, created_at, updated_at)
+                            VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
+                            ON DUPLICATE KEY UPDATE
+                                vector = VALUES(vector),
+                                keywords = VALUES(keywords),
+                                representative_vector = VALUES(representative_vector),
+                                model_version = VALUES(model_version),
+                                updated_at = NOW()
+                        """, (article_id, article_id, vector_json_str, keywords_json_str, rep_vector_str, model_version))
 
                     logger.info(f"기사 {article_id} (KeyBERT) 처리 완료")
                     processed_count += 1
@@ -351,11 +350,6 @@ async def search_articles_semantic(
             )
 
         # 검색어 벡터화
-        query_vector = await vectorize_raw_query(cleaned_query)
-        if query_vector is None:
-            logger.warning(f"검색어 벡터화 실패: {cleaned_query}")
-            return SearchResponse(query=cleaned_query, totalCount=0, articles=[])
-
         query_vector = await vectorize_raw_query(cleaned_query)
         if query_vector is None:
             logger.warning(f"검색어 벡터화 실패: {cleaned_query}")
@@ -590,7 +584,6 @@ async def update_user_profile(request: UserProfileRequest):
 
     async with db_pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            # UPSERT (INSERT ... ON DUPLICATE KEY UPDATE)
             await cursor.execute("""
                 INSERT INTO user_vectors (user_id, vector, model_version)
                 VALUES (%s, %s, %s)

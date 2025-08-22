@@ -15,7 +15,7 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SearchResponseDto {
     private String query;
-    @JsonIgnoreProperties("total_count")
+    @com.fasterxml.jackson.annotation.JsonProperty("total_count")
     private int totalCount;
     private List<ArticleSearchResultDto> articles;
 
