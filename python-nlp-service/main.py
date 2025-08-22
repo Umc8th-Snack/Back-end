@@ -18,10 +18,10 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- FastAPI 애플리케이션 인스턴스 생성 (이 부분이 누락되어 있었음!) ---
+# --- FastAPI 애플리케이션 인스턴스 생성  ---
 app = FastAPI(
     title="기사 NLP 마이크로서비스",
-    description="기사 분석 및 추천을 위한 한국어 자연어 처리 마이크로서비스 (TF-IDF + SBERT)",
+    description="기사 분석 및 추천을 위한 한국어 자연어 처리 마이크로서비스 (KeyBERT + SBERT)",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -215,47 +215,41 @@ async def vectorize_articles_from_db(article_ids: List[int]):
 
                     text = article.get('summary') or ''
 
-                    tfidf_keywords = {}
-                    sbert_vectors = {}
-                    representative_vector = [0.0] * 384
+                    if text.strip() and nlp_processor:
+                        keywords_dict, vectors_dict = await nlp_processor.extract_keywords_and_vectors(text)
+                    else:
+                        keywords_dict, vectors_dict = {}, {}
+                        if not text.strip():
+                            logger.info(f"기사 {article_id}는 summary가 없어 빈 값으로 처리합니다.")
 
-                    if not text.strip():
-                        # summary가 비어있으면, 벡터와 키워드를 모두 빈 딕셔너리로 처리
-                        logger.info(f"기사 {article_id}는 summary가 없어 빈 값으로 처리합니다.")
-                    elif nlp_processor:
-                        # summary가 있을 때만 NLP 처리
-                        tfidf_keywords = await nlp_processor.extract_tfidf_keywords(text, top_k=10)
-                        top_keywords = list(tfidf_keywords.keys())
-                        if top_keywords:
-                            sbert_vectors = await nlp_processor.generate_sbert_vectors(top_keywords)
+                    # 대표 벡터 계산
+                    representative_vector = [0.0] * 768
+                    if vectors_dict:
+                        all_vectors = np.array(list(vectors_dict.values()))
+                        avg_vector = np.mean(all_vectors, axis=0)
+                        norm = np.linalg.norm(avg_vector)
+                        if norm > 0:
+                            representative_vector = (avg_vector / norm).tolist()
 
-                            # 대표 벡터 계산 (키워드 벡터들의 단순 평균)
-                            if sbert_vectors:
-                                all_vectors = np.array(list(sbert_vectors.values()))
-                                avg_vector = np.mean(all_vectors, axis=0)
-                                norm = np.linalg.norm(avg_vector)
-                                if norm > 0:
-                                    representative_vector = (avg_vector / norm).tolist()
-
-                    vector_json_str = json.dumps(sbert_vectors)
-                    keywords_json_str = json.dumps(tfidf_keywords)
+                    keywords_json_str = json.dumps(keywords_dict)
+                    vector_json_str = json.dumps(vectors_dict)
                     rep_vector_str = json.dumps(representative_vector)
 
-                    await cursor.execute("SELECT article_id FROM article_semantic_vectors WHERE article_id = %s", (article_id,))
-                    existing = await cursor.fetchone()
-                    if existing:
-                        await cursor.execute(
-                            "UPDATE article_semantic_vectors SET vector = %s, keywords = %s, representative_vector = %s, model_version = %s, updated_at = NOW() WHERE article_id = %s",
-                            (vector_json_str, keywords_json_str, rep_vector_str, "sbert-keywords-v4", article_id)
-                        )
-                        logger.info(f"기사 {article_id} 키워드 및 대표 벡터 업데이트 완료")
-                    else:
-                        await cursor.execute(
-                            "INSERT INTO article_semantic_vectors (vector_id, article_id, vector, keywords, representative_vector, model_version, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())",
-                            (article_id, article_id, vector_json_str, keywords_json_str, rep_vector_str, "sbert-keywords-v4")
-                        )
-                        logger.info(f"기사 {article_id} 키워드 및 대표 벡터 신규 저장 완료")
+                    model_version = "keybert-multitask-v1"
 
+                    await cursor.execute("""
+                        INSERT INTO article_semantic_vectors (vector_id, article_id, vector, keywords, representative_vector, model_version)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        AS new_values
+                        ON DUPLICATE KEY UPDATE
+                            vector = new_values.vector,
+                            keywords = new_values.keywords,
+                            representative_vector = new_values.representative_vector,
+                            model_version = new_values.model_version,
+                            updated_at = NOW()
+                    """, (article_id, article_id, vector_json_str, keywords_json_str, rep_vector_str, model_version))
+
+                    logger.info(f"기사 {article_id} (KeyBERT) 처리 완료")
                     processed_count += 1
 
                 except Exception as e:
@@ -386,6 +380,9 @@ async def search_articles_semantic(
                         rep_vector = np.array(json.loads(article['representative_vector']))
                         similarity = cosine_similarity(query_vector, rep_vector)
 
+                        if article['summary'] and cleaned_query in article['summary']:
+                            similarity = 0.99
+
                         if similarity >= threshold:
                             search_results.append({
                                 'article_id': article['article_id'],
@@ -434,7 +431,7 @@ async def calculate_weighted_average(
         tfidf_scores: dict
 ) -> List[float]:
     if not sbert_vectors:
-        return [0.0] * 384
+        return [0.0] * 768
 
     vectors = []
     weights = []
@@ -445,7 +442,7 @@ async def calculate_weighted_average(
             weights.append(tfidf_scores[keyword])
 
     if not vectors:
-        return [0.0] * 384
+        return [0.0] * 768
 
     # numpy 배열로 변환
     vectors = np.array(vectors)
@@ -465,20 +462,19 @@ async def calculate_weighted_average(
     return weighted_avg.tolist()
 
 async def vectorize_raw_query(query: str) -> Optional[np.ndarray]:
-    """검색어 전체를 하나의 벡터로 변환"""
     if not nlp_processor:
         logger.error("NLP 프로세서가 초기화되지 않았습니다.")
         return None
 
-    vector_dict = await nlp_processor.generate_sbert_vectors([query])
-    if not vector_dict or query not in vector_dict:
-        logger.error(f"검색어 '{query}'에 대한 SBERT 벡터 생성 실패")
+    try:
+        vector = await nlp_processor.vectorize_query(query)
+        return vector
+    except Exception as e:
+        logger.error(f"검색어 '{query}' 벡터 변환 실패: {e}")
         return None
 
-    return np.array(vector_dict[query])
-
 def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
-    """두 벡터 간의 코사인 유사도 계산"""
+    # 두 벡터 간의 코사인 유사도 계산
     try:
         # 벡터가 이미 정규화되어 있다면 단순 내적만 계산
         dot_product = np.dot(vec1, vec2)
@@ -500,13 +496,12 @@ def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
         return 0.0
 
 def parse_keywords(keywords_str: str) -> List[KeywordScore]:
-    """키워드 문자열을 파싱하여 KeywordScore 리스트로 변환"""
+    # 키워드 문자열을 파싱하여 KeywordScore 리스트로 변환
     if not keywords_str:
         return []
 
     keywords = []
     try:
-        # "word1:0.5,word2:0.3" 형식 파싱
         pairs = keywords_str.split(',')
         for pair in pairs[:5]:  # 상위 5개만
             if ':' in pair:
@@ -521,12 +516,12 @@ def parse_keywords(keywords_str: str) -> List[KeywordScore]:
 
 ACTION_WEIGHTS = {
     "click": 1.0,
-    "scrap": 1.5,  # 스크랩에 더 높은 가중치 부여
+    "scrap": 1.5,
     "search": 0.8
 }
 
 async def _get_representative_vectors(article_ids: List[int]) -> Dict[int, np.ndarray]:
-    """ 여러 기사의 대표 벡터를 한번에 조회 """
+    # 여러 기사의 대표 벡터를 한번에 조회
     if not article_ids or not db_pool:
         return {}
 
@@ -543,15 +538,16 @@ async def _get_representative_vectors(article_ids: List[int]) -> Dict[int, np.nd
     return vectors
 
 async def _calculate_user_profile_vector(interactions: List[UserInteraction]) -> Optional[np.ndarray]:
-    """ 행동 로그를 기반으로 사용자 프로필 벡터 계산 """
-    article_ids = [interaction.articleId for interaction in interactions]
-    search_keywords = [inter.keyword for inter in interactions if inter.keyword is not None]
+    # 행동 로그를 기반으로 사용자 프로필 벡터 계산
+    # articleId가 있는 경우만 추출
+    article_ids = [interaction.articleId for interaction in interactions if interaction.articleId]
+    search_keywords = [inter.keyword for inter in interactions if inter.keyword]
 
     # 기사 벡터와 검색어 벡터를 모두 가져옴
     article_vectors_map = await _get_representative_vectors(article_ids)
     keyword_vectors_map = {}
     if search_keywords and nlp_processor:
-        keyword_vectors_map = await nlp_processor.generate_sbert_vectors(search_keywords)
+        keyword_vectors_map = await nlp_processor.vectorize_keywords(search_keywords)
 
     if not article_vectors_map and not keyword_vectors_map:
         return None
@@ -581,10 +577,7 @@ async def _calculate_user_profile_vector(interactions: List[UserInteraction]) ->
     norm = np.linalg.norm(avg_vector)
     return avg_vector / norm if norm > 0 else avg_vector
 
-
-
 # --- 맞춤 피드 엔드포인트 ---
-
 @app.post("/api/nlp/user-profile", status_code=status.HTTP_201_CREATED)
 async def update_user_profile(request: UserProfileRequest):
     user_id = request.userId
@@ -634,7 +627,6 @@ async def get_personalized_feed(user_id: int, page: int = 0, size: int = 20):
                 try:
                     if article['representative_vector']:
                         article_vector = np.array(json.loads(article['representative_vector']))
-                        # 벡터 차원이 맞는지 확인 (안전장치)
                         if user_vector.shape == article_vector.shape:
                             score = cosine_similarity(user_vector, article_vector)
                             recommendations.append(RecommendedArticle(articleId=article['article_id'], score=score))
@@ -642,12 +634,31 @@ async def get_personalized_feed(user_id: int, page: int = 0, size: int = 20):
                     logger.warning(f"기사 ID {article.get('article_id')} 유사도 계산 중 오류: {e}")
                     continue
 
-            # 4. 유사도 순 정렬 및 페이징
             recommendations.sort(key=lambda x: x.score, reverse=True)
             start_idx = page * size
             end_idx = start_idx + size
 
             return FeedResponse(articles=recommendations[start_idx:end_idx])
+
+async def _get_search_keywords_for_user(user_id: int) -> List[str]:
+    # 특정 사용자의 최근 검색어 목록을 DB에서 가져옴
+    if not db_pool:
+        return []
+
+    async with db_pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            query = """
+                SELECT keyword 
+                FROM search_keywords 
+                WHERE user_id = %s 
+                ORDER BY created_at DESC 
+                LIMIT 10
+            """
+            await cursor.execute(query, (user_id,))
+            results = await cursor.fetchall()
+
+            return [row[0] for row in results] if results else []
+
 # --- 메인 실행 ---
 
 if __name__ == "__main__":
