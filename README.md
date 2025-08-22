@@ -29,7 +29,7 @@
 - Gradle
 
 ### Infra & DevOps
-- AWS EC2, RDS, S3
+- AWS EC2, RDS, S3, ECR
 - Nginx
 - Docker, Docker Compose
 - GitHub Actions (CI/CD)
