@@ -77,9 +77,9 @@ google:
 fastapi:
   url: http://python:5000
 
-# AWS S3 설정
-aws:
 
+# AWS S3 설정,,,
+aws:
   s3:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
