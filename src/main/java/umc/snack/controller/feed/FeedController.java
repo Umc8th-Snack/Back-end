@@ -50,7 +50,6 @@ public class FeedController {
             @RequestParam(value = "query") String query,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "5") int size,
-            @RequestParam(value = "threshold", defaultValue = "0.7") double threshold,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         // 로그인한 경우에만 저장
@@ -58,6 +57,9 @@ public class FeedController {
             Long userId = userDetails.getUser().getUserId();
             searchKeywordService.saveKeyword(userId, query);
         }
+
+
+        double threshold = 0.7;
 
         SearchResponseDto result = feedService.searchArticlesByQuery(query, page, size, threshold);
 
