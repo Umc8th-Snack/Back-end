@@ -1,6 +1,8 @@
 package umc.snack.repository.article;
 
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import umc.snack.domain.article.entity.CrawledArticle;
 
@@ -19,5 +21,7 @@ public interface CrawledArticleRepository extends JpaRepository<CrawledArticle, 
     @Query("SELECT c.articleUrl FROM CrawledArticle c") // 이미 크롤링한 URL을 모두 Set으로 가져오는 쿼리
     Set<String> findAllArticleUrls();
     Optional<CrawledArticle> findByArticleId(Long articleId);
+
+    Optional<CrawledArticle> findByArticleIdAndStatus(Long articleId, CrawledArticle.Status status);
 
 }

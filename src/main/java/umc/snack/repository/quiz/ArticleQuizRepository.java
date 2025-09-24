@@ -14,4 +14,5 @@ public interface ArticleQuizRepository extends JpaRepository<ArticleQuiz, Articl
     
     @Query("SELECT aq FROM ArticleQuiz aq JOIN FETCH aq.quiz WHERE aq.articleId = :articleId")
     List<ArticleQuiz> findByArticleIdWithQuiz(@Param("articleId") Long articleId);
+
 } 

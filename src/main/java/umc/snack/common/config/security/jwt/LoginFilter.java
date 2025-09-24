@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -16,6 +17,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
+import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.auth.dto.LoginResponseDto;
 import umc.snack.domain.auth.entity.RefreshToken;
 import umc.snack.repository.auth.RefreshTokenRepository;
@@ -28,6 +30,8 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 
+import static umc.snack.common.config.security.CookieUtil.createCookie;
+
 public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private final AuthenticationManager authenticationManager;
@@ -35,15 +39,26 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     private final JWTUtil jwtUtil;
     private final ReissueService reissueService;
 
-    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil, ReissueService reissueService ,RefreshTokenRepository refreshTokenRepository) {
+    @Value("${spring.jwt.token.expiration.access}")
+    private Long accessExpiredMs;
 
+    @Value("${spring.jwt.token.expiration.refresh}")
+    private Long refreshExpiredMs;
+
+    public LoginFilter(AuthenticationManager authenticationManager,
+                       JWTUtil jwtUtil,
+                       ReissueService reissueService,
+                       RefreshTokenRepository refreshTokenRepository,
+                       Long accessExpiredMs,
+                       Long refreshExpiredMs) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.refreshTokenRepository = refreshTokenRepository;
         this.reissueService = reissueService;
-        setUsernameParameter("email"); // email을 username으로 인식함
+        this.accessExpiredMs = accessExpiredMs;
+        this.refreshExpiredMs = refreshExpiredMs;
+        setUsernameParameter("email");
         setFilterProcessesUrl("/api/auth/login");
-
     }
 
     @Override
@@ -73,11 +88,11 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String role = authorities.iterator().next().getAuthority();
 
         // 토큰 생성
-        String accessToken = jwtUtil.createJwt("access", userId, email, role, 1_800_000L); // 30분
-        String refreshToken = jwtUtil.createJwt("refresh", userId, email, role, 86_400_000L); // 1일
+        String accessToken = jwtUtil.createJwt("access", userId, email, role, accessExpiredMs); // 30분
+        String refreshToken = jwtUtil.createJwt("refresh", userId, email, role, refreshExpiredMs); // 1일
 
         // refresh 토큰 저장
-        LocalDateTime expirationDate = LocalDateTime.now().plusSeconds(86_400_000L / 1000); // 1일
+        LocalDateTime expirationDate = LocalDateTime.now().plusSeconds(refreshExpiredMs / 1000); // 1일
         reissueService.replaceRefreshToken(userId, email, refreshToken, expirationDate);
 
         // 응답 DTO
@@ -95,6 +110,10 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         response.setContentType("application/json; charset=UTF-8");
         response.setStatus(HttpStatus.OK.value());
+        // 헤더/쿠키 설정
+        response.setHeader("Authorization", "Bearer " + accessToken);
+        createCookie("refresh", refreshToken, response);
+
         try {
             ObjectMapper mapper = new ObjectMapper();
             response.getWriter().write(mapper.writeValueAsString(apiResponse));
@@ -102,9 +121,6 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
             throw new RuntimeException(e);
         }
 
-        // 헤더/쿠키 유지
-        response.setHeader("Authorization", "Bearer " + accessToken);
-        response.addCookie(createCookie("refresh", refreshToken));
     }
 
     @Override
@@ -117,14 +133,14 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         // 예외 종류별로 코드/메시지 세팅 (실제 메시지는 예외 구현체에 따라 다를 수 있음)
         if (failed instanceof UsernameNotFoundException) {
-            code = "AUTH_2101";
-            message = "등록되지 않은 이메일입니다.";
+            code = ErrorCode.AUTH_2101.name();
+            message =  ErrorCode.AUTH_2101.getMessage();
         } else if (failed instanceof BadCredentialsException) {
-            code = "AUTH_2102";
-            message = "비밀번호가 올바르지 않습니다.";
+            code = ErrorCode.AUTH_2102.name();
+            message = ErrorCode.AUTH_2102.getMessage();
         } else {
-            code = "AUTH_2103";
-            message = "로그인에 실패하였습니다.";
+            code = ErrorCode.AUTH_2103.name();
+            message = ErrorCode.AUTH_2103.getMessage();
         }
 
         // ApiResponse 생성 (에러 상세 정보 필요 없으면 result만 null)
@@ -138,14 +154,5 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         }
     }
 
-    // 쿠키 생성 메서드
-    private Cookie createCookie(String key, String value) {
-        Cookie cookie = new Cookie(key, value);
-        cookie.setMaxAge(24 * 60 * 60);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        return cookie;
-    }
 
 }

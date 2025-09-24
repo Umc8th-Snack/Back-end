@@ -6,7 +6,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.common.exception.CustomException;
@@ -31,6 +33,9 @@ public class AuthController {
     private final LogoutService logoutService;
     private final GoogleOAuthService googleOAuthService;
 
+    @Value("${frontend.url}")
+    private String frontendUrl;
+
     public AuthController(JWTUtil jwtUtil, ReissueService reissueService, LogoutService logoutService, GoogleOAuthService googleOAuthService) {
         this.jwtUtil = jwtUtil;
         this.reissueService = reissueService;
@@ -52,23 +57,9 @@ public class AuthController {
         return reissueService.reissue(request, response);
     }
 
-    @Operation(summary = "카카오 소셜 로그인", description = "인가 코드를 전달하여 카카오 소셜 로그인을 시작합니다.")
-    @GetMapping("/kakao")
-    public ResponseEntity<?> kakaoLogin() {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
-    }
-
-    @Operation(summary = "카카오 소셜 로그인 콜백 주소", description = "카카오 인가코드로 로그인 처리를 완료합니다.")
-    @GetMapping("/kakao/callback")
-    public ResponseEntity<?> kakaoCallback(@RequestParam(required = false) String code) {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
-    }
-
     @Operation(summary = "구글 소셜 로그인 콜백", description = "구글 인증 서버로부터 받은 인가 코드로 소셜 로그인을 처리합니다.")
     @GetMapping("/google/callback")
-    public ResponseEntity<ApiResponse<SocialLoginResponseDto>> googleCallback(@RequestParam(required = false) String code) {
+    public ResponseEntity<?> googleCallback(@RequestParam(required = false) String code, HttpServletResponse response) {
         try {
             // 인가 코드 누락 체크
             if (code == null || code.trim().isEmpty()) {
@@ -77,26 +68,34 @@ public class AuthController {
             }
 
             // 구글 OAuth 처리
-            SocialLoginResponseDto response = googleOAuthService.processGoogleCallback(code);
-            
-            return ResponseEntity.ok(
-                    ApiResponse.onSuccess("AUTH_2020", "소셜 로그인에 성공하였습니다.", response)
-            );
+            SocialLoginResponseDto tokens = googleOAuthService.processGoogleCallback(code);
+
+            // Cross-Domain 환경을 위한 쿠키 설정
+            umc.snack.common.config.security.CookieUtil.createCookie("refresh", tokens.getRefreshToken(), response);
+
+            // 토큰 설정: access -> URL 쿼리 파라미터, refresh -> Secure HttpOnly 쿠키
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, frontendUrl + "/auth/success?accessToken=" + tokens.getAccessToken())
+                    .build();
             
         } catch (CustomException e) {
             // 서비스에서 발생한 커스텀 예외 처리
             ErrorCode errorCode = e.getErrorCode();
             if (errorCode == ErrorCode.AUTH_2112 || errorCode == ErrorCode.AUTH_2113 || errorCode == ErrorCode.AUTH_2114) {
-                return ResponseEntity.status(401)
-                        .body(ApiResponse.onFailure("AUTH_2122", "유효하지 않은 토큰입니다.", null));
+                // 에러 발생 시 프론트엔드 에러 페이지로 리다이렉트
+                return ResponseEntity.status(302)
+                        .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=AUTH_2122")
+                        .build();
             } else {
-                return ResponseEntity.status(errorCode.getStatus())
-                        .body(ApiResponse.onFailure(errorCode.name(), errorCode.getMessage(), null));
+                return ResponseEntity.status(302)
+                        .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=" + errorCode.name())
+                        .build();
             }
         } catch (Exception e) {
-            // 예상치 못한 오류
-            return ResponseEntity.status(401)
-                    .body(ApiResponse.onFailure("AUTH_2122", "유효하지 않은 토큰입니다.", null));
+            // 예상치 못한 오류 - 프론트엔드 에러 페이지로 리다이렉트
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=AUTH_2122")
+                    .build();
         }
     }
 
@@ -106,17 +105,4 @@ public class AuthController {
         return logoutService.logout(request, response);
     }
 
-    @Operation(summary = "이메일 인증코드 전송", description = "입력한 이메일로 인증코드를 전송합니다.")
-    @PostMapping("/email/send-code")
-    public ResponseEntity<?> sendEmailCode(@RequestBody Object request) {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
-    }
-
-    @Operation(summary = "이메일 인증코드 검증", description = "이메일로 받은 인증코드가 올바른지 검증합니다.")
-    @PostMapping("/email/verify-code")
-    public ResponseEntity<?> verifyEmailCode(@RequestBody Object request) {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
-    }
 }

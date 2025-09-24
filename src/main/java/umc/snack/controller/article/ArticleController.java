@@ -2,6 +2,7 @@ package umc.snack.controller.article;
 
 import umc.snack.domain.article.dto.ArticleDto;
 
+import umc.snack.domain.article.dto.RelatedArticleDto;
 import umc.snack.domain.article.entity.CrawledArticle;
 import umc.snack.domain.term.dto.TermResponseDto;
 import umc.snack.repository.article.CrawledArticleRepository;
@@ -12,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import umc.snack.common.response.ApiResponse;
+import umc.snack.common.dto.ApiResponse;
 import umc.snack.service.article.ArticleService;
 
 import java.util.List;
@@ -41,7 +42,7 @@ public class ArticleController {
         );
 
         return ResponseEntity.ok(
-                ApiResponse.success(
+                ApiResponse.onSuccess(
                         "ARTICLE_8001",
                         "크롤링 상태 조회 성공",
                         result
@@ -55,7 +56,7 @@ public class ArticleController {
     public ResponseEntity<ApiResponse<ArticleDto>> getArticle(@PathVariable Long articleId) {
         ArticleDto dto = articleService.getArticleById(articleId);
         return ResponseEntity.ok(
-                ApiResponse.success(
+                ApiResponse.onSuccess(
                         "ARTICLE_9001",
                         "기사 정보를 성공적으로 불러왔습니다.",
                         dto
@@ -69,14 +70,14 @@ public class ArticleController {
     public ResponseEntity<ApiResponse<List<TermResponseDto>>> getTerms(@PathVariable Long articleId) {
         List<TermResponseDto> terms = articleService.getTermsByArticleId(articleId);
         return ResponseEntity.ok(
-                ApiResponse.success(
+                ApiResponse.onSuccess(
                         "ARTICLE_9002",
                         "기사 주요 용어 조회 성공",
                         terms
                 )
         );
     }
-
+/*
     @Operation(summary = "키워드 기반 기사 검색", description = "키워드로 기사를 검색합니다. 최신순 정렬, 페이지네이션을 지원합니다.")
     @GetMapping("/search/keyword")
     public ResponseEntity<?> searchArticlesByKeyword(
@@ -86,11 +87,18 @@ public class ArticleController {
         // TODO: 개발 예정
         return ResponseEntity.ok("키워드 기반 기사 검색 API - 개발 예정");
     }
-
+*/
     @Operation(summary = "관련 기사 조회", description = "현재 보고 있는 기사와 카테고리가 같은 관련 기사를 추천합니다.")
     @GetMapping("/{articleId}/related-articles")
-    public ResponseEntity<?> getRelatedArticles(@PathVariable Long articleId) {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("관련 기사 조회 API - 개발 예정");
+    public ResponseEntity<ApiResponse<List<RelatedArticleDto>>> getRelatedArticles(@PathVariable Long articleId) {
+        List<RelatedArticleDto> relatedArticles = articleService.findRelatedArticles(articleId);
+        if (relatedArticles.isEmpty()) {
+            return ResponseEntity.ok(
+                    ApiResponse.onSuccess("ARTICLE_9004", "해당 기사와 관련된 기사가 없습니다.", List.of()));
+        } else {
+            return ResponseEntity.ok(
+                    ApiResponse.onSuccess("ARTICLE_9003", "관련 기사 조회에 성공하였습니다.", relatedArticles)
+            );
+        }
     }
 }

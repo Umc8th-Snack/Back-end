@@ -12,7 +12,6 @@ import umc.snack.domain.memo.dto.MemoRequestDto;
 import umc.snack.domain.memo.dto.MemoResponseDto;
 import umc.snack.service.memo.MemoCommandService;
 import umc.snack.service.memo.MemoQueryService;
-import umc.snack.service.memo.MemoQueryServiceImpl;
 
 @RestController
 @RequestMapping("/api/articles/{article_id}/memos")

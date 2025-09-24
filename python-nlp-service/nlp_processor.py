@@ -1,90 +1,142 @@
-import pickle
-import re
-import os
+# nlp_processor.py에 추가/수정할 함수들
+
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
-from scripts.tokenizer_utils import dummy_tokenizer
-from dotenv import load_dotenv
-import pymysql
-import csv
+from sentence_transformers import SentenceTransformer
+from konlpy.tag import Okt
+from typing import Dict, List, Tuple
 
-# .env 로드
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+# 전역 변수
+tfidf_vectorizer = None
+sbert_model = None
+okt = None
 
-TFIDF_MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'tfidf_vectorizer.pkl')
-STOPWORDS_PATH = os.path.join(os.path.dirname(__file__), 'data_source', 'stopwords.csv')
+async def initialize_nlp_service():
+    """NLP 모델 초기화"""
+    global tfidf_vectorizer, sbert_model, okt
 
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_PORT = int(os.getenv('DB_PORT', 3306))
-DB_USER = os.getenv('DB_USER', 'root')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '')
-DB_NAME = os.getenv('DB_NAME', '')
+    # 형태소 분석기
+    okt = Okt()
 
-# --- 불용어 로딩 (CSV 파일 기반으로 변경) ---
-stopwords_set = set()
-try:
-    with open(STOPWORDS_PATH, 'r', encoding='utf-8') as f:
-        reader = csv.reader(f)
-        stopwords_set = {row[0].strip() for row in reader if row and row[0].strip()}
-    print(f"불용어 CSV에서 {len(stopwords_set)}개 불러옴")
-except Exception as e:
-    print(f"경고: 불용어 CSV 로드 실패: {e}")
-    stopwords_set = set()
-
-# --- 간단한 토크나이저 (띄어쓰기 기반, 불용어 제거 포함) ---
-def tokenize_korean_text_for_tfidf(text: str) -> list[str]:
-    text = re.sub(r'[^가-힣a-zA-Z0-9\s]', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    tokens = text.split()
-    return [
-        word for word in tokens
-        if word not in stopwords_set and len(word) > 1
-    ]
-
-# --- TF-IDF 학습 ---
-def train_and_save_tfidf_model(article_contents: list[str]):
-    if not article_contents:
-        print("TF-IDF 학습을 위한 데이터 없음. 학습 스킵.")
-        return
-
-    print("TF-IDF 모델 학습 시작...")
+    # TF-IDF 벡터라이저 (한국어 특화)
     tfidf_vectorizer = TfidfVectorizer(
-        tokenizer=tokenize_korean_text_for_tfidf,
+        tokenizer=lambda x: okt.nouns(x),  # 명사만 추출
+        max_features=1000,
         min_df=2,
         max_df=0.8
     )
-    tfidf_vectorizer.fit(article_contents)
-    print(f"학습 완료. 어휘 수: {len(tfidf_vectorizer.vocabulary_)}")
 
-    os.makedirs(os.path.dirname(TFIDF_MODEL_PATH), exist_ok=True)
-    with open(TFIDF_MODEL_PATH, 'wb') as f:
-        pickle.dump(tfidf_vectorizer, f)
-    print(f"모델 저장 완료: {TFIDF_MODEL_PATH}")
+    # SBERT 모델 (한국어 지원)
+    sbert_model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
 
-# --- 메인 실행 ---
-if __name__ == "__main__":
-    print("--- TF-IDF 모델 학습 스크립트 실행 ---")
+    return True
 
-    article_contents_from_db = []
-    try:
-        conn = pymysql.connect(
-            host=DB_HOST, port=DB_PORT, user=DB_USER, password=DB_PASSWORD, db=DB_NAME, charset='utf8mb4'
-        )
-        cursor = conn.cursor()
-        cursor.execute("SELECT summary FROM articles")
-        rows = cursor.fetchall()
-        article_contents_from_db = [
-            row[0].strip() for row in rows if row[0] and isinstance(row[0], str) and row[0].strip()
-        ]
-        cursor.close()
-        conn.close()
-        print(f"DB에서 {len(article_contents_from_db)}개의 summary 로드 완료.")
-    except pymysql.Error as e:
-        print(f"DB 에러: {e}")
-        exit(1)
-    except Exception as e:
-        print(f"예상치 못한 오류: {e}")
-        exit(1)
+async def extract_tfidf_keywords(text: str, top_k: int = 10) -> Dict[str, float]:
+    """
+    텍스트에서 TF-IDF 기반 상위 키워드 추출
 
-    train_and_save_tfidf_model(article_contents_from_db)
+    Args:
+        text: 분석할 텍스트
+        top_k: 추출할 키워드 개수
 
-    print("--- TF-IDF 모델 학습 스크립트 완료 ---")
+    Returns:
+        {키워드: TF-IDF 점수} 딕셔너리
+    """
+    global okt
+
+    if not okt:
+        okt = Okt()
+
+    # 명사 추출
+    nouns = okt.nouns(text)
+
+    if not nouns:
+        return {}
+
+    # 단어 빈도 계산 (간단한 TF 계산)
+    word_freq = {}
+    for word in nouns:
+        if len(word) >= 2:  # 2글자 이상만
+            word_freq[word] = word_freq.get(word, 0) + 1
+
+    # 빈도 기준 정렬
+    sorted_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)
+
+    # 상위 k개 선택 및 정규화
+    top_words = sorted_words[:top_k]
+    if not top_words:
+        return {}
+
+    max_freq = top_words[0][1]
+
+    # TF-IDF 점수 계산 (간단한 버전)
+    result = {}
+    for word, freq in top_words:
+        # 정규화된 점수 (0-1 사이)
+        score = freq / max_freq
+        result[word] = score
+
+    return result
+
+async def generate_sbert_vectors(keywords: List[str]) -> Dict[str, List[float]]:
+    """
+    키워드들에 대한 SBERT 벡터 생성
+
+    Args:
+        keywords: 벡터화할 키워드 리스트
+
+    Returns:
+        {키워드: 벡터} 딕셔너리
+    """
+    global sbert_model
+
+    if not sbert_model:
+        sbert_model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+
+    if not keywords:
+        return {}
+
+    # SBERT 임베딩 생성
+    embeddings = sbert_model.encode(keywords)
+
+    # 딕셔너리로 변환
+    result = {}
+    for keyword, embedding in zip(keywords, embeddings):
+        result[keyword] = embedding.tolist()
+
+    return result
+
+async def vectorize_text(text: str) -> Tuple[Dict[str, float], Dict[str, List[float]]]:
+    """
+    텍스트를 TF-IDF와 SBERT로 벡터화
+
+    Returns:
+        (TF-IDF 키워드, SBERT 벡터) 튜플
+    """
+    # TF-IDF로 상위 키워드 추출
+    tfidf_keywords = await extract_tfidf_keywords(text, top_k=10)
+
+    # 키워드들에 대한 SBERT 벡터 생성
+    if tfidf_keywords:
+        keywords_list = list(tfidf_keywords.keys())
+        sbert_vectors = await generate_sbert_vectors(keywords_list)
+    else:
+        sbert_vectors = {}
+
+    return tfidf_keywords, sbert_vectors
+
+def is_service_ready() -> bool:
+    """서비스 준비 상태 확인"""
+    return sbert_model is not None and okt is not None
+
+# 코사인 유사도 계산 (벡터 간)
+def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
+    """두 벡터 간의 코사인 유사도 계산"""
+    dot_product = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+
+    return dot_product / (norm1 * norm2)

@@ -90,6 +90,7 @@ public class UserScrapServiceImpl implements UserScrapService {
         }
     }
 
+    // 스크랩 버튼 클릭시에 바로 취소되도록 사용, 실질적으로 사용 X
     @Override
     public boolean isScrapped(Long userId, Long articleId) {
         try {
@@ -99,6 +100,7 @@ public class UserScrapServiceImpl implements UserScrapService {
         }
     }
 
+    // 스크랩 기사 조회에서 기사 아이디만 받으면 프론트 측에서 리디랙션 가능
     @Override
     @Transactional(readOnly = true)
     public String getArticleUrlByScrapIdAndUserId(Long scrapId, Long userId) {

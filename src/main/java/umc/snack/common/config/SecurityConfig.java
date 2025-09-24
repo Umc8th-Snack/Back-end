@@ -1,6 +1,7 @@
 package umc.snack.common.config;
 
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -37,6 +38,12 @@ public class SecurityConfig {
     private final RefreshTokenRepository refreshTokenRepository;
     private final ReissueService reissueService;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+
+    @Value("${spring.jwt.token.expiration.access}")
+    private Long accessExpiredMs;
+
+    @Value("${spring.jwt.token.expiration.refresh}")
+    private Long refreshExpiredMs;
 
     public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil, ReissueService reissueService ,RefreshTokenRepository refreshTokenRepository, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
 
@@ -82,19 +89,21 @@ public class SecurityConfig {
                                 // 전체 공개 api
                                 "/api/users/signup",
                                 "/api/auth/login",
-                                "/api/auth/kakao",
                                 "/api/auth/google/callback",
                                 "/api/auth/reissue",
-                                "/auth/kakao/callback",
                                 "/api/articles/*/related-articles",
                                 "/api/articles/search",
                                 "/api/articles/main",
                                 "/api/feeds/main/**",
+                                "/api/nlp/search/**",
+                                "/api/users/password-reset/**",
                                 // 관리자 공개 api -> 개발 단계에서는 전체 공개
                                 "/api/share/**",
                                 "/api/articles/crawl/status",
                                 "/api/articles/*/summarize",
-                                "/api/terms"
+                                "/api/terms",
+                                //캐시 액츄에이터
+                                "/actuator/**"
                         ).permitAll()
                         // 나머지는 모두 JWT 토큰 인증 필요
                         .anyRequest().authenticated()
@@ -103,8 +112,14 @@ public class SecurityConfig {
         http
                 .addFilterBefore(new JWTFilter(jwtUtil, userRepository, refreshTokenRepository), LoginFilter.class);
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, reissueService, refreshTokenRepository), UsernamePasswordAuthenticationFilter.class)
-
+                .addFilterAt(new LoginFilter(
+                                authenticationManager(authenticationConfiguration),
+                                jwtUtil,
+                                reissueService,
+                                refreshTokenRepository,
+                                accessExpiredMs,
+                                refreshExpiredMs),
+                        UsernamePasswordAuthenticationFilter.class)
                 .cors(cors -> cors
                         .configurationSource(request -> {
                             CorsConfiguration config = new CorsConfiguration();
@@ -118,7 +133,7 @@ public class SecurityConfig {
                                     "Origin",
                                     "X-Requested-With"
                             ));
-                            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                             config.setExposedHeaders(List.of("Authorization"));
                             return config;
                         })

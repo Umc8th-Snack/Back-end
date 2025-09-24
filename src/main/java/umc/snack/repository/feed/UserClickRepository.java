@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface UserClickRepository extends JpaRepository<UserClicks, Long> {
     List<UserClicks> findByUserIdAndCreatedAtAfter(Long userId, LocalDateTime createdAt);
+    List<UserClicks> findTop15ByUserIdOrderByCreatedAtDesc(Long userId);
 }

@@ -33,11 +33,25 @@ public class UserController {
         );
     }
 
+    @Operation(summary = "내 이메일 변경", description = "현재 비밀번호를 확인 후 이메일을 변경합니다.")
+    @PatchMapping("/me/email")
+    public ResponseEntity<ApiResponse<EmailChangeResponseDto>> changeEmail(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody EmailChangeRequestDto request
+    ) {
+        EmailChangeResponseDto result = userService.changeEmail(userDetails.getUserId(), request);
+        return ResponseEntity.ok(
+                ApiResponse.onSuccess("USER_2550", "이메일이 성공적으로 변경되었습니다.", result)
+        );
+    }
+
     @Operation(summary = "내 비밀번호 변경", description = "현재 비밀번호와 새 비밀번호를 입력하여 비밀번호를 변경합니다.")
     @PatchMapping("/me/password")
-    public ResponseEntity<?> updatePassword(@RequestBody Object request) {
-        // TODO: 구현 예정
-        return ResponseEntity.ok("구현 예정");
+    public ResponseEntity<ApiResponse<PasswordChangeResponseDto>> changePassword(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                                 @RequestBody @Valid PasswordChangeRequestDto request) {
+        PasswordChangeResponseDto response = userService.changePassword(userDetails.getUserId(), request);
+
+        return ResponseEntity.ok(ApiResponse.onSuccess("USER_2510", "비밀번호가 성공적으로 변경되었습니다.", response));
     }
 
     @Operation(summary = "마이페이지 정보 조회", description = "내 회원 정보를 조회합니다.")
@@ -62,6 +76,33 @@ public class UserController {
         UserUpdateResponseDto result = userService.updateMyInfo(request);
         return ResponseEntity.ok(
                 ApiResponse.onSuccess("USER_2540", "사용자 정보가 성공적으로 수정되었습니다", result)
+        );
+    }
+
+    @Operation(summary = "비밀번호 재설정 인증 코드 전송", description = "가입된 이메일로 비밀번호 재설정을 위한 인증 코드를 전송합니다.")
+    @PostMapping("/password-reset/send-code")
+    public ResponseEntity<ApiResponse<Void>> sendPasswordResetCode(@RequestBody @Valid EmailRequestDto request) {
+        userService.sendPasswordResetCode(request.getEmail());
+        return ResponseEntity.ok(
+                ApiResponse.onSuccess("USER_2560", "인증 코드 전송을 요청했습니다. 이메일을 확인해주세요.", null)
+        );
+    }
+
+    @Operation(summary = "비밀번호 재설정 인증 코드 확인", description = "이메일로 전송된 인증 코드가 유효한지 확인합니다.")
+    @PostMapping("/password-reset/verify-code")
+    public ResponseEntity<ApiResponse<Void>> verifyPasswordResetCode(@RequestBody @Valid VerificationCodeDto request) {
+        userService.verifyPasswordResetCode(request.getEmail(), request.getCode());
+        return ResponseEntity.ok(
+                ApiResponse.onSuccess("USER_2570", "인증 코드가 확인되었습니다.", null)
+        );
+    }
+
+    @Operation(summary = "새 비밀번호로 재설정", description = "인증 완료 후 새로운 비밀번호로 재설정합니다.")
+    @PostMapping("/password-reset/set-new-password")
+    public ResponseEntity<ApiResponse<Void>> setNewPassword(@RequestBody @Valid PasswordResetDto request) {
+        userService.resetPassword(request);
+        return ResponseEntity.ok(
+                ApiResponse.onSuccess("USER_2580", "비밀번호가 성공적으로 변경되었습니다.", null)
         );
     }
 }
