@@ -1,0 +1,55 @@
+name: CI (build, tests, crawl-quality)
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: "0 18 * * *"
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build_and_unit_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Gradle build
+        run: |
+          chmod +x gradlew || true
+          ./gradlew clean build --stacktrace
+
+  crawl_quality_check:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      SAMPLE_SIZE: "500"
+      MAX_NULL_PERCENT: "20"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Run crawl quality check
+        continue-on-error: true
+        run: | 
+          bash scripts/crawl_quality_check.sh \
+            --sample ${SAMPLE_SIZE} \
+            --max-null-percent ${MAX_NULL_PERCENT}
