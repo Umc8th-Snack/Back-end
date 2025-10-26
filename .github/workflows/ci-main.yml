@@ -1,8 +1,6 @@
 name: CI (Only Crawl Quality)
 
 on:
-  pull_request:
-    branches: [ main ]
   push:
     branches: [ main ]
   workflow_dispatch: {}
@@ -28,10 +26,8 @@ jobs:
           cache: gradle
 
       - name: Run Crawl Quality Check (only 'live' tag)
-        # continue-on-error: true # PR에서는 실패 시 CI 실패 처리하는 것이 일반적이므로 제거 고려
         run: |
           chmod +x gradlew || true
-          # test 명령어와 include=live 옵션은 그대로 유지합니다.
           ./gradlew test -Djunit.jupiter.tags.include=live \
             -Dcrawl.sample=${SAMPLE_SIZE} \
             -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import umc.snack.crawler.service.ArticleCollectorService;
@@ -24,6 +25,13 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
+@TestPropertySource(properties = {
+        "MYSQL_HOST=ignore-me",
+        "MYSQL_PORT=3308",
+        "MYSQL_DATABASE=ignore-me",
+        "MYSQL_USER=ignore-me",
+        "MYSQL_PASSWORD=ignore-me"
+})
 @Tag("live")
 @ActiveProfiles("test")
 public class CrawlQualityTest {
