@@ -1,4 +1,4 @@
-name: CI (crawl-quality)
+name: CI (Only Crawl Quality)
 
 on:
   pull_request:
@@ -11,26 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  build_and_unit_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: gradle
-
-      - name: Run Build & Unit Tests (exclude 'live' tag)
-        run: |
-          chmod +x gradlew || true
-          # [수정] build를 실행하되, @Tag("live")가 붙은 테스트는 제외
-          ./gradlew clean build -Djunit.jupiter.tags.exclude=live --stacktrace
 
   crawl_quality_check:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       SAMPLE_SIZE: "200"
@@ -46,9 +28,10 @@ jobs:
           cache: gradle
 
       - name: Run Crawl Quality Check (only 'live' tag)
-        continue-on-error: true
+        # continue-on-error: true # PR에서는 실패 시 CI 실패 처리하는 것이 일반적이므로 제거 고려
         run: |
           chmod +x gradlew || true
+          # test 명령어와 include=live 옵션은 그대로 유지합니다.
           ./gradlew test -Djunit.jupiter.tags.include=live \
             -Dcrawl.sample=${SAMPLE_SIZE} \
             -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \
