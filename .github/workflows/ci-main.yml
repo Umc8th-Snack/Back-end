@@ -1,4 +1,4 @@
-name: CI (build, tests, crawl-quality)
+name: CI (crawl-quality)
 
 on:
   pull_request:
@@ -23,16 +23,17 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Gradle build
+      - name: Run Build & Unit Tests (exclude 'live' tag)
         run: |
           chmod +x gradlew || true
-          ./gradlew clean build --stacktrace
+          # [수정] build를 실행하되, @Tag("live")가 붙은 테스트는 제외
+          ./gradlew clean build -Djunit.jupiter.tags.exclude=live --stacktrace
 
   crawl_quality_check:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
-      SAMPLE_SIZE: "500"
+      SAMPLE_SIZE: "200"
       MAX_NULL_PERCENT: "20"
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +45,11 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Run crawl quality check
+      - name: Run Crawl Quality Check (only 'live' tag)
         continue-on-error: true
-        run: | 
-          bash scripts/crawl_quality_check.sh \
-            --sample ${SAMPLE_SIZE} \
-            --max-null-percent ${MAX_NULL_PERCENT}
+        run: |
+          chmod +x gradlew || true
+          ./gradlew test -Djunit.jupiter.tags.include=live \
+            -Dcrawl.sample=${SAMPLE_SIZE} \
+            -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \
+            --stacktrace

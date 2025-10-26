@@ -16,9 +16,16 @@ spring:
       ddl-auto: create-drop
     properties:
       hibernate:
+        # H2 DB를 MySQL 모드로 사용하므로 Dialect는 MySQL을 유지해도 괜찮습니다.
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
+
   h2:
     console:
       enabled: true
       path: /h2-console
+
+
+  sql:
+    init:
+      mode: never

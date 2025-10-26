@@ -5,20 +5,19 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.ClassPathResource; // [수정] ClassPathResource 임포트
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import umc.snack.crawler.service.ArticleCollectorService;
 import umc.snack.crawler.service.ArticleCrawlerService;
 import umc.snack.domain.article.entity.CrawledArticle;
 import umc.snack.repository.article.CrawledArticleRepository;
 
-
 import java.nio.file.Files;
-// import java.nio.file.Path; // [수정] Path.of()를 안 쓰므로 제거
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.atLeast;
@@ -26,6 +25,7 @@ import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @Tag("live")
+@ActiveProfiles("test")
 public class CrawlQualityTest {
 
     @Autowired
@@ -37,13 +37,14 @@ public class CrawlQualityTest {
     @MockitoSpyBean
     private CrawledArticleRepository crawledArticleRepository;
 
-    @MockitoSpyBean
+    @MockitoBean
     private umc.snack.service.nlp.NlpService nlpService;
 
     @Test
     void crawlDataQualityShouldBeWithinThreshold() throws Exception {
         int sampleSize = Integer.parseInt(System.getProperty("crawl.sample", "200"));
         double maxNullPercent = Double.parseDouble(System.getProperty("crawl.maxNullPercent", "20"));
+
         ClassPathResource resource = new ClassPathResource("CrawlTest.txt");
         List<String> links = Files.readAllLines(resource.getFile().toPath());
 
