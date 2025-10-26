@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 --sample <N> --max-null-percent <P>"
+  echo "사용법: $0 --sample <샘플 수> --max-null-percent <허용 최대 빈값 비율>"
   exit 1
 }
 
@@ -17,10 +17,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo "▶ Running crawl quality check: sample=${SAMPLE}, threshold=${MAX_NULL_PERCENT}%"
+echo "▶ 크롤 품질 검사 시작: 샘플=${SAMPLE}개, 허용 임계값=${MAX_NULL_PERCENT}%"
 
 ./gradlew -q test \
   -Dcrawl.sample="${SAMPLE}" \
   -Dcrawl.maxNullPercent="${MAX_NULL_PERCENT}"
 
-echo "✅ Crawl quality check passed!"
+echo "✅ 크롤 품질 검사 통과!"

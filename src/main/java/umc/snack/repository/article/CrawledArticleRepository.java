@@ -24,4 +24,5 @@ public interface CrawledArticleRepository extends JpaRepository<CrawledArticle, 
 
     Optional<CrawledArticle> findByArticleIdAndStatus(Long articleId, CrawledArticle.Status status);
 
+    List<CrawledArticle> findTop60ByOrderByCrawledAtDesc();
 }

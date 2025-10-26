@@ -81,7 +81,7 @@ public class ArticleCollectorService {
      */
     public List<String> collectArticleLinksPerCategoryWeighted(Map<String, Integer> targetPerCat,
                                                                int perPublisherLimit) {
-        // ✅ DB에서 기존 수집 URL 1회 조회 후, 모두 정규화 키(oid:aid)로 변환
+        // DB에서 기존 수집 URL 1회 조회 후, 모두 정규화 키(oid:aid)로 변환
         Set<String> alreadyCrawledUrlKeys = new HashSet<>();
         for (String url : crawledArticleRepository.findAllArticleUrls()) {
             String key = normalizeUrlKey(url);

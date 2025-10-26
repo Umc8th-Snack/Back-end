@@ -11,12 +11,11 @@ import umc.snack.crawler.service.ArticleCrawlerService;
 import umc.snack.domain.article.entity.CrawledArticle;
 import umc.snack.repository.article.CrawledArticleRepository;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.atLeast;
@@ -35,22 +34,15 @@ public class CrawlQualityTest {
     @MockitoSpyBean
     private CrawledArticleRepository crawledArticleRepository;
 
+    @MockitoSpyBean
+    private umc.snack.service.nlp.NlpService nlpService;
+
     @Test
     void crawlDataQualityShouldBeWithinThreshold() throws Exception {
         int sampleSize = Integer.parseInt(System.getProperty("crawl.sample", "500"));
         double maxNullPercent = Double.parseDouble(System.getProperty("crawl.maxNullPercent", "20"));
 
-        // 1) DB에서 최신 기사 URL 수집 (카테고리별 10개, IT/과학 가중 2, 언론사 상한 3)
-        java.util.Map<String, Integer> weights = new java.util.HashMap<>();
-        weights.put("100", 1);
-        weights.put("101", 1);
-        weights.put("102", 1);
-        weights.put("103", 1);
-        weights.put("104", 1);
-        weights.put("105", 2);
-        int perPublisherLimit = 3;
-
-        List<String> links = articleCollectorService.collectArticleLinksPerCategoryWeighted(10, weights, perPublisherLimit)
+        List<String> links = articleCollectorService.collectRandomArticleLinks()
                 .stream()
                 .limit(sampleSize)
                 .toList();
