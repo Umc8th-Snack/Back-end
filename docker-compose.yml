@@ -1,19 +1,25 @@
-version: "3.8"
-
 services:
   nginx:
     image: nginx:stable
     container_name: nginx
-    volumes:
-      - ./infra/nginx/conf.d:/etc/nginx/conf.d
-      - ./infra/certbot/conf:/etc/letsencrypt
-      - ./infra/certbot/www:/var/www/certbot
     ports:
       - "80:80"
       - "443:443"
     depends_on:
       - spring
       - python
+    volumes:
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d
+      - ./infra/certbot/conf:/etc/letsencrypt
+      - ./infra/certbot/www:/var/www/certbot
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /nginx/access
+        awslogs-create-group: "true"
+        awslogs-stream: nginx
+    restart: unless-stopped
 
   certbot:
     image: certbot/certbot
@@ -21,7 +27,11 @@ services:
     volumes:
       - ./infra/certbot/conf:/etc/letsencrypt
       - ./infra/certbot/www:/var/www/certbot
-    command: certonly --webroot --webroot-path=/var/www/certbot --email liz0824@naver.com --agree-tos --no-eff-email -d snacknews.site -d www.snacknews.site
+    command: >
+      certonly --webroot --webroot-path=/var/www/certbot
+      --email liz0824@naver.com --agree-tos --no-eff-email
+      -d snacknews.site -d www.snacknews.site
+    restart: "no"
 
   spring:
     build:
@@ -34,6 +44,7 @@ services:
       - python
     env_file:
       - .env
+    restart: unless-stopped
 
   python:
     build:
@@ -44,3 +55,4 @@ services:
       - "5000"
     env_file:
       - python-nlp-service/.env
+    restart: unless-stopped
