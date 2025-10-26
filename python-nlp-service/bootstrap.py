@@ -22,14 +22,6 @@ subprocess.run(
     cwd=BASE_DIR
 )
 
-# TF-IDF 모델 학습
-print("TF-IDF 모델 학습 중...")
-subprocess.run(
-    ["python", "-m", "scripts.train_tfidf_model"],
-    check=True,
-    cwd=BASE_DIR
-)
-
 # FastAPI 서버 실행
 print("FastAPI 서버 실행 중...")
 subprocess.run(
