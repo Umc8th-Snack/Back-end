@@ -8,14 +8,14 @@ public class CookieUtil {
     // Cross-Domain 환경을 지원하는 쿠키 생성 메서드 (ResponseCookie 사용)
     public static void createCookie(String key, String value, HttpServletResponse response) {
         ResponseCookie cookie = ResponseCookie.from(key, value)
-                .maxAge(3 * 10 * 60)  // 개발 단계: 30분
+                .maxAge(24 * 60 * 60)  // 1일
                 .httpOnly(true)
                 .secure(true)  // HTTPS 환경에서만 전송
                 .path("/")
                 .sameSite("None")  // Cross-Domain 허용
                 .build();
         
-        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
     
     // 쿠키 삭제를 위한 메서드
@@ -28,6 +28,6 @@ public class CookieUtil {
                 .sameSite("None")
                 .build();
         
-        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

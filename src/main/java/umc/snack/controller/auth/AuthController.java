@@ -73,10 +73,9 @@ public class AuthController {
             // Cross-Domain 환경을 위한 쿠키 설정
             umc.snack.common.config.security.CookieUtil.createCookie("refresh", tokens.getRefreshToken(), response);
 
-            // 토큰 설정: access -> Authorization 헤더, refresh -> Secure HttpOnly 쿠키
+            // 토큰 설정: access -> URL 쿼리 파라미터, refresh -> Secure HttpOnly 쿠키
             return ResponseEntity.status(302)
-                    .header(HttpHeaders.LOCATION, frontendUrl + "/auth/success")
-                    .header("Authorization", "Bearer " + tokens.getAccessToken())
+                    .header(HttpHeaders.LOCATION, frontendUrl + "/auth/success?accessToken=" + tokens.getAccessToken())
                     .build();
             
         } catch (CustomException e) {
