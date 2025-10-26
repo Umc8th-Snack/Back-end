@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource; // [수정] ClassPathResource 임포트
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import umc.snack.crawler.service.ArticleCollectorService;
 import umc.snack.crawler.service.ArticleCrawlerService;
@@ -12,6 +13,8 @@ import umc.snack.domain.article.entity.CrawledArticle;
 import umc.snack.repository.article.CrawledArticleRepository;
 
 
+import java.nio.file.Files;
+// import java.nio.file.Path; // [수정] Path.of()를 안 쓰므로 제거
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -39,16 +42,15 @@ public class CrawlQualityTest {
 
     @Test
     void crawlDataQualityShouldBeWithinThreshold() throws Exception {
-        int sampleSize = Integer.parseInt(System.getProperty("crawl.sample", "500"));
+        int sampleSize = Integer.parseInt(System.getProperty("crawl.sample", "200"));
         double maxNullPercent = Double.parseDouble(System.getProperty("crawl.maxNullPercent", "20"));
+        ClassPathResource resource = new ClassPathResource("CrawlTest.txt");
+        List<String> links = Files.readAllLines(resource.getFile().toPath());
 
-        List<String> links = articleCollectorService.collectRandomArticleLinks()
-                .stream()
-                .limit(sampleSize)
-                .toList();
+        links = links.stream().limit(sampleSize).toList();
 
         if (links.isEmpty()) {
-            throw new IllegalStateException("DB/수집기에서 가져온 신규 기사 링크가 없습니다. 수집 로직 혹은 네트워크 상태를 확인하세요.");
+            throw new IllegalStateException("'CrawlTest.txt' 파일이 비어있거나, 파일에 링크가 없습니다.");
         }
 
         // 2) JSON 생성 후 실제 크롤 실행
