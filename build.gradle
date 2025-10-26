@@ -63,6 +63,9 @@ dependencies {
 	// 이메일에 코드 전송
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+	// CI용 가짜 db
+	testImplementation 'com.h2database:h2'
+
 }
 
 tasks.named('test') {

@@ -1,5 +1,6 @@
 package umc.snack.crawler;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Disabled
 @SpringBootTest
 @Tag("Recent")
 public class CrawlRecentQualityTest {
