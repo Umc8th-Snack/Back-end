@@ -56,6 +56,7 @@ jobs:
           docker push ${URI}:${{ github.sha }}
           docker push ${URI}:${ENV_TAG}
 
+
   deploy:
     runs-on: ubuntu-latest
     needs: build_and_push
