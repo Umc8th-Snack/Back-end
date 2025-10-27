@@ -52,8 +52,11 @@ public class CrawlQualityTest {
 
         ClassPathResource resource = new ClassPathResource("CrawlTest.txt");
         List<String> links;
-        try (var reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-            links = reader.lines().collect(Collectors.toList());
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+            links = br.lines()
+                    .filter(line -> line != null && !line.isBlank())
+                    .toList();
         }
 
         links = links.stream().limit(sampleSize).toList();
