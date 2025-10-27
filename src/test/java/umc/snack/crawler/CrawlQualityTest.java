@@ -15,24 +15,20 @@ import umc.snack.crawler.service.ArticleCrawlerService;
 import umc.snack.domain.article.entity.CrawledArticle;
 import umc.snack.repository.article.CrawledArticleRepository;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
-@TestPropertySource(properties = {
-        "MYSQL_HOST=ignore-me",
-        "MYSQL_PORT=3308",
-        "MYSQL_DATABASE=ignore-me",
-        "MYSQL_USER=ignore-me",
-        "MYSQL_PASSWORD=ignore-me",
-        "FASTAPI_URL=http://ignore-me"
-})
 @Tag("live")
 @ActiveProfiles("test")
 public class CrawlQualityTest {
@@ -55,7 +51,10 @@ public class CrawlQualityTest {
         double maxNullPercent = Double.parseDouble(System.getProperty("crawl.maxNullPercent", "20"));
 
         ClassPathResource resource = new ClassPathResource("CrawlTest.txt");
-        List<String> links = Files.readAllLines(resource.getFile().toPath());
+        List<String> links;
+        try (var reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+            links = reader.lines().collect(Collectors.toList());
+        }
 
         links = links.stream().limit(sampleSize).toList();
 

@@ -12,7 +12,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Disabled
+@Disabled("실제 DB 데이터 필요 - 로컬/CI 환경에서는 실행 불가")
 @SpringBootTest
 @Tag("Recent")
 public class CrawlRecentQualityTest {

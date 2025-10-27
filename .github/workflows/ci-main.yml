@@ -31,36 +31,26 @@ jobs:
       - name: Gradle wrapper perms
         run: chmod +x gradlew || true
 
-      - name: Run Crawl Quality Check (@Tag=live, profile=test, verbose)
+      - name: Run Crawl Quality Check (@Tag=live, profile=test)
         run: |
-          echo "== JVM/System props sanity =="
-          ./gradlew -v
-          java -version || true
-
-          echo "== Print active Spring profile via test JVM =="
-          ./gradlew -q printProps -Dspring.profiles.active=test || true
-
-          echo "== Run tests (verbose) =="
           ./gradlew clean test \
             -Dspring.profiles.active=test \
+            -Dspring.config.import= \
             -Djunit.jupiter.tags.include=live \
             -Dcrawl.sample=${SAMPLE_SIZE} \
             -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \
             --no-daemon --stacktrace --info --fail-fast
 
-          echo "== List which tests ran =="
-          grep -R "Started" build/test-results/test/*.xml || true
-
-      - name: Upload test report
+      - name: Upload test report (HTML)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-report
           path: build/reports/tests/test
 
-      - name: Upload Gradle problems report
+      - name: Upload raw test results (XML)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-problems-report
-          path: build/reports/problems/problems-report.html
+          name: test-results-xml
+          path: build/test-results/test
