@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
@@ -24,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.main.allow-bean-definition-overriding=true")
 @TestPropertySource(properties = {
         "MYSQL_HOST=ignore-me",
         "MYSQL_PORT=3308",
@@ -33,7 +34,7 @@ import static org.mockito.Mockito.verify;
         "MYSQL_PASSWORD=ignore-me",
         "FASTAPI_URL=http://ignore-me",
         "spring.sql.init.mode=never",
-        "spring.jwt.token.secretKey=abcdefghijklmnopqrstuvwxyz012345",
+        "spring.jwt.token.secretKey=abcdefghijklmnopqrstuvwxyz012345", // 32+자
         "spring.jwt.token.expiration.access=1800000",
         "spring.jwt.token.expiration.refresh=86400000"
 })
