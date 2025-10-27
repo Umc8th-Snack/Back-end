@@ -31,7 +31,8 @@ import static org.mockito.Mockito.verify;
         "MYSQL_DATABASE=ignore-me",
         "MYSQL_USER=ignore-me",
         "MYSQL_PASSWORD=ignore-me",
-        "FASTAPI_URL=http://ignore-me"
+        "FASTAPI_URL=http://ignore-me",
+        "spring.sql.init.mode=never"
 })
 @Tag("live")
 @ActiveProfiles("test")

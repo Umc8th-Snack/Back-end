@@ -80,17 +80,18 @@ tasks.register('crawlQuality', Test) {
 		includeTags 'live'
 	}
 
+	filter {
+		includeTestsMatching 'umc.snack.crawler.CrawlQualityTest'
+	}
+
 	systemProperty 'spring.profiles.active', 'test'
 	systemProperty 'crawl.sample', System.getProperty('crawl.sample', '200')
 	systemProperty 'crawl.maxNullPercent', System.getProperty('crawl.maxNullPercent', '20')
 
-	filter {
-		includeTestsMatching 'umc.snack.crawler.CrawlQualityTest'
-		// isFailOnNoMatchingTests/failOnNoMatchingTests 둘 다 쓰지 말 것! (여기서 에러 났었음)
-	}
+	systemProperty 'JWT_SECRET_KEY', System.getProperty('JWT_SECRET_KEY', 'test-secret')
 
 	testLogging {
-		events 'PASSED', 'FAILED', 'SKIPPED', 'STANDARD_OUT', 'STANDARD_ERROR'
+		events 'PASSED','FAILED','SKIPPED','STANDARD_OUT','STANDARD_ERROR'
 		exceptionFormat 'full'
 	}
 }

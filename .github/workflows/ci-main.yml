@@ -28,6 +28,11 @@ jobs:
           cache: gradle
 
       - name: Run Crawl Quality Check (only 'live' tag)
-        continue-on-error: true # 테스트 실패 시에도 CI는 성공으로 표시 (필요시 false로 변경)
-        run: ./gradlew clean crawlQuality --no-daemon --stacktrace
+        run: |
+          ./gradlew clean crawlQuality \
+            -Dspring.profiles.active=test \
+            -Dcrawl.sample=${SAMPLE_SIZE} \
+            -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \
+            -DJWT_SECRET_KEY=test-secret \
+            --no-daemon --stacktrace
 
