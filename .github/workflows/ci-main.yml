@@ -35,6 +35,8 @@ jobs:
         run: |
           ./gradlew clean crawlQuality \
             -Dspring.profiles.active=test \
+            -DJWT_SECRET_KEY=test-secret \
+            -Dspring.sql.init.mode=never \
             -Dcrawl.sample=${SAMPLE_SIZE} \
             -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \
             --no-daemon --stacktrace
