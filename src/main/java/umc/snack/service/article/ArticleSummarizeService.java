@@ -1,10 +1,7 @@
 package umc.snack.service.article;
 
-import io.jsonwebtoken.lang.Assert;
-import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -19,8 +16,6 @@ import umc.snack.repository.article.CrawledArticleRepository;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-
-import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
 
 @Service
 public class ArticleSummarizeService {
@@ -138,8 +133,8 @@ public class ArticleSummarizeService {
     }
 
     public void getCompletion() {
-        // 최근 7개만
-        PageRequest page = PageRequest.of(0, 7, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // 최근 20개만
+        PageRequest page = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Article> articlePage = articleRepository.findBySummaryIsNull(page);
         List<Article> articles = articlePage.getContent();
 
@@ -169,7 +164,8 @@ public class ArticleSummarizeService {
             try {
                 // Gemini API 호출
                 String prompt = promptTemplate + crawled.getContent();
-                String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
+//                String result = getCompletionWithRetry(prompt, "gemini-2.5-pro");
+                String result = getCompletionWithRetry(prompt, "gemini-2.5-flash"); // 유료 모델
 
                 log.info("Gemini 호출 결과 - articleId: {}, result: {}", article.getArticleId(), result);
                 log.info("=========================================================");
@@ -179,9 +175,9 @@ public class ArticleSummarizeService {
 
                 log.error("요약 실패 - articleId: {}", article.getArticleId(), e);
             }
-            // 20초 대기
+            // 10초 대기
             try {
-                Thread.sleep(20_000);
+                Thread.sleep(10_000);
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 return;

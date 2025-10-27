@@ -67,3 +67,27 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+tasks.register('crawlQuality', Test) {
+	description = 'Run only CrawlQualityTest with @Tag("live") on test profile'
+	group = 'verification'
+
+	useJUnitPlatform {
+		includeTags 'live'
+	}
+
+	filter {
+		includeTestsMatching 'umc.snack.crawler.CrawlQualityTest'
+	}
+
+	systemProperty 'spring.profiles.active', 'test'
+	systemProperty 'crawl.sample', System.getProperty('crawl.sample', '200')
+	systemProperty 'crawl.maxNullPercent', System.getProperty('crawl.maxNullPercent', '20')
+
+	systemProperty 'JWT_SECRET_KEY', System.getProperty('JWT_SECRET_KEY', 'test-secret')
+
+	testLogging {
+		events 'PASSED','FAILED','SKIPPED','STANDARD_OUT','STANDARD_ERROR'
+		exceptionFormat 'full'
+	}
+}
