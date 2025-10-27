@@ -93,4 +93,4 @@ tasks.register('crawlQuality', Test) {
 		events 'PASSED', 'FAILED', 'SKIPPED', 'STANDARD_OUT', 'STANDARD_ERROR'
 		exceptionFormat 'full'
 	}
-}}
+}
