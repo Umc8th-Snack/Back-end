@@ -32,7 +32,10 @@ import static org.mockito.Mockito.verify;
         "MYSQL_USER=ignore-me",
         "MYSQL_PASSWORD=ignore-me",
         "FASTAPI_URL=http://ignore-me",
-        "spring.sql.init.mode=never"
+        "spring.sql.init.mode=never",
+        "spring.jwt.token.secretKey=abcdefghijklmnopqrstuvwxyz012345",
+        "spring.jwt.token.expiration.access=1800000",
+        "spring.jwt.token.expiration.refresh=86400000"
 })
 @Tag("live")
 @ActiveProfiles("test")

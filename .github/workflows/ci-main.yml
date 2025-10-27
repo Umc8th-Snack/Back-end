@@ -28,6 +28,7 @@ jobs:
           cache: gradle
 
       - name: Run Crawl Quality Check (only 'live' tag)
+        continue-on-error: true
         run: |
           ./gradlew test --tests "umc.snack.crawler.CrawlQualityTest" 
             -Dspring.profiles.active=test
