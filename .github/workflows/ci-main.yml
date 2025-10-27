@@ -31,11 +31,11 @@ jobs:
       - name: Gradle wrapper perms
         run: chmod +x gradlew || true
 
-      - name: Run Crawl Quality Check (@Tag=live, profile=test)
+      - name: Run Crawl Quality Check (@Tag=live, profile=test, only that class)
         run: |
           ./gradlew clean test \
+            --tests "umc.snack.crawler.CrawlQualityTest" \
             -Dspring.profiles.active=test \
-            -Dspring.config.import= \
             -Djunit.jupiter.tags.include=live \
             -Dcrawl.sample=${SAMPLE_SIZE} \
             -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \
