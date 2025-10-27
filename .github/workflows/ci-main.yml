@@ -16,6 +16,7 @@ jobs:
     env:
       SAMPLE_SIZE: "200"
       MAX_NULL_PERCENT: "20"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,18 +28,29 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Run Crawl Quality Check (only 'live' tag)
-        continue-on-error: true
+      - name: Gradle wrapper perms
+        run: chmod +x gradlew || true
+
+      - name: Run Crawl Quality Check (@Tag=live, profile=ci)
+        env:
+          SPRING_PROFILES_ACTIVE: ci
         run: |
-          chmod +x gradlew || true
-          # 시스템 프로퍼티(-D)로 플레이스홀더 값 임시 지정
-          ./gradlew test -Djunit.jupiter.tags.include=live \
+          ./gradlew clean test \
+            -Djunit.jupiter.tags.include=live \
             -Dcrawl.sample=${SAMPLE_SIZE} \
             -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \
-            -DMYSQL_HOST=ignore-me \
-            -DMYSQL_PORT=3308 \
-            -DMYSQL_DATABASE=ignore-me \
-            -DMYSQL_USER=ignore-me \
-            -DMYSQL_PASSWORD=ignore-me \
-            -DFASTAPI_URL=http://ignore-me \
-            --stacktrace
+            --no-daemon --stacktrace
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test
+
+      - name: Upload Gradle problems report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-problems-report
+          path: build/reports/problems/problems-report.html

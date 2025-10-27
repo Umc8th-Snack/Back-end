@@ -68,6 +68,15 @@ dependencies {
 
 }
 
-tasks.named('test') {
-	useJUnitPlatform()
+test {
+	useJUnitPlatform {
+		def inc = System.getProperty("junit.jupiter.tags.include")
+		if (inc) {
+			includeTags inc.split(',') as String[]
+		}
+		def exc = System.getProperty("junit.jupiter.tags.exclude")
+		if (exc) {
+			excludeTags exc.split(',') as String[]
+		}
+	}
 }
