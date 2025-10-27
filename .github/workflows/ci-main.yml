@@ -27,10 +27,12 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Run Crawl Quality Check (only CrawlQualityTest, allow failure)
+      - name: Run Crawl Quality Check (only CrawlQualityTest)
         run: |
           ./gradlew test --tests "umc.snack.crawler.CrawlQualityTest" \
             -Dspring.profiles.active=test \
+            -Dspring.main.allow-bean-definition-overriding=true \
+            -DJWT_SECRET_KEY=abcdefghijklmnopqrstuvwxyz0123456789abcd \
             -Dcrawl.sample=${{ env.SAMPLE_SIZE || 200 }} \
             -Dcrawl.maxNullPercent=${{ env.MAX_NULL_PERCENT || 20 }} \
             --no-daemon --stacktrace
@@ -39,14 +41,36 @@ jobs:
       - name: Show Crawl Quality Summary
         if: always()
         run: |
-          passed=$(grep -o 'testsuite.*tests="[0-9]*"' build/test-results/test/TEST-umc.snack.crawler.CrawlQualityTest.xml | sed -E 's/.*tests="([0-9]+)".*/\1/')
-          failed=$(grep -o 'failures="[0-9]*"' build/test-results/test/TEST-umc.snack.crawler.CrawlQualityTest.xml | sed -E 's/.*failures="([0-9]+)".*/\1/')
-          if [ -z "$passed" ]; then
-            echo "⚠️  CrawlQualityTest 결과를 찾을 수 없습니다."
-          else
-            total=$((passed))
-            success=$((total - failed))
-            rate=$(awk "BEGIN {printf \"%.1f\", ($success/$total)*100}")
-            echo "✅ 크롤링 품질 검사 완료: 성공률 ${rate}% (${success}/${total})"
+          file=$(ls build/test-results/test/TEST-umc.snack.crawler.CrawlQualityTest*.xml 2>/dev/null | head -n 1)
+          if [ -z "$file" ]; then
+            echo "⚠️  CrawlQualityTest 결과 XML을 찾을 수 없습니다."
+            exit 0
           fi
+
+          tests=$(grep -o 'tests="[0-9]*"' "$file" | head -n1 | sed -E 's/.*"([0-9]+)".*/\1/')
+          failures=$(grep -o 'failures="[0-9]*"' "$file" | head -n1 | sed -E 's/.*"([0-9]+)".*/\1/')
+          errors=$(grep -o 'errors="[0-9]*"' "$file" | head -n1 | sed -E 's/.*"([0-9]+)".*/\1/')
+          [ -z "$tests" ] && tests=0
+          [ -z "$failures" ] && failures=0
+          [ -z "$errors" ] && errors=0
+
+          success=$((tests - failures - errors))
+          if [ "$tests" -le 0 ]; then
+            echo "⚠️  실행된 테스트가 없습니다."
+            exit 0
+          fi
+
+          rate=$(awk "BEGIN {printf \"%.1f\", ($success/$tests)*100}")
+          echo "✅ 크롤링 품질 검사: 성공률 ${rate}% (${success}/${tests})"
+
+          # GitHub Summary에도 남기기
+          {
+            echo "### CrawlQualityTest 결과"
+            echo ""
+            echo "- 총 테스트: ${tests}"
+            echo "- 성공: ${success}"
+            echo "- 실패: ${failures}"
+            echo "- 에러: ${errors}"
+            echo "- 성공률: ${rate}%"
+          } >> "$GITHUB_STEP_SUMMARY"
 
