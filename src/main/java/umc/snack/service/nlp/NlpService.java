@@ -43,7 +43,7 @@ public class NlpService {
     @PostConstruct
     public void initialize() {
         log.info("NLP 서비스 초기화 - FastAPI URL: {}", fastapiUrl);
-        //checkFastApiHealth();
+        checkFastApiHealth();
     }
 
     /**
