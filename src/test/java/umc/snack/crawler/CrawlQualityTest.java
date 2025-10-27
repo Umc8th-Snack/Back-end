@@ -53,6 +53,9 @@ public class CrawlQualityTest {
     @MockitoBean
     private umc.snack.service.nlp.NlpService nlpService;
 
+    @MockitoBean
+    private umc.snack.common.config.security.jwt.JWTUtil jwtUtil;
+
     @Test
     void crawlDataQualityShouldBeWithinThreshold() throws Exception {
         int sampleSize = Integer.parseInt(System.getProperty("crawl.sample", "200"));
