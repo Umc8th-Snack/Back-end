@@ -69,5 +69,43 @@ dependencies {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		excludeTags 'live'
+	}
+	if (System.getenv('GITHUB_ACTIONS') == 'true' || System.getenv('CI') == 'true') {
+		systemProperty 'spring.profiles.active', 'test'
+	} else {
+	}
+	testLogging {
+		events "passed", "skipped", "failed"
+		exceptionFormat "full"
+		showStandardStreams = false
+	}
+}
+
+tasks.register('crawlQuality', Test) {
+	description = 'Run only CrawlQualityTest with @Tag("live") on test profile'
+	group = 'verification'
+
+	useJUnitPlatform {
+		includeTags 'live'
+	}
+
+	filter {
+		includeTestsMatching 'umc.snack.crawler.CrawlQualityTest'
+		// 실패해도 필터링된 다른 테스트는 없음
+		isFailOnNoMatchingTests = true
+	}
+
+	systemProperty 'spring.profiles.active', 'test'
+
+	systemProperty 'crawl.sample', System.getProperty('crawl.sample', '200')
+	systemProperty 'crawl.maxNullPercent', System.getProperty('crawl.maxNullPercent', '20')
+
+	testLogging {
+		events "passed", "skipped", "failed"
+		exceptionFormat "full"
+		showStandardStreams = true
+	}
+
 }

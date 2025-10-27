@@ -16,6 +16,7 @@ jobs:
     env:
       SAMPLE_SIZE: "200"
       MAX_NULL_PERCENT: "20"
+      SPRING_PROFILES_ACTIVE: test
 
     steps:
       - name: Checkout code
@@ -31,26 +32,20 @@ jobs:
       - name: Gradle wrapper perms
         run: chmod +x gradlew || true
 
-      - name: Run Crawl Quality Check (@Tag=live, profile=test, only that class)
+      - name: Run Crawl Quality Check (only CrawlQualityTest, @Tag=live)
         run: |
-          ./gradlew clean test \
-            --tests "umc.snack.crawler.CrawlQualityTest" \
-            -Dspring.profiles.active=test \
-            -Djunit.jupiter.tags.include=live \
-            -Dcrawl.sample=${SAMPLE_SIZE} \
-            -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \
-            --no-daemon --stacktrace --info --fail-fast
+          ./gradlew clean crawlQuality --no-daemon --stacktrace
 
-      - name: Upload test report (HTML)
+      - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-report
           path: build/reports/tests/test
 
-      - name: Upload raw test results (XML)
+      - name: Upload Gradle problems report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-xml
-          path: build/test-results/test
+          name: gradle-problems-report
+          path: build/reports/problems/problems-report.html
