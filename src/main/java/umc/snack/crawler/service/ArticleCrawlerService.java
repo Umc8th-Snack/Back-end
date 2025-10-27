@@ -120,7 +120,6 @@ public class ArticleCrawlerService {
 
                 log.info("🗓️ 발행일(=수정일): {}", publishedAt);  // 2025-07-17T15:24:17
 
-                // 이 시점에서 둘 다 final 로 선언 (람다에서 사용 가능)
                 final String finalAuthor = author;
                 final LocalDateTime finalPublishedAt = publishedAt;
 

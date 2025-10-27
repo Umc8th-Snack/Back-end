@@ -34,6 +34,7 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'org.mockito:mockito-inline:5.2.0'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     runtimeOnly 'com.mysql:mysql-connector-j:8.0.33'
 
@@ -62,8 +63,35 @@ dependencies {
 	// 이메일에 코드 전송
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+	// CI용 가짜 db
+	testImplementation 'com.h2database:h2'
+
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+tasks.register('crawlQuality', Test) {
+	description = 'Run only CrawlQualityTest with @Tag("live") on test profile'
+	group = 'verification'
+
+	useJUnitPlatform {
+		includeTags 'live'
+	}
+
+	filter {
+		includeTestsMatching 'umc.snack.crawler.CrawlQualityTest'
+	}
+
+	systemProperty 'spring.profiles.active', 'test'
+	systemProperty 'crawl.sample', System.getProperty('crawl.sample', '200')
+	systemProperty 'crawl.maxNullPercent', System.getProperty('crawl.maxNullPercent', '20')
+
+	systemProperty 'JWT_SECRET_KEY', System.getProperty('JWT_SECRET_KEY', 'test-secret')
+
+	testLogging {
+		events 'PASSED','FAILED','SKIPPED','STANDARD_OUT','STANDARD_ERROR'
+		exceptionFormat 'full'
+	}
 }
