@@ -28,11 +28,17 @@ jobs:
           cache: gradle
 
       - name: Run Crawl Quality Check (only CrawlQualityTest)
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
+          SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.H2Dialect
+          SPRING_SQL_INIT_MODE: never
         run: |
           ./gradlew test --tests "umc.snack.crawler.CrawlQualityTest" \
             -Dspring.profiles.active=test \
-            -Dspring.main.allow-bean-definition-overriding=true \
-            -DJWT_SECRET_KEY=abcdefghijklmnopqrstuvwxyz0123456789abcd \
+            -Dspring.jwt.token.secretKey=abcdefghijklmnopqrstuvwxyz0123456789abcd \
+            -Dspring.jpa.database-platform=org.hibernate.dialect.H2Dialect \
+            -Dspring.sql.init.mode=never \
             -Dcrawl.sample=${{ env.SAMPLE_SIZE || 200 }} \
             -Dcrawl.maxNullPercent=${{ env.MAX_NULL_PERCENT || 20 }} \
             --no-daemon --stacktrace
