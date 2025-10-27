@@ -20,4 +20,4 @@ spring:
 
 jwt:
   token:
-    secretKey: test-secret
+    secretKey: "abcdefghijklmnopqrstuvwxyz012345"

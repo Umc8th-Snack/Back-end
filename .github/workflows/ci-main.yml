@@ -29,8 +29,8 @@ jobs:
 
       - name: Run Crawl Quality Check (only 'live' tag)
         run: |
-          ./gradlew clean crawlQuality \
-            -Dspring.profiles.active=test \
+          ./gradlew test --tests "umc.snack.crawler.CrawlQualityTest" 
+            -Dspring.profiles.active=test
             -Dcrawl.sample=${SAMPLE_SIZE} \
             -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \
             -DJWT_SECRET_KEY=test-secret \
