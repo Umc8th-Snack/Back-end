@@ -41,3 +41,5 @@ out/
 Thumbs.db
 
 .env
+
+*.pyc
