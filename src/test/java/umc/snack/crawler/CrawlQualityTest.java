@@ -29,6 +29,15 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
+@TestPropertySource(properties = {
+        "MYSQL_HOST=ignore-me",
+        "MYSQL_PORT=3308",
+        "MYSQL_DATABASE=ignore-me",
+        "MYSQL_USER=ignore-me",
+        "MYSQL_PASSWORD=ignore-me",
+        "FASTAPI_URL=http://ignore-me",
+        "JWT_SECRET_KEY=test-secret"
+})
 @Tag("live")
 @ActiveProfiles("test")
 public class CrawlQualityTest {
