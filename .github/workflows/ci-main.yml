@@ -31,7 +31,7 @@ jobs:
       - name: Gradle wrapper perms
         run: chmod +x gradlew || true
 
-      - name: Run Crawl Quality Check (@Tag=live, profile=ci)
+      - name: Run Crawl Quality Check (@Tag=live, profile=test)
         env:
           SPRING_PROFILES_ACTIVE: ci
         run: |

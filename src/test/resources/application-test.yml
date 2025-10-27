@@ -3,10 +3,11 @@ spring:
   config:
     activate:
       on-profile: test
+    import: ""
 
   # H2 DB 설정
   datasource:
-    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -16,16 +17,67 @@ spring:
       ddl-auto: create-drop
     properties:
       hibernate:
-        # H2 DB를 MySQL 모드로 사용하므로 Dialect는 MySQL을 유지해도 괜찮습니다.
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
+    open-in-view: false
 
   h2:
     console:
       enabled: true
       path: /h2-console
 
-
   sql:
     init:
       mode: never
+
+  mail:
+    test-connection: false
+    host: localhost
+    port: 2525
+    username: dummy
+    password: dummy
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+management:
+  health:
+    mail:
+      enabled: false
+
+jwt:
+  token:
+    secretKey: test-secret
+    expiration:
+      access: 1800000
+      refresh: 86400000
+
+frontend:
+  url: http://localhost:3000
+
+googleai:
+  api:
+    key: dummy-google-api-key
+
+google:
+  oauth:
+    client-id: dummy
+    client-secret: dummy
+    redirect-uri: http://localhost/dummy
+
+aws:
+  s3:
+    access-key: dummy
+    secret-key: dummy
+    region: ap-northeast-2
+    bucket-name: dummy
+
+fastapi:
+  url: http://localhost:5000
+
+crawl:
+  sample: ${crawl.sample:200}
+  maxNullPercent: ${crawl.maxNullPercent:20}
