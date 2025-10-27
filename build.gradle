@@ -73,35 +73,24 @@ tasks.named('test') {
 }
 
 tasks.register('crawlQuality', Test) {
-	description = 'Run CrawlQualityTest only with @Tag("live") on test profile'
+	description = 'Run only CrawlQualityTest with @Tag("live") on test profile'
 	group = 'verification'
 
 	useJUnitPlatform {
 		includeTags 'live'
 	}
 
-
 	systemProperty 'spring.profiles.active', 'test'
 	systemProperty 'crawl.sample', System.getProperty('crawl.sample', '200')
 	systemProperty 'crawl.maxNullPercent', System.getProperty('crawl.maxNullPercent', '20')
 
-
 	filter {
 		includeTestsMatching 'umc.snack.crawler.CrawlQualityTest'
-	}
-
-	reports {
-		junitXml.required = true
-		junitXml.outputLocation = layout.buildDirectory.dir("test-results/crawlQuality")
-		html.required = true
-		html.outputLocation = layout.buildDirectory.dir("reports/tests/crawlQuality")
+		// isFailOnNoMatchingTests/failOnNoMatchingTests 둘 다 쓰지 말 것! (여기서 에러 났었음)
 	}
 
 	testLogging {
 		events 'PASSED', 'FAILED', 'SKIPPED', 'STANDARD_OUT', 'STANDARD_ERROR'
 		exceptionFormat 'full'
-		showExceptions true
-		showCauses true
-		showStackTraces true
 	}
-}
+}}

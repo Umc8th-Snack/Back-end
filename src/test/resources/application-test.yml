@@ -7,38 +7,30 @@ spring:
 
   # H2 DB 설정
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false   # <-- MODE=MySQL 제거
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
     driver-class-name: org.h2.Driver
     username: sa
     password:
 
     jpa:
-      database-platform: org.hibernate.dialect.H2Dialect                   # <-- H2 다이얼렉트 고정
       hibernate:
         ddl-auto: create-drop
-        naming:
-          physical-strategy: org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy  # <-- snake_case 보장
       properties:
         hibernate:
+          dialect: org.hibernate.dialect.MySQLDialect
           format_sql: true
-          globally_quoted_identifiers: true
-      open-in-view: false
-
+      defer-datasource-initialization: true
     sql:
       init:
         mode: never
-  mail:
-    test-connection: false
-    host: localhost
-    port: 2525
-    username: dummy
-    password: dummy
-    properties:
-      mail:
-        smtp:
-          auth: false
-          starttls:
-            enable: false
+
+    h2:
+      console:
+        enabled: true
+
+    mail:
+      test-connection: false
+
 
 management:
   health:
