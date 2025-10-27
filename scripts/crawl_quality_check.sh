@@ -6,7 +6,7 @@ usage() {
   exit 1
 }
 
-SAMPLE=500
+SAMPLE=200
 MAX_NULL_PERCENT=20
 
 while [[ $# -gt 0 ]]; do

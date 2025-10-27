@@ -62,7 +62,13 @@ public class CrawlQualityTest {
         double maxNullPercent = Double.parseDouble(System.getProperty("crawl.maxNullPercent", "20"));
 
         ClassPathResource resource = new ClassPathResource("CrawlTest.txt");
-        List<String> links = Files.readAllLines(resource.getFile().toPath());
+        List<String> links;
+        try (var is = resource.getInputStream();
+             var br = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
+            links = br.lines()
+                    .filter(s -> s != null && !s.isBlank())
+                    .toList();
+        }
 
         links = links.stream().limit(sampleSize).toList();
 

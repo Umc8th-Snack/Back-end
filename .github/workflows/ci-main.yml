@@ -27,13 +27,26 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Run Crawl Quality Check (only 'live' tag)
-        continue-on-error: true
+      - name: Run Crawl Quality Check (only CrawlQualityTest, allow failure)
         run: |
-          ./gradlew test --tests "umc.snack.crawler.CrawlQualityTest" 
-            -Dspring.profiles.active=test
-            -Dcrawl.sample=${SAMPLE_SIZE} \
-            -Dcrawl.maxNullPercent=${MAX_NULL_PERCENT} \
-            -DJWT_SECRET_KEY=test-secret \
+          ./gradlew test --tests "umc.snack.crawler.CrawlQualityTest" \
+            -Dspring.profiles.active=test \
+            -Dcrawl.sample=${{ env.SAMPLE_SIZE || 200 }} \
+            -Dcrawl.maxNullPercent=${{ env.MAX_NULL_PERCENT || 20 }} \
             --no-daemon --stacktrace
+        continue-on-error: true
+
+      - name: Show Crawl Quality Summary
+        if: always()
+        run: |
+          passed=$(grep -o 'testsuite.*tests="[0-9]*"' build/test-results/test/TEST-umc.snack.crawler.CrawlQualityTest.xml | sed -E 's/.*tests="([0-9]+)".*/\1/')
+          failed=$(grep -o 'failures="[0-9]*"' build/test-results/test/TEST-umc.snack.crawler.CrawlQualityTest.xml | sed -E 's/.*failures="([0-9]+)".*/\1/')
+          if [ -z "$passed" ]; then
+            echo "⚠️  CrawlQualityTest 결과를 찾을 수 없습니다."
+          else
+            total=$((passed))
+            success=$((total - failed))
+            rate=$(awk "BEGIN {printf \"%.1f\", ($success/$total)*100}")
+            echo "✅ 크롤링 품질 검사 완료: 성공률 ${rate}% (${success}/${total})"
+          fi
 
