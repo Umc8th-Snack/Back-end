@@ -13,7 +13,6 @@ import java.util.Date;
 @Component
 public class JWTUtil {
 
-    @Value("${spring.jwt.token.secretKey:${JWT_SECRET_KEY:}}")
     private SecretKey secretKey;
 
     public JWTUtil(@Value("${spring.jwt.token.secretKey}") String secret) {

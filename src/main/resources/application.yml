@@ -47,6 +47,10 @@ management:
       exposure:
         include: health,info,caches
 
+  health:
+    mail:
+      enabled: false
+
 
 # 프론트엔드 URL 설정
 frontend:
