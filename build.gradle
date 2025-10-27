@@ -68,7 +68,6 @@ dependencies {
 
 }
 
-
 tasks.named('test') {
 	useJUnitPlatform()
 }
@@ -81,16 +80,22 @@ tasks.register('crawlQuality', Test) {
 		includeTags 'live'
 	}
 
+
 	systemProperty 'spring.profiles.active', 'test'
 	systemProperty 'crawl.sample', System.getProperty('crawl.sample', '200')
 	systemProperty 'crawl.maxNullPercent', System.getProperty('crawl.maxNullPercent', '20')
+
 
 	filter {
 		includeTestsMatching 'umc.snack.crawler.CrawlQualityTest'
 	}
 
-
-	failOnNoMatchingTests = false
+	reports {
+		junitXml.required = true
+		junitXml.outputLocation = layout.buildDirectory.dir("test-results/crawlQuality")
+		html.required = true
+		html.outputLocation = layout.buildDirectory.dir("reports/tests/crawlQuality")
+	}
 
 	testLogging {
 		events 'PASSED', 'FAILED', 'SKIPPED', 'STANDARD_OUT', 'STANDARD_ERROR'
