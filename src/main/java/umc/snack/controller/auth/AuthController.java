@@ -1,10 +1,10 @@
 package umc.snack.controller.auth;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +17,11 @@ import umc.snack.common.exception.ErrorCode;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.auth.dto.LoginRequestDto;
 import umc.snack.domain.auth.dto.LoginResponseDto;
+import umc.snack.domain.auth.dto.KakaoLoginRequestDto;
 import umc.snack.domain.auth.dto.SocialLoginResponseDto;
 import umc.snack.domain.auth.dto.TokenReissueResponseDto;
 import umc.snack.service.auth.GoogleOAuthService;
+import umc.snack.service.auth.KakaoOAuthService;
 import umc.snack.service.auth.LogoutService;
 import umc.snack.service.auth.ReissueService;
 
@@ -32,15 +34,17 @@ public class AuthController {
     private final ReissueService reissueService;
     private final LogoutService logoutService;
     private final GoogleOAuthService googleOAuthService;
+    private final KakaoOAuthService kakaoOAuthService;
 
     @Value("${frontend.url}")
     private String frontendUrl;
 
-    public AuthController(JWTUtil jwtUtil, ReissueService reissueService, LogoutService logoutService, GoogleOAuthService googleOAuthService) {
+    public AuthController(JWTUtil jwtUtil, ReissueService reissueService, LogoutService logoutService, GoogleOAuthService googleOAuthService, KakaoOAuthService kakaoOAuthService) {
         this.jwtUtil = jwtUtil;
         this.reissueService = reissueService;
         this.logoutService = logoutService;
         this.googleOAuthService = googleOAuthService;
+        this.kakaoOAuthService = kakaoOAuthService;
     }
 
     @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
@@ -93,6 +97,29 @@ public class AuthController {
             }
         } catch (Exception e) {
             // 예상치 못한 오류 - 프론트엔드 에러 페이지로 리다이렉트
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=AUTH_2122")
+                    .build();
+        }
+    }
+
+    @Operation(summary = "카카오 소셜 로그인 처리", description = "프론트엔드에서 전달한 카카오 액세스 토큰으로 소셜 로그인을 처리합니다.")
+    @PostMapping("/kakao/callback")
+    public ResponseEntity<?> kakaoCallback(@Valid @RequestBody KakaoLoginRequestDto request, HttpServletResponse response) {
+        try {
+            SocialLoginResponseDto tokens = kakaoOAuthService.processKakaoLogin(request.getAccessToken());
+
+            umc.snack.common.config.security.CookieUtil.createCookie("refresh", tokens.getRefreshToken(), response);
+
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, frontendUrl + "/auth/success?accessToken=" + tokens.getAccessToken())
+                    .build();
+        } catch (CustomException e) {
+            ErrorCode errorCode = e.getErrorCode();
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=" + errorCode.name())
+                    .build();
+        } catch (Exception e) {
             return ResponseEntity.status(302)
                     .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=AUTH_2122")
                     .build();
