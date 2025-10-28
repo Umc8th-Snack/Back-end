@@ -41,3 +41,4 @@ out/
 Thumbs.db
 
 .env
+.venv
