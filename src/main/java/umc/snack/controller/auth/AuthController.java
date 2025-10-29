@@ -4,20 +4,16 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
-import umc.snack.common.config.security.jwt.JWTUtil;
 import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
 
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.domain.auth.dto.LoginRequestDto;
 import umc.snack.domain.auth.dto.LoginResponseDto;
-import umc.snack.domain.auth.dto.KakaoLoginRequestDto;
 import umc.snack.domain.auth.dto.SocialLoginResponseDto;
 import umc.snack.domain.auth.dto.TokenReissueResponseDto;
 import umc.snack.service.auth.GoogleOAuthService;
@@ -30,7 +26,6 @@ import umc.snack.service.auth.ReissueService;
 @Tag(name = "Auth", description = "인증/인가 관련 API")
 public class AuthController {
 
-    private final JWTUtil jwtUtil;
     private final ReissueService reissueService;
     private final LogoutService logoutService;
     private final GoogleOAuthService googleOAuthService;
@@ -38,9 +33,14 @@ public class AuthController {
 
     @Value("${frontend.url}")
     private String frontendUrl;
+    
+    @Value("${kakao.oauth.client-id}")
+    private String kakaoClientId;
+    
+    @Value("${kakao.oauth.redirect-uri}")
+    private String kakaoRedirectUri;
 
-    public AuthController(JWTUtil jwtUtil, ReissueService reissueService, LogoutService logoutService, GoogleOAuthService googleOAuthService, KakaoOAuthService kakaoOAuthService) {
-        this.jwtUtil = jwtUtil;
+    public AuthController(ReissueService reissueService, LogoutService logoutService, GoogleOAuthService googleOAuthService, KakaoOAuthService kakaoOAuthService) {
         this.reissueService = reissueService;
         this.logoutService = logoutService;
         this.googleOAuthService = googleOAuthService;
@@ -103,23 +103,49 @@ public class AuthController {
         }
     }
 
-    @Operation(summary = "카카오 소셜 로그인 처리", description = "프론트엔드에서 전달한 카카오 액세스 토큰으로 소셜 로그인을 처리합니다.")
-    @PostMapping("/kakao/callback")
-    public ResponseEntity<?> kakaoCallback(@Valid @RequestBody KakaoLoginRequestDto request, HttpServletResponse response) {
-        try {
-            SocialLoginResponseDto tokens = kakaoOAuthService.processKakaoLogin(request.getAccessToken());
+    @Operation(summary = "카카오 소셜 로그인 시작", description = "카카오 OAuth 인증 페이지로 리다이렉트합니다.")
+    @GetMapping("/kakao/authorize")
+    public ResponseEntity<?> kakaoAuthorize() {
+        String kakaoAuthUrl = String.format(
+                "https://kauth.kakao.com/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code",
+                kakaoClientId,
+                kakaoRedirectUri
+        );
+        
+        return ResponseEntity.status(302)
+                .header(HttpHeaders.LOCATION, kakaoAuthUrl)
+                .build();
+    }
 
+    @Operation(summary = "카카오 소셜 로그인 콜백", description = "카카오 OAuth 인증 후 인가 코드를 받아 로그인을 처리합니다.")
+    @GetMapping("/kakao/callback")
+    public ResponseEntity<?> kakaoCallback(@RequestParam(required = false) String code, HttpServletResponse response) {
+        try {
+            // 인가 코드 누락 체크
+            if (code == null || code.trim().isEmpty()) {
+                return ResponseEntity.status(401)
+                        .body(ApiResponse.onFailure("AUTH_2121", "인증 정보가 누락되었습니다.", null));
+            }
+
+            // 카카오 OAuth 처리
+            SocialLoginResponseDto tokens = kakaoOAuthService.processKakaoCallback(code);
+
+            // Cross-Domain 환경을 위한 쿠키 설정
             umc.snack.common.config.security.CookieUtil.createCookie("refresh", tokens.getRefreshToken(), response);
 
+            // 토큰 설정: access -> URL 쿼리 파라미터, refresh -> Secure HttpOnly 쿠키
             return ResponseEntity.status(302)
                     .header(HttpHeaders.LOCATION, frontendUrl + "/auth/success?accessToken=" + tokens.getAccessToken())
                     .build();
+            
         } catch (CustomException e) {
+            // 서비스에서 발생한 커스텀 예외 처리
             ErrorCode errorCode = e.getErrorCode();
             return ResponseEntity.status(302)
                     .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=" + errorCode.name())
                     .build();
         } catch (Exception e) {
+            // 예상치 못한 오류 - 프론트엔드 에러 페이지로 리다이렉트
             return ResponseEntity.status(302)
                     .header(HttpHeaders.LOCATION, frontendUrl + "/auth/error?code=AUTH_2122")
                     .build();

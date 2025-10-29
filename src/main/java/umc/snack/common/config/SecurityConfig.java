@@ -90,6 +90,7 @@ public class SecurityConfig {
                                 "/api/users/signup",
                                 "/api/auth/login",
                                 "/api/auth/google/callback",
+                                "/api/auth/kakao/authorize",
                                 "/api/auth/kakao/callback",
                                 "/api/auth/reissue",
                                 "/api/articles/*/related-articles",
