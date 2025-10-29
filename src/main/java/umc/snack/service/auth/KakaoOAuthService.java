@@ -15,6 +15,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -48,18 +50,38 @@ public class KakaoOAuthService {
     @Value("${spring.jwt.token.expiration.refresh}")
     private Long refreshExpiredMs;
 
+    @Value("${kakao.oauth.client-id:}")
+    private String kakaoClientId;
+
+    @Value("${kakao.oauth.client-secret:}")
+    private String kakaoClientSecret;
+
+    @Value("${kakao.oauth.redirect-uri:}")
+    private String kakaoRedirectUri;
+
+    private static final String KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token";
     private static final String KAKAO_USER_INFO_URL = "https://kapi.kakao.com/v2/user/me";
 
     @Transactional
-    public SocialLoginResponseDto processKakaoLogin(String kakaoAccessToken) {
+    public SocialLoginResponseDto processKakaoCallback(String authorizationCode) {
         try {
+            // 1. 카카오로부터 액세스 토큰 받기
+            String kakaoAccessToken = getKakaoAccessToken(authorizationCode);
+            
+            // 2. 카카오 사용자 정보 조회
             KakaoUserInfo userInfo = getKakaoUserInfo(kakaoAccessToken);
+            
+            // 3. 사용자 로그인/회원가입 처리
             User user = findOrCreateUser(userInfo);
 
+            // 4. JWT 토큰 생성
             String accessToken = jwtUtil.createJwt("access", user.getUserId(), user.getEmail(), user.getRole().name(), accessExpiredMs);
             String refreshToken = jwtUtil.createJwt("refresh", user.getUserId(), user.getEmail(), user.getRole().name(), refreshExpiredMs);
 
+            // 5. Refresh Token 저장
             saveRefreshToken(user.getUserId(), user.getEmail(), refreshToken);
+            
+            // 6. 소셜 로그인 정보 저장/업데이트
             saveSocialLoginInfo(user.getUserId(), kakaoAccessToken, userInfo.getId());
 
             return SocialLoginResponseDto.builder()
@@ -70,6 +92,48 @@ public class KakaoOAuthService {
             throw e;
         } catch (Exception e) {
             log.error("카카오 OAuth 처리 중 예상치 못한 오류", e);
+            throw new CustomException(ErrorCode.AUTH_2115);
+        }
+    }
+
+    private String getKakaoAccessToken(String authorizationCode) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("grant_type", "authorization_code");
+        params.add("client_id", kakaoClientId);
+        params.add("client_secret", kakaoClientSecret);
+        params.add("code", authorizationCode);
+        params.add("redirect_uri", kakaoRedirectUri);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    KAKAO_TOKEN_URL,
+                    HttpMethod.POST,
+                    request,
+                    String.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                JsonNode jsonNode = objectMapper.readTree(response.getBody());
+                return jsonNode.get("access_token").asText();
+            } else {
+                log.error("카카오 액세스 토큰 획득 실패 - 응답 상태: {}", response.getStatusCode());
+                throw new CustomException(ErrorCode.AUTH_2116);
+            }
+        } catch (HttpClientErrorException e) {
+            log.error("카카오 액세스 토큰 획득 실패 - Client Error: {}", e.getMessage());
+            throw new CustomException(ErrorCode.AUTH_2116);
+        } catch (HttpServerErrorException e) {
+            log.error("카카오 액세스 토큰 획득 실패 - Server Error: {}", e.getMessage());
+            throw new CustomException(ErrorCode.AUTH_2115);
+        } catch (CustomException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("카카오 액세스 토큰 획득 실패", e);
             throw new CustomException(ErrorCode.AUTH_2115);
         }
     }
