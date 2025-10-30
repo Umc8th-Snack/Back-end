@@ -107,7 +107,7 @@ public class AuthController {
     @GetMapping("/kakao/authorize")
     public ResponseEntity<?> kakaoAuthorize() {
         String kakaoAuthUrl = String.format(
-                "https://kauth.kakao.com/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code",
+                "https://kauth.kakao.com/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=account_email",
                 kakaoClientId,
                 kakaoRedirectUri
         );
