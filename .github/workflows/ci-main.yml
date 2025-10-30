@@ -1,4 +1,4 @@
-name: CD on main (spring+python → prod, prune)
+name: CI (Only Crawl Quality)
 
 on:
   push:
@@ -6,130 +6,75 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
-  build_and_push:
+  crawl_quality_check:
     runs-on: ubuntu-latest
     env:
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-      AWS_REGION:     ${{ secrets.AWS_REGION }}
-      SPRING_REPO:    spring
-      PY_REPO:        python
-      ENV_TAG:        prod-latest
-      KEEP_N:         "5"
-      EXTRA_PROTECT:  ""
+      SAMPLE_SIZE: "200"
+      MAX_NULL_PERCENT: "20"
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '21'
-          distribution: 'temurin'
+          cache: gradle
 
-      - name: Set up Python (for optional python build)
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume:    ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region:        ${{ secrets.AWS_REGION }}
-          role-session-name: snacknews-cd
-
-      - name: Who am I?
-        run: aws sts get-caller-identity
-
-      - uses: aws-actions/amazon-ecr-login@v2
-
-      # ---------------- 스프링 JAR 빌드(필수) ----------------
-      - name: Build Spring JAR
+      - name: Run Crawl Quality Check (only CrawlQualityTest)
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
+          SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.H2Dialect
+          SPRING_SQL_INIT_MODE: never
         run: |
-          chmod +x ./gradlew
-          ./gradlew clean bootJar -x test
+          ./gradlew test --tests "umc.snack.crawler.CrawlQualityTest" \
+            -Dspring.profiles.active=test \
+            -Dspring.jwt.token.secretKey=abcdefghijklmnopqrstuvwxyz0123456789abcd \
+            -Dspring.jpa.database-platform=org.hibernate.dialect.H2Dialect \
+            -Dspring.sql.init.mode=never \
+            -Dcrawl.sample=${{ env.SAMPLE_SIZE || 200 }} \
+            -Dcrawl.maxNullPercent=${{ env.MAX_NULL_PERCENT || 20 }} \
+            --no-daemon --stacktrace
+        continue-on-error: true
 
-      - name: Show Spring build artifacts
-        run: ls -la build/libs || true
-
-      # ---------------- 파이썬 빌드(선택적) ----------------
-      - name: Build Python package if applicable
+      - name: Show Crawl Quality Summary
+        if: always()
         run: |
-          if [ -f python-nlp-service/pyproject.toml ] || [ -f python-nlp-service/setup.py ]; then
-            python -m pip install --upgrade pip setuptools wheel build
-            (cd python-nlp-service && python -m build) || true
-            ls -la python-nlp-service/dist || true
-          else
-            echo "No python build file found, skipping python packaging step"
+          file=$(ls build/test-results/test/TEST-umc.snack.crawler.CrawlQualityTest*.xml 2>/dev/null | head -n 1)
+          if [ -z "$file" ]; then
+            echo "⚠️  CrawlQualityTest 결과 XML을 찾을 수 없습니다."
+            exit 0
           fi
 
-      # ---------------- Docker 이미지 빌드 ----------------
-      - name: Build spring image
-        run: |
-          URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${SPRING_REPO}
-          docker build -f src/Dockerfile -t ${URI}:${{ github.sha }} -t ${URI}:${ENV_TAG} .
+          tests=$(grep -o 'tests="[0-9]*"' "$file" | head -n1 | sed -E 's/.*"([0-9]+)".*/\1/')
+          failures=$(grep -o 'failures="[0-9]*"' "$file" | head -n1 | sed -E 's/.*"([0-9]+)".*/\1/')
+          errors=$(grep -o 'errors="[0-9]*"' "$file" | head -n1 | sed -E 's/.*"([0-9]+)".*/\1/')
+          [ -z "$tests" ] && tests=0
+          [ -z "$failures" ] && failures=0
+          [ -z "$errors" ] && errors=0
 
-      - name: Build python image
-        run: |
-          URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PY_REPO}
-          docker build -t ${URI}:${{ github.sha }} -t ${URI}:${ENV_TAG} ./python-nlp-service
+          success=$((tests - failures - errors))
+          if [ "$tests" -le 0 ]; then
+            echo "⚠️  실행된 테스트가 없습니다."
+            exit 0
+          fi
 
-      - name: Push spring
-        run: |
-          URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${SPRING_REPO}
-          docker push ${URI}:${{ github.sha }}
-          docker push ${URI}:${ENV_TAG}
+          rate=$(awk "BEGIN {printf \"%.1f\", ($success/$tests)*100}")
+          echo "✅ 크롤링 품질 검사: 성공률 ${rate}% (${success}/${tests})"
 
-      - name: Push python
-        run: |
-          URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PY_REPO}
-          docker push ${URI}:${{ github.sha }}
-          docker push ${URI}:${ENV_TAG}
+          # GitHub Summary에도 남기기
+          {
+            echo "### CrawlQualityTest 결과"
+            echo ""
+            echo "- 총 테스트: ${tests}"
+            echo "- 성공: ${success}"
+            echo "- 실패: ${failures}"
+            echo "- 에러: ${errors}"
+            echo "- 성공률: ${rate}%"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build_and_push
-    env:
-      REMOTE_DIR: /home/ubuntu/Back-end
-      ENV_TAG:    prod-latest
-    steps:
-      - name: SSH & deploy (prod)
-        uses: appleboy/ssh-action@v1
-        with:
-          host:     ${{ secrets.SSH_HOST_STG }}
-          username: ${{ secrets.SSH_USER }}
-          key:      ${{ secrets.SSH_PRIVATE_KEY }}
-          script_stop: true
-          script: |
-            set -e
-            cd "${{ env.REMOTE_DIR }}"
-            AWS_REGION="${{ secrets.AWS_REGION }}"
-            AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
-            TAG="${{ env.ENV_TAG }}"
-
-            if ! command -v aws >/dev/null 2>&1; then
-              sudo apt update && sudo apt install -y unzip curl
-              ARCH=$(uname -m)
-              if [ "$ARCH" = "x86_64" ]; then URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"; else URL="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"; fi
-              curl -fsSL "$URL" -o awscliv2.zip
-              unzip -q awscliv2.zip
-              sudo ./aws/install
-            fi
-
-            aws ecr get-login-password --region "$AWS_REGION" \
-              | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-
-            touch .deploy.env
-            grep -q '^AWS_ACCOUNT_ID=' .deploy.env || echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> .deploy.env
-            grep -q '^AWS_REGION='     .deploy.env || echo "AWS_REGION=$AWS_REGION"         >> .deploy.env
-            if grep -q '^IMAGE_TAG=' .deploy.env; then sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$TAG/" .deploy.env; else echo "IMAGE_TAG=$TAG" >> .deploy.env; fi
-            if grep -q '^PYTHON_IMAGE_TAG=' .deploy.env; then sed -i "s/^PYTHON_IMAGE_TAG=.*/PYTHON_IMAGE_TAG=$TAG/" .deploy.env; else echo "PYTHON_IMAGE_TAG=$TAG" >> .deploy.env; fi
-
-            docker compose --env-file .deploy.env pull
-            docker compose --env-file .deploy.env up -d
-            docker image prune -f
