@@ -61,6 +61,7 @@ public class KakaoOAuthService {
 
     private static final String KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token";
     private static final String KAKAO_USER_INFO_URL = "https://kapi.kakao.com/v2/user/me";
+    private static final String KAKAO_PLACEHOLDER_EMAIL_DOMAIN = "kakao-user.snacknews";
 
     @Transactional
     public SocialLoginResponseDto processKakaoCallback(String authorizationCode) {
@@ -166,10 +167,7 @@ public class KakaoOAuthService {
                 throw new CustomException(ErrorCode.AUTH_2118);
             }
 
-            String email = kakaoAccount.path("email").asText(null);
-            if (email == null || email.isBlank()) {
-                throw new CustomException(ErrorCode.AUTH_2117);
-            }
+            String email = resolveEmail(kakaoAccount, kakaoId);
 
             JsonNode profileNode = kakaoAccount.path("profile");
             if (profileNode.isMissingNode() || profileNode.isNull()) {
@@ -230,6 +228,28 @@ public class KakaoOAuthService {
                 .build();
 
         return userRepository.save(newUser);
+    }
+
+    private String resolveEmail(JsonNode kakaoAccount, String kakaoId) {
+        String email = kakaoAccount.path("email").asText(null);
+        if (email != null && !email.isBlank()) {
+            return email;
+        }
+
+        boolean hasEmail = kakaoAccount.path("has_email").asBoolean(false);
+        boolean needsAgreement = kakaoAccount.path("email_needs_agreement").asBoolean(false);
+
+        if (hasEmail && needsAgreement) {
+            log.warn("카카오 계정 이메일 동의가 필요하지만 제공되지 않았습니다. Kakao ID: {}", kakaoId);
+        } else {
+            log.warn("카카오 계정에 이메일 정보가 제공되지 않았습니다. Kakao ID: {}", kakaoId);
+        }
+
+        return buildPlaceholderEmail(kakaoId);
+    }
+
+    private String buildPlaceholderEmail(String kakaoId) {
+        return String.format("kakao-%s@%s", kakaoId, KAKAO_PLACEHOLDER_EMAIL_DOMAIN);
     }
 
     private String generateUniqueNickname(String rawNickname, String email) {
