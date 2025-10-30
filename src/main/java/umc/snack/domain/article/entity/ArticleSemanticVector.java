@@ -19,11 +19,12 @@ import java.util.Arrays;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "article_semantic_vectors")
-public class ArticleSemanticVector extends BaseEntity {
-@Id
-@GeneratedValue(strategy = GenerationType.IDENTITY)
-@Column(name = "vector_id")
-private Long vectorId;
+public class ArticleSemanticVector {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "vector_id")
+    private Long vectorId;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "article_id", nullable = false, unique = true)
