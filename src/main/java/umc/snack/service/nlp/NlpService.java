@@ -222,7 +222,6 @@ public class NlpService {
             log.info("FastAPI 사용자 프로필 업데이트 성공: userId={}", userId);
         } catch (Exception e) {
             log.error("FastAPI 사용자 프로필 업데이트 실패: {}", e.getMessage());
-            // 에러를 던져서 상위 서비스에서 처리하도록 할 수도 있습니다.
             throw new RuntimeException("FastAPI 사용자 프로필 업데이트 실패", e);
         }
     }
@@ -255,6 +254,12 @@ public class NlpService {
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             // FastAPI가 4xx, 5xx 에러를 명확히 반환한 경우
             log.error("FastAPI HTTP 오류: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            
+            // 404 NOT_FOUND는 사용자 프로필 벡터가 없는 경우
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                throw new CustomException(ErrorCode.FEED_9504); // 맞춤 피드의 기사를 찾을 수 없습니다
+            }
+            
             throw new CustomException(ErrorCode.NLP_9899); // NLP 내부 서버 오류
 
         } catch (Exception e) {

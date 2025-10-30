@@ -41,4 +41,6 @@ out/
 Thumbs.db
 
 .env
+
+*.pyc
 .venv

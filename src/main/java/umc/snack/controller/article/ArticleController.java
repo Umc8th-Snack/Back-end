@@ -5,20 +5,26 @@ import umc.snack.domain.article.dto.ArticleDto;
 import umc.snack.domain.article.dto.RelatedArticleDto;
 import umc.snack.domain.article.entity.CrawledArticle;
 import umc.snack.domain.term.dto.TermResponseDto;
+import umc.snack.domain.user.dto.UserClicksDto;
 import umc.snack.repository.article.CrawledArticleRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import umc.snack.common.config.security.CustomUserDetails;
 import umc.snack.common.dto.ApiResponse;
 import umc.snack.service.article.ArticleService;
+import umc.snack.service.user.UserClickService;
 
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping(value = "/api/articles", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
@@ -27,6 +33,7 @@ public class ArticleController {
 
     private final CrawledArticleRepository crawledArticleRepository;
     private final ArticleService articleService;
+    private final UserClickService userClickService;
 
     @Operation(summary = "기사 크롤링 상태 확인", description = "현재 크롤링 작업이 진행 중인지 확인합니다.")
     @GetMapping("/crawl/status")
@@ -51,10 +58,29 @@ public class ArticleController {
     }
 
 
-    @Operation(summary = "기사 상세 정보 조회", description = "기사 요약내용, 원본 url 등 기사의 상세 정보를 제공합니다.")
+    @Operation(summary = "기사 상세 정보 조회", description = "기사 요약내용, 원본 url 등 기사의 상세 정보를 제공합니다. " +
+            "로그인한 사용자의 경우 자동으로 클릭 로그가 저장됩니다.")
     @GetMapping("/{articleId}")
-    public ResponseEntity<ApiResponse<ArticleDto>> getArticle(@PathVariable Long articleId) {
+    public ResponseEntity<ApiResponse<ArticleDto>> getArticle(
+            @PathVariable Long articleId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        // 기사 조회
         ArticleDto dto = articleService.getArticleById(articleId);
+        
+        // 로그인한 사용자라면 클릭 로그 자동 저장 
+        if (userDetails != null) {
+            try {
+                UserClicksDto clickDto = UserClicksDto.builder()
+                    .userId(userDetails.getUserId())
+                    .articleId(articleId)
+                    .build();
+                userClickService.saveUserClick(clickDto);
+            } catch (Exception e) {
+                // 클릭 로그 저장 실패해도 기사 조회는 성공 (에러 무시)
+            }
+        }
+        
         return ResponseEntity.ok(
                 ApiResponse.onSuccess(
                         "ARTICLE_9001",
@@ -77,17 +103,7 @@ public class ArticleController {
                 )
         );
     }
-/*
-    @Operation(summary = "키워드 기반 기사 검색", description = "키워드로 기사를 검색합니다. 최신순 정렬, 페이지네이션을 지원합니다.")
-    @GetMapping("/search/keyword")
-    public ResponseEntity<?> searchArticlesByKeyword(
-            @RequestParam String keyword,
-            @RequestParam(defaultValue = "latest") String sort,
-            @RequestParam(defaultValue = "1") int page) {
-        // TODO: 개발 예정
-        return ResponseEntity.ok("키워드 기반 기사 검색 API - 개발 예정");
-    }
-*/
+
     @Operation(summary = "관련 기사 조회", description = "현재 보고 있는 기사와 카테고리가 같은 관련 기사를 추천합니다.")
     @GetMapping("/{articleId}/related-articles")
     public ResponseEntity<ApiResponse<List<RelatedArticleDto>>> getRelatedArticles(@PathVariable Long articleId) {

@@ -13,7 +13,7 @@ import umc.snack.domain.feed.entity.Category;
 import umc.snack.domain.user.dto.UserCategoryScoreDto;
 import umc.snack.domain.user.entity.UserClicks;
 import umc.snack.domain.user.entity.UserScrap;
-import umc.snack.repository.feed.UserClickRepository;
+import umc.snack.repository.user.UserClickRepository;
 import umc.snack.repository.scrap.UserScrapRepository;
 
 import java.time.LocalDateTime;
