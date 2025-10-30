@@ -56,6 +56,8 @@ jobs:
           docker push ${URI}:${{ github.sha }}
           docker push ${URI}:${ENV_TAG}
 
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
   deploy:
     runs-on: ubuntu-latest

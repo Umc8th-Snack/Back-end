@@ -76,17 +76,13 @@ public class FeedController {
             @RequestParam(required = false) Long lastArticleId) {
 
         if (userDetails == null) {
-            // LOGIN_REQUIRED 등 적절한 에러 코드로 변경해주세요.
             return ApiResponse.onFailure("FEED_9604", "로그인이 필요한 서비스입니다.", null);
         }
 
         Long userId = userDetails.getUserId();
 
         ArticleInFeedDto responseDto = feedService.getPersonalizedFeed(userId, lastArticleId);
-        if (responseDto.getArticles().isEmpty()) {
-            return ApiResponse.onSuccess("FEED_9504", "맞춤 피드의 기사를 찾을 수 없습니다.", null);
-        }
-
+        
         return ApiResponse.onSuccess("FEED_9503", "맞춤 피드 조회에 성공하였습니다", responseDto);
     }
 }

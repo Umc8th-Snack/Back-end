@@ -78,7 +78,7 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private Role role = Role.ROLE_USER;
 
-    public enum LoginType { LOCAL, GOOGLE }
+    public enum LoginType { LOCAL, GOOGLE, KAKAO }
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
