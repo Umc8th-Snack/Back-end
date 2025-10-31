@@ -133,8 +133,8 @@ public class ArticleSummarizeService {
     }
 
     public void getCompletion() {
-        // 최근 20개만
-        PageRequest page = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // 최근 40개만
+        PageRequest page = PageRequest.of(0, 40, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Article> articlePage = articleRepository.findBySummaryIsNull(page);
         List<Article> articles = articlePage.getContent();
 
