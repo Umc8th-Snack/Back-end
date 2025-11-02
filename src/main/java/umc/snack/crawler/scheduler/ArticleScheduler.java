@@ -59,7 +59,7 @@ public class ArticleScheduler {
      * 오전 10시 10분, 오후 6시 10분에 Gemini 요약 실행
      * cron: "0 30 10,18 * * *"
      */
-    @Scheduled(cron = "0 10 10,18 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 03 10,18 * * *", zone = "Asia/Seoul")
 //    @Scheduled(cron = "0 */10 * * * *", zone = "Asia/Seoul")
     public void autoSummarize() {
         log.info("✅ 스케쥴러 Gemini 기사 요약 시작: {}", LocalDateTime.now());
