@@ -39,42 +39,12 @@ public class NlpController {
     }
 
     /**
-     * 사용자 프로필 벡터 생성/업데이트 (Spring 내부 또는 관리자용)
-     */
-    @PostMapping("/user-profile")
-    public ResponseEntity<Map<String, Object>> updateUserProfile(
-            @RequestBody UserProfileRequestDto requestDto) {
-
-        try {
-            nlpService.updateUserProfile(requestDto.getUserId(), requestDto.getInteractions());
-            return ResponseEntity.ok(Map.of("isSuccess", true, "message", "사용자 프로필 업데이트 요청 성공"));
-        } catch (Exception e) {
-            log.error("사용자 프로필 업데이트 실패: {}", e.getMessage());
-            return ResponseEntity.status(500).body(Map.of(
-                    "isSuccess", false,
-                    "message", "프로필 업데이트 중 오류가 발생했습니다",
-                    "error", e.getMessage()
-            ));
-        }
-    }
-
-
-    /**
      * NLP 시스템 상태 확인
      */
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> healthCheck() {
         boolean isHealthy = nlpService.checkFastApiHealth();
         return ResponseEntity.ok(Map.of("isSuccess", isHealthy, "fastapi_status", isHealthy ? "connected" : "disconnected"));
-    }
-
-    /**
-     * 통계 조회
-     */
-    @GetMapping("/statistics")
-    public ResponseEntity<Map<String, Object>> getStatistics() {
-        Map<String, Object> stats = nlpService.getVectorStatistics();
-        return ResponseEntity.ok(Map.of("isSuccess", true, "result", stats));
     }
 
     /**
