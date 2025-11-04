@@ -1,6 +1,9 @@
 # 📰 Snack Backend
 
+![데모데이용 피피티_최종 (1)-이미지-0](https://github.com/user-attachments/assets/e4b93d6a-d8e4-4554-8952-e0b4f95c4c26)
+
 > 네이버 뉴스 기사를 크롤링하여 요약본, 어려운 용어 해설, 퀴즈, 스크랩, 맞춤형 기사 피드를 제공하는 **뉴스 리딩 보조 서비스**
+
 
 ---
 
@@ -13,7 +16,7 @@
 ---
 ## 팀원 소개
 
-| <img src="image/img_4.png" width="120"/> <br> **크롤링 · 스크랩 · 신고** <br> [@chaewon](https://github.com/chaewon) | <img src="image/img_3.png" width="120"/> <br> **피드 · 검색 · 메모** <br> [@padoz3](https://github.com/padoz3) |
+| <img src="image/img_4.png" width="120"/> <br> **크롤링 · 스크랩 · 신고** <br> [@sungchaewon](https://github.com/sungchaewon) | <img src="image/img_3.png" width="120"/> <br> **피드 · 검색 · 메모** <br> [@padoz3](https://github.com/padoz3) |
 |---|---|
 | <img src="image/img_1.png" width="120"/> <br> **인증 · 사용자 · AI** <br> [@danaggero](https://github.com/danaggero) | <img src="image/img_5.png" width="120"/> <br> **소셜 로그인 · 퀴즈 · 신고** <br> [@LABYRINTH3](https://github.com/LABYRINTH3) |
 | <img src="image/img_2.png" width="120"/> <br> **피드 · 검색 · 인프라** <br> [@weeeeestern](https://github.com/weeeeestern) |  |
@@ -29,7 +32,7 @@
 - Gradle
 
 ### Infra & DevOps
-- AWS EC2, RDS, S3
+- AWS EC2, RDS, S3, ECR
 - Nginx
 - Docker, Docker Compose
 - GitHub Actions (CI/CD)

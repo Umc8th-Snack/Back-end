@@ -519,9 +519,15 @@ def parse_keywords(keywords_str: str) -> List[KeywordScore]:
     return keywords
 
 ACTION_WEIGHTS = {
+<<<<<<< HEAD
     "click": 1.0,
     "scrap": 1.5,
     "search": 0.8
+=======
+    "scrap": 0.5,
+    "click": 0.3,
+    "search": 0.2
+>>>>>>> f37b148c5a293ac479b4709afc511e4f2514ecae
 }
 
 async def _get_representative_vectors(article_ids: List[int]) -> Dict[int, np.ndarray]:

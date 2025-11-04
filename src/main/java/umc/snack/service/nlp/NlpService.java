@@ -271,8 +271,16 @@ public class NlpService {
             log.error("FastAPI 연결 시간 초과: {}", uri, e);
             throw new CustomException(ErrorCode.SERVER_5102);
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("FastAPI 맞춤 피드 HTTP 오류: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new CustomException(ErrorCode.NLP_9899);
+            // FastAPI가 4xx, 5xx 에러를 명확히 반환한 경우
+            log.error("FastAPI HTTP 오류: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            
+            // 404 NOT_FOUND는 사용자 프로필 벡터가 없는 경우
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                throw new CustomException(ErrorCode.FEED_9504); // 맞춤 피드의 기사를 찾을 수 없습니다
+            }
+            
+            throw new CustomException(ErrorCode.NLP_9899); // NLP 내부 서버 오류
+
         } catch (Exception e) {
             log.error("FastAPI 맞춤 피드 요청 실패: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.SERVER_5101);

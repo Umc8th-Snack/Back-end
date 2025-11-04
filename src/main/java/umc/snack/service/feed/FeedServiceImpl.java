@@ -21,7 +21,7 @@ import umc.snack.domain.user.entity.UserScrap;
 import umc.snack.repository.article.ArticleRepository;
 import umc.snack.repository.feed.CategoryRepository;
 import umc.snack.repository.feed.FeedRepository;
-import umc.snack.repository.feed.UserClickRepository;
+import umc.snack.repository.user.UserClickRepository;
 import umc.snack.repository.scrap.UserScrapRepository;
 import umc.snack.repository.user.SearchKeywordRepository;
 import umc.snack.service.nlp.NlpService;
@@ -114,8 +114,6 @@ class FeedServiceImpl implements FeedService {
         }
 
         // FastAPI한테 맞춤피드 페이지 요청
-        // 메인 피드와 달리, 맞춤피드는 FastAPI를 이용해 기사를 가져오는 거라서 한번에 많이씩 가져오도록 구현했어요
-        // -> 자꾸 오류 뜬다고 해서 한번에 가져오는 기사 개수를 48 -> 16으로 감소
         FeedResponseDto recommendedFeed = nlpService.getPersonalizedFeed(userId, 0, 16);
 
         if (recommendedFeed == null || recommendedFeed.getArticles().isEmpty()) {

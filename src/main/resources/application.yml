@@ -47,6 +47,10 @@ management:
       exposure:
         include: health,info,caches
 
+  health:
+    mail:
+      enabled: false
+
 
 # 프론트엔드 URL 설정
 frontend:
@@ -69,6 +73,8 @@ googleai:
   api:
     key: ${GOOGLE_API_KEY}
 
+    # please
+
 # 구글 OAuth2 설정
 google:
   oauth:
@@ -76,12 +82,19 @@ google:
     client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
     redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI}
 
+# 카카오 OAuth2 설정
+kakao:
+  oauth:
+    client-id: ${KAKAO_OAUTH_CLIENT_ID}
+    client-secret: ${KAKAO_OAUTH_CLIENT_SECRET}
+    redirect-uri: ${KAKAO_OAUTH_REDIRECT_URI}
+
 fastapi:
-  url: http://localhost:5000
+  url: http://python:5000
 
-# AWS S3 설정
+
+# AWS S3 설정,,,
 aws:
-
   s3:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
