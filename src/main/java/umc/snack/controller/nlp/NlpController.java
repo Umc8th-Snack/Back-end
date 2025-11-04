@@ -50,7 +50,7 @@ public class NlpController {
     /**
      * 전체 기사 처리 (관리자용)
      */
-    @PostMapping("/vectorize/articles/process-all")
+    @PostMapping("/admin/process-all")
     public ResponseEntity<Map<String, Object>> processAllArticles(
             @RequestParam(defaultValue = "false") boolean reprocess) {
         try {
