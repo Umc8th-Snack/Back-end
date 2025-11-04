@@ -248,15 +248,15 @@ async def vectorize_articles_from_db(article_ids: List[int]):
                     model_version = "keybert-multitask-v1"
 
                     await cursor.execute("""
-                            INSERT INTO article_semantic_vectors (vector_id, article_id, vector, keywords, representative_vector, model_version, created_at, updated_at)
-                            VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
+                            INSERT INTO article_semantic_vectors (article_id, vector, keywords, representative_vector, model_version, created_at, updated_at)
+                            VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
                             ON DUPLICATE KEY UPDATE
                                 vector = VALUES(vector),
                                 keywords = VALUES(keywords),
                                 representative_vector = VALUES(representative_vector),
                                 model_version = VALUES(model_version),
                                 updated_at = NOW()
-                        """, (article_id, article_id, vector_json_str, keywords_json_str, rep_vector_str, model_version))
+                        """, (article_id, vector_json_str, keywords_json_str, rep_vector_str, model_version))
 
                     logger.info(f"기사 {article_id} (KeyBERT) 처리 완료")
                     processed_count += 1
