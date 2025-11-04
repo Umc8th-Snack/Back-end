@@ -19,7 +19,7 @@ public class RestTemplateConfig {
     public RestTemplate fastApiRestTemplate() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(5000); // 연결시간 5000ms = 5s
-        requestFactory.setReadTimeout(10000); // 읽는 시간 10초
+        requestFactory.setReadTimeout(300000); // 300000ms = 5분
 
         return new RestTemplate(requestFactory);
     }
