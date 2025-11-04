@@ -90,7 +90,7 @@ kakao:
     redirect-uri: ${KAKAO_OAUTH_REDIRECT_URI}
 
 fastapi:
-  url: http://python:5000
+  url: http://localhost:5001
 
 
 # AWS S3 설정,,,
