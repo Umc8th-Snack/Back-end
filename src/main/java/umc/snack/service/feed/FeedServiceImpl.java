@@ -149,7 +149,7 @@ class FeedServiceImpl implements FeedService {
             return feedConverter.toArticleInFeedDto("맞춤 피드", false, null, new ArrayList<>());
         }
 
-        Map<Long, Article> articlesMap = articleRepository.findAllById(filteredIds).stream()
+        Map<Long, Article> articlesMap = articleRepository.findAllReadyByIdIn(filteredIds).stream()
                 .collect(Collectors.toMap(Article::getArticleId, article -> article));
 
         List<Article> sortedArticles = filteredIds.stream()

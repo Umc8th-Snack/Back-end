@@ -47,7 +47,6 @@ public class NlpService {
     @PostConstruct
     public void initialize() {
         log.info("NLP 서비스 초기화 - FastAPI URL: {}", fastapiUrl);
-        // checkFastApiHealth();
     }
 
     /**
@@ -74,7 +73,7 @@ public class NlpService {
     /**
      * 전체 기사 벡터화 - FastAPI의 실제 엔드포인트 호출
      */
-    @Async("taskExecutor") // (비동기 실행)
+    @Async("taskExecutor")
     public void processAllArticles(boolean reprocess) {
         log.info("비동기 전체 기사 처리 시작 - 재처리: {}", reprocess);
 
@@ -85,10 +84,8 @@ public class NlpService {
         HttpEntity<Void> request = new HttpEntity<>(new HttpHeaders());
 
         try {
-            // 처리할 기사가 없을 때까지(hasMoreArticles == false) 루프
             while (hasMoreArticles) {
 
-                // 1. FastAPI 배치 API 호출 (limit=50)
                 String url = String.format("%s/api/nlp/vectorize/batch?limit=%d&force_update=%b",
                         fastapiUrl, batchSize, reprocess);
 
@@ -97,21 +94,15 @@ public class NlpService {
                 ResponseEntity<Map> response = longTimeoutRestTemplate.postForEntity(url, request, Map.class);
                 Map<String, Object> body = response.getBody();
 
-                // 2. FastAPI 응답 결과 확인
                 if (body == null || "no_articles".equals(body.get("status"))) {
-                    // "no_articles" 응답이 오면 루프 종료
                     hasMoreArticles = false;
                     log.info("처리할 기사가 더 이상 없습니다. 루프를 종료합니다.");
 
                 } else {
-                    // 처리 결과 로그
                     int processedInThisBatch = (int) body.getOrDefault("processed", 0);
                     totalProcessed += processedInThisBatch;
                     log.info("이번 배치에서 {}개 처리 완료 (총 {}개 처리)", processedInThisBatch, totalProcessed);
 
-                    // 만약 FastAPI가 50개를 꽉 채워서 처리했다면,
-                    // 아직 처리할 기사가 더 남았을 것이라 가정하고 루프 계속
-                    // 만약 50개 미만으로 처리했다면, 이게 마지막 배치일 것이므로 루프 종료
                     if (processedInThisBatch < batchSize) {
                         hasMoreArticles = false;
                         log.info("마지막 배치를 완료했습니다.");
@@ -119,7 +110,7 @@ public class NlpService {
                 }
 
                 if (hasMoreArticles) {
-                    Thread.sleep(1000); // 1초 대기
+                    Thread.sleep(1000);
                 }
             }
 
@@ -179,13 +170,10 @@ public class NlpService {
 
             log.info("FastAPI 호출 URL: {}", url);
 
-            // URI 객체 생성
             URI uri = URI.create(url);
 
-            // FastAPI 호출
             ResponseEntity<SearchResponseDto> response = fastApiRestTemplate.getForEntity(uri, SearchResponseDto.class);
 
-            // 응답 검증
             if (response.getBody() == null) {
                 log.warn("FastAPI 응답 본문이 null - 검색어: '{}'", cleanedQuery);
                 throw new CustomException(ErrorCode.NLP_9808);
@@ -207,7 +195,7 @@ public class NlpService {
 
         } catch (ResourceAccessException e) {
             log.error("FastAPI 연결 시간 초과 - URL: {}, 오류: {}", fastapiUrl, e.getMessage());
-            throw new CustomException(ErrorCode.SERVER_5102);
+            throw new CustomException(ErrorCode.FEED_9606);
 
         } catch (HttpClientErrorException e) {
             log.error("FastAPI 클라이언트 오류 - 상태: {}, 응답: {}", e.getStatusCode(), e.getResponseBodyAsString());
@@ -249,8 +237,6 @@ public class NlpService {
         }
     }
 
-
-
     public void updateUserProfile(Long userId, List<UserInteractionDto> interactions) {
         String url = fastapiUrl + "/api/nlp/user-profile";
         log.info("FastAPI 사용자 프로필 업데이트 요청: userId={}", userId);
@@ -271,9 +257,6 @@ public class NlpService {
         }
     }
 
-    /**
-     * 맞춤 피드 기사 ID 목록 요청
-    */
     public FeedResponseDto getPersonalizedFeed(Long userId, int page, int size) {
         log.info("FastAPI 맞춤 피드 요청: userId={}, page={}, size={}", userId, page, size);
         URI uri = UriComponentsBuilder.fromHttpUrl(fastapiUrl)
@@ -302,14 +285,12 @@ public class NlpService {
             log.error("FastAPI 연결 시간 초과: {}", uri, e);
             throw new CustomException(ErrorCode.SERVER_5102);
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            // FastAPI가 4xx, 5xx 에러를 명확히 반환한 경우
             log.error("FastAPI HTTP 오류: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
-            
-            // 404 NOT_FOUND는 사용자 프로필 벡터가 없는 경우
+
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
                 throw new CustomException(ErrorCode.FEED_9504); // 맞춤 피드의 기사를 찾을 수 없습니다
             }
-            
+
             throw new CustomException(ErrorCode.NLP_9899); // NLP 내부 서버 오류
 
         } catch (Exception e) {
