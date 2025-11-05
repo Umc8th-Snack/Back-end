@@ -16,7 +16,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_REGION:     ${{ secrets.AWS_REGION }}
       SPRING_REPO:    spring
-      PY_REPO:        python-nlp
+      PY_REPO:        python
       ENV_TAG:        prod-latest
     steps:
       - uses: actions/checkout@v4
