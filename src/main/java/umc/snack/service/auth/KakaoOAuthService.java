@@ -219,7 +219,7 @@ public class KakaoOAuthService {
 
         User newUser = User.builder()
                 .email(userInfo.getEmail())
-                .password("SOCIAL_LOGIN_USER")
+                .password(null) // 소셜 로그인 사용자는 비밀번호 없음
                 .nickname(nickname)
                 .profileImage(userInfo.getProfileImage())
                 .status(User.Status.ACTIVE)
