@@ -92,5 +92,4 @@ jobs:
             docker compose --env-file .deploy.env pull
             docker compose --env-file .deploy.env up -d
 
-            # Clean unused images
             docker image prune -f

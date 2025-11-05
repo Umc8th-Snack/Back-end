@@ -4,8 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import umc.snack.domain.nlp.dto.SearchResponseDto;
-import umc.snack.domain.nlp.dto.UserProfileRequestDto;
+import umc.snack.common.dto.ApiResponse;
+import umc.snack.common.exception.ErrorCode;
+import umc.snack.domain.nlp.dto.NlpResponseDto;
 import umc.snack.service.nlp.NlpService;
 
 import java.util.List;
@@ -39,60 +40,48 @@ public class NlpController {
     }
 
     /**
-     * 사용자 프로필 벡터 생성/업데이트 (Spring 내부 또는 관리자용)
-     */
-    @PostMapping("/user-profile")
-    public ResponseEntity<Map<String, Object>> updateUserProfile(
-            @RequestBody UserProfileRequestDto requestDto) {
-
-        try {
-            nlpService.updateUserProfile(requestDto.getUserId(), requestDto.getInteractions());
-            return ResponseEntity.ok(Map.of("isSuccess", true, "message", "사용자 프로필 업데이트 요청 성공"));
-        } catch (Exception e) {
-            log.error("사용자 프로필 업데이트 실패: {}", e.getMessage());
-            return ResponseEntity.status(500).body(Map.of(
-                    "isSuccess", false,
-                    "message", "프로필 업데이트 중 오류가 발생했습니다",
-                    "error", e.getMessage()
-            ));
-        }
-    }
-
-
-    /**
      * NLP 시스템 상태 확인
      */
     @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> healthCheck() {
-        boolean isHealthy = nlpService.checkFastApiHealth();
-        return ResponseEntity.ok(Map.of("isSuccess", isHealthy, "fastapi_status", isHealthy ? "connected" : "disconnected"));
+    public ApiResponse<NlpResponseDto.HealthCheckDto> healthCheck() {
+        NlpResponseDto.HealthCheckDto healthStatusDto = nlpService.healthCheck();
+
+        return ApiResponse.onSuccess("NLP_9520",
+                "python server가 정상적으로 연결되었습니다.",
+                healthStatusDto);
     }
 
     /**
-     * 통계 조회
-     */
-    @GetMapping("/statistics")
-    public ResponseEntity<Map<String, Object>> getStatistics() {
-        Map<String, Object> stats = nlpService.getVectorStatistics();
-        return ResponseEntity.ok(Map.of("isSuccess", true, "result", stats));
-    }
-
-    /**
-     * 전체 기사 처리 (관리자용)
+     * 전체 기사 처리 (admin)
      */
     @PostMapping("/admin/process-all")
-    public ResponseEntity<Map<String, Object>> processAllArticles(
+    public ApiResponse<NlpResponseDto.ProcessStartDto> processAllArticles(
             @RequestParam(defaultValue = "false") boolean reprocess) {
+
         try {
-            Map<String, Object> result = nlpService.processAllArticles(reprocess);
-            return ResponseEntity.ok(result);
+            nlpService.processAllArticles(reprocess); // 비동기 작업 호출
+
+            ErrorCode code = ErrorCode.FEED_9508;
+
+            NlpResponseDto.ProcessStartDto dataDto = NlpResponseDto.ProcessStartDto.builder()
+                    .status("BACKGROUND_PROCESSING_STARTED")
+                    .reprocess(reprocess)
+                    .build();
+
+            return ApiResponse.onSuccess(
+                    code.name(),             // "FEED_9508"
+                    code.getMessage(),       // "기사 벡터화를 시작합니다."
+                    dataDto                  // DTO 전달
+            );
+
         } catch (Exception e) {
-            log.error("전체 기사 처리 실패: {}", e.getMessage());
-            return ResponseEntity.status(500).body(Map.of(
-                    "isSuccess", false,
-                    "message", "전체 기사 처리 중 오류가 발생했습니다",
-                    "error", e.getMessage()
-            ));
+            log.error("전체 기사 처리 시작 실패: {}", e.getMessage());
+
+            return ApiResponse.onFailure(
+                    ErrorCode.SERVER_5101.name(),       // "SERVER_5101"
+                    ErrorCode.SERVER_5101.getMessage(),
+                    null
+            );
         }
     }
 }

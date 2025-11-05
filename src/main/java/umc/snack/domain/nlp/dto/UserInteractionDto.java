@@ -2,9 +2,12 @@ package umc.snack.domain.nlp.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter @JsonInclude(JsonInclude.Include.NON_NULL)
+@Builder @NoArgsConstructor @AllArgsConstructor
 public class UserInteractionDto {
     private Long articleId;
     private String action;

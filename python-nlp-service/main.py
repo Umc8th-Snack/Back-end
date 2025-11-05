@@ -1,5 +1,6 @@
 # main.py
 from fastapi import FastAPI, HTTPException, status, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import asyncio
@@ -25,6 +26,15 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
+)
+
+# CORS 설정 추가
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 모든 origin 허용 (개발 환경용)
+    allow_credentials=True,
+    allow_methods=["*"],  # 모든 HTTP 메서드 허용
+    allow_headers=["*"],  # 모든 헤더 허용
 )
 
 # DB 연결 설정 (.env에서 읽기)
@@ -147,7 +157,7 @@ async def health_check():
 # --- 벡터화 엔드포인트 ---
 @app.post("/api/nlp/vectorize/batch")
 async def batch_vectorize_articles(
-        limit: int = Query(500, description="한 번에 처리할 최대 기사 수"),
+        limit: int = Query(50, description="한 번에 처리할 최대 기사 수"),
         force_update: bool = Query(False, description="기존 벡터 재생성 여부")
 ):
     if not db_pool:
@@ -238,15 +248,15 @@ async def vectorize_articles_from_db(article_ids: List[int]):
                     model_version = "keybert-multitask-v1"
 
                     await cursor.execute("""
-                            INSERT INTO article_semantic_vectors (vector_id, article_id, vector, keywords, representative_vector, model_version, created_at, updated_at)
-                            VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
+                            INSERT INTO article_semantic_vectors (article_id, vector, keywords, representative_vector, model_version, created_at, updated_at)
+                            VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
                             ON DUPLICATE KEY UPDATE
                                 vector = VALUES(vector),
                                 keywords = VALUES(keywords),
                                 representative_vector = VALUES(representative_vector),
                                 model_version = VALUES(model_version),
                                 updated_at = NOW()
-                        """, (article_id, article_id, vector_json_str, keywords_json_str, rep_vector_str, model_version))
+                        """, (article_id, vector_json_str, keywords_json_str, rep_vector_str, model_version))
 
                     logger.info(f"기사 {article_id} (KeyBERT) 처리 완료")
                     processed_count += 1
@@ -315,6 +325,8 @@ async def check_db_schema():
                 result['count_error'] = str(e)
 
             return result
+
+
 
 @app.get("/api/articles/search")
 async def search_articles_semantic(

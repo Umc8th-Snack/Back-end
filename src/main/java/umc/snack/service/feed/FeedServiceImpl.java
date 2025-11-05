@@ -1,9 +1,14 @@
 package umc.snack.service.feed;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import umc.snack.common.dto.ApiResponse;
 import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
 import umc.snack.converter.feed.FeedConverter;
@@ -21,6 +26,8 @@ import umc.snack.repository.scrap.UserScrapRepository;
 import umc.snack.repository.user.SearchKeywordRepository;
 import umc.snack.service.nlp.NlpService;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +37,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 class FeedServiceImpl implements FeedService {
     private final FeedRepository feedRepository;
     private final CategoryRepository categoryRepository;
@@ -43,9 +51,14 @@ class FeedServiceImpl implements FeedService {
 
     private static final int PAGE_SIZE = 16;
 
+    // 메인피드
     @Override
     public ArticleInFeedDto getMainFeedByCategories(List<String> categoryNames, Long lastArticleId, Long userId) {
-        // 카테고리 다중 선택
+        // 카테고리 누락
+        if (categoryNames == null || categoryNames.isEmpty()) {
+            throw new CustomException(ErrorCode.FEED_9602);
+        }
+
         // 유효하지 않은 커서 값에 대한 예외처리
         if (lastArticleId != null && lastArticleId <= 0) {
             throw new CustomException(ErrorCode.FEED_9603);
@@ -76,12 +89,17 @@ class FeedServiceImpl implements FeedService {
     @Override
     @Transactional(readOnly = true)
     public ArticleInFeedDto getPersonalizedFeed(Long userId, Long lastArticleId) {
-
+        // 커서값이 유효하지 않은 경우
         if (lastArticleId != null && lastArticleId <= 0) {
             throw new CustomException(ErrorCode.FEED_9603);
         }
 
-        // 1. 사용자의 최근 행동로그 조회
+        // 로그인 안 한 경우
+        if (userId == null) {
+            throw new CustomException(ErrorCode.FEED_9604);
+        }
+
+        // 사용자의 최근 행동로그 조회
         List<UserScrap> scraps = userScrapRepository.findTop20ByUserIdOrderByCreatedAtDesc(userId);
         List<UserClicks> clicks = userClickRepository.findTop15ByUserIdOrderByCreatedAtDesc(userId);
         List<SearchKeyword> searches = searchKeywordRepository.findTop10ByUserIdOrderByCreatedAtDesc(userId);
@@ -96,7 +114,12 @@ class FeedServiceImpl implements FeedService {
         }
 
         // FastAPI한테 맞춤피드 페이지 요청
-        FeedResponseDto recommendedFeed = nlpService.getPersonalizedFeed(userId, 0, 48);
+        FeedResponseDto recommendedFeed = nlpService.getPersonalizedFeed(userId, 0, 16);
+
+        if (recommendedFeed == null || recommendedFeed.getArticles().isEmpty()) {
+            log.warn("맞춤 추천 결과가 없어 빈 피드를 반환합니다.");
+            return feedConverter.toArticleInFeedDto("맞춤 피드", false, null, new ArrayList<>());
+        }
 
         List<Long> articleIds = recommendedFeed.getArticles().stream()
                 .map(RecommendedArticleDto::getArticleId)
@@ -153,12 +176,61 @@ class FeedServiceImpl implements FeedService {
         return feedConverter.toArticleInFeedDto("맞춤 피드", hasNext, nextCursorId, sortedArticles);
     }
 
+
     @Override
     public SearchResponseDto searchArticlesByQuery(String query, int page, int size, double threshold) {
-        return nlpService.searchArticles(query, page, size, threshold);
+
+        try {
+            // URL 디코딩 처리
+            String decodedQuery;
+            try {
+                decodedQuery = URLDecoder.decode(query, java.nio.charset.StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException e) {
+                log.error("URL 디코딩 실패(잘못된 퍼센트 인코딩): {}", e.getMessage());
+                throw new CustomException(ErrorCode.REQ_3102);
+            }
+
+            // 한글, 영문, 숫자, 공백, 일부 특수문자(+, #, -, ., _) 허용
+            String cleanedQuery = decodedQuery.replaceAll("[^가-힣a-zA-Z0-9\\s+#\\-._]", " ")
+                    .trim()
+                    .replaceAll("\\s+", " ");
+
+            // 검증
+            if (!StringUtils.hasText(cleanedQuery)) {
+                throw new CustomException(ErrorCode.NLP_9807);
+            }
+            if (cleanedQuery.length() < 2) {
+                throw new CustomException(ErrorCode.ARTICLE_9102_SEARCH);
+            }
+            if (page < 0) {
+                throw new CustomException(ErrorCode.ARTICLE_9103_SEARCH);
+            }
+            if (size < 1 || size > 100) {
+                throw new CustomException(ErrorCode.ARTICLE_9104_SEARCH);
+            }
+            log.info("검색 요청 처리 - 원본: '{}', 디코딩: '{}', 정리: '{}'", query, decodedQuery, cleanedQuery);
+
+            // NLP 서비스 호출
+            SearchResponseDto result = nlpService.searchArticles(cleanedQuery, page, size, threshold);
+
+            if (result == null || result.getArticles() == null || result.getArticles().isEmpty()) {
+                log.info("검색 결과 없음 - 검색어: '{}'", cleanedQuery);
+                throw new CustomException(ErrorCode.NLP_9808);
+            }
+
+            log.info("검색 완료 - 검색어: '{}', 결과: {}/{}", cleanedQuery, result.getArticles().size(), result.getTotalCount());
+            return result;
+
+        } catch (CustomException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("검색 처리 중 예상치 못한 오류 - 검색어: '{}', 오류: {}", query, e.getMessage(), e);
+            throw new CustomException(ErrorCode.NLP_9899);
+        }
     }
 
     private ArticleInFeedDto buildFeedResponse(String categoryName, Slice<Article> articleSlice) {
+        // 메인피드 - 해당 카테고리의 기사가 없는 경우
         if (!articleSlice.hasContent()) {
             throw new CustomException(ErrorCode.FEED_9502);
         }
@@ -167,9 +239,4 @@ class FeedServiceImpl implements FeedService {
         return feedConverter.toArticleInFeedDto(categoryName, articleSlice.hasNext(), nextCursorId, articles);
     }
 
-    @Override
-    @Transactional
-    public void updateUserProfile(UserProfileRequestDto requestDto) {
-        nlpService.updateUserProfile(requestDto.getUserId(), requestDto.getInteractions());
-    }
 }
