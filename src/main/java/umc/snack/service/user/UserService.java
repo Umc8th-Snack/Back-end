@@ -95,24 +95,21 @@ public class UserService {
         User managedUser = userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_2622)); // 존재하지 않는 회원
 
-        if (managedUser.getStatus() == User.Status.DELETED) { // 이미 탈퇴 처리된 회원
-            throw new CustomException(ErrorCode.USER_2621);
+        if (managedUser.getPassword() == null || managedUser.getPassword().isBlank()) {
+            throw new CustomException(ErrorCode.USER_2612); // 비번 없음(소셜) 상태에서 비번 확인 불가
         }
 
-        // 소셜 로그인 유저와 일반 로그인 유저 분기 처리
-        if (managedUser.getLoginType() == User.LoginType.LOCAL) {
-            // 일반 로그인: 비밀번호 검증 필요
-            if (managedUser.getPassword() == null || managedUser.getPassword().isBlank()) {
-                throw new CustomException(ErrorCode.USER_2612); // 비밀번호 없음
-            }
-            if (password == null || password.isBlank()) {
-                throw new CustomException(ErrorCode.USER_2611); // 비밀번호 불일치
-            }
-            if (!passwordEncoder.matches(password, managedUser.getPassword())) {
-                throw new CustomException(ErrorCode.USER_2611); // 비밀번호 불일치
-            }
+        // 비밀번호 검증 로직
+        if (password == null || password.isBlank()) {
+            throw new CustomException(ErrorCode.USER_2611);
         }
-        // 소셜 로그인(GOOGLE, KAKAO): 비밀번호 검증 없이 탈퇴 가능 (JWT 인증으로 본인 확인됨)
+        if (!passwordEncoder.matches(password, managedUser.getPassword())) {
+            throw new CustomException(ErrorCode.USER_2611);
+        }
+
+        if (managedUser .getStatus() == User.Status.DELETED) { // 이미 탈퇴 처리된 회원
+            throw new CustomException(ErrorCode.USER_2621);
+        }
 
         managedUser.withdraw();
         // refresh 토큰, 탈퇴한 user관련 메모, 스크랩 DB에서 삭제
