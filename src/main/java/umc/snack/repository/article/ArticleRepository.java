@@ -52,4 +52,9 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Article> findDistinctByArticleCategories_CategoryAndArticleIdNot(
             Category category, Long articleId, Pageable pageable
     );
+
+    @Query("SELECT a FROM Article a " +
+            "WHERE a.articleId IN :ids " +
+            "AND a.summary IS NOT NULL AND a.summary <> ''")
+    List<Article> findAllReadyByIdIn(@Param("ids") List<Long> ids);
 }

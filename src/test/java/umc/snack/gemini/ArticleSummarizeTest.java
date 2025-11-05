@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.client.HttpServerErrorException;
 import umc.snack.domain.article.entity.Article;
 import umc.snack.domain.article.entity.CrawledArticle;

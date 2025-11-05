@@ -17,26 +17,14 @@ public interface FeedRepository extends JpaRepository<Article, Long> {
     @Query("SELECT DISTINCT a FROM Article a " +
             "LEFT JOIN FETCH a.articleCategories ac " +
             "LEFT JOIN FETCH ac.category " +
-            "WHERE ac.category.categoryName IN :categoryNames")
+            "WHERE ac.category.categoryName IN :categoryNames AND a.summary IS NOT NULL AND a.summary <> ''")
     Slice<Article> findByCategoryName(@Param("categoryNames") List<String> categoryNames, Pageable pageable);
 
     // 카테고리별 다음 페이지 조회 (커서 기반)
     @Query("SELECT DISTINCT a FROM Article a " +
             "LEFT JOIN FETCH a.articleCategories ac " +
             "LEFT JOIN FETCH ac.category " +
-            "WHERE ac.category.categoryName IN :categoryNames AND a.articleId < :lastArticleId")
+            "WHERE ac.category.categoryName IN :categoryNames AND a.articleId < :lastArticleId AND a.summary IS NOT NULL AND a.summary <> ''")
     Slice<Article> findByCategoryNameWithCursor(
             @Param("categoryNames") List<String> categoryNames, @Param("lastArticleId") Long lastArticleId, Pageable pageable);
-
-    @Query("SELECT DISTINCT a FROM Article a JOIN a.articleCategories ac " +
-            "WHERE ac.category.categoryId IN :categoryIds " +
-            "ORDER BY a.articleId DESC")
-    Slice<Article> findByCategoryId(@Param("categoryIds") List<Long> categoryIds, Pageable pageable);
-
-    @Query("SELECT DISTINCT a FROM Article a JOIN a.articleCategories ac " +
-            "WHERE ac.category.categoryId IN :categoryIds AND a.articleId < :lastArticleId " +
-            "ORDER BY a.articleId DESC")
-    Slice<Article> findByCategoryIdWithCursor(@Param("categoryIds") List<Long> categoryIds, @Param("lastArticleId") Long lastArticleId, Pageable pageable);
-
-
 }
