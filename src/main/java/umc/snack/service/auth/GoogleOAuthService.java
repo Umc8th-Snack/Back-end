@@ -165,7 +165,7 @@ public class GoogleOAuthService {
             // 신규 소셜 로그인 회원
             User newUser = User.builder()
                     .email(userInfo.getEmail())
-                    .password("SOCIAL_LOGIN_USER") // 소셜 로그인 사용자 임시 패스워드
+                    .password(null)
                     .nickname(userInfo.getName())
                     .role(User.Role.ROLE_USER)
                     .status(User.Status.ACTIVE)
