@@ -157,7 +157,7 @@ async def health_check():
 # --- 벡터화 엔드포인트 ---
 @app.post("/api/nlp/vectorize/batch")
 async def batch_vectorize_articles(
-        limit: int = Query(500, description="한 번에 처리할 최대 기사 수"),
+        limit: int = Query(50, description="한 번에 처리할 최대 기사 수"),
         force_update: bool = Query(False, description="기존 벡터 재생성 여부")
 ):
     if not db_pool:
@@ -325,6 +325,8 @@ async def check_db_schema():
                 result['count_error'] = str(e)
 
             return result
+
+
 
 @app.get("/api/articles/search")
 async def search_articles_semantic(

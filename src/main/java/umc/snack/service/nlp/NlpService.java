@@ -4,10 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
@@ -17,10 +17,8 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.web.util.UriComponentsBuilder;
 import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
-import umc.snack.domain.nlp.dto.FeedResponseDto;
-import umc.snack.domain.nlp.dto.SearchResponseDto;
-import umc.snack.domain.nlp.dto.UserInteractionDto;
-import umc.snack.domain.nlp.dto.UserProfileRequestDto;
+import umc.snack.domain.nlp.dto.*;
+import org.springframework.scheduling.annotation.Async;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -55,18 +53,17 @@ public class NlpService {
     /**
      * FastAPI 헬스체크
      */
-    public boolean checkFastApiHealth() {
+    @GetMapping("/health")
+    public NlpResponseDto.HealthCheckDto healthCheck() {
         try {
             String healthUrl = fastapiUrl + "/health";
             ResponseEntity<Map> response = fastApiRestTemplate.getForEntity(healthUrl, Map.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
-                log.info("FastAPI 서버 연결 확인: {}", fastapiUrl);
-                return true;
-            }
-            log.warn("FastAPI 헬스체크 실패. 상태 코드: {}", response.getStatusCode());
-            return false;
+            boolean isHealthy = (response.getStatusCode() == HttpStatus.OK);
 
+            return NlpResponseDto.HealthCheckDto.builder()
+                    .fastapi_status(isHealthy ? "connected" : "disconnected")
+                    .build();
         } catch (ResourceAccessException e) {
             throw new CustomException(ErrorCode.SERVER_5102);
         } catch (Exception e) {
@@ -77,28 +74,62 @@ public class NlpService {
     /**
      * 전체 기사 벡터화 - FastAPI의 실제 엔드포인트 호출
      */
-    public Map<String, Object> processAllArticles(boolean reprocess) {
-        log.info("전체 기사 처리 요청 - 재처리: {}", reprocess);
-        String url = fastapiUrl + "/api/nlp/vectorize/batch";
+    @Async("taskExecutor") // (비동기 실행)
+    public void processAllArticles(boolean reprocess) {
+        log.info("비동기 전체 기사 처리 시작 - 재처리: {}", reprocess);
+
+        int batchSize = 50;
+        int totalProcessed = 0;
+        boolean hasMoreArticles = true;
+
         HttpEntity<Void> request = new HttpEntity<>(new HttpHeaders());
 
         try {
-            ResponseEntity<Map> response = longTimeoutRestTemplate.postForEntity(url, request, Map.class);
-            if (response.getBody() != null) {
-                log.info("FastAPI 응답: {}", response.getBody());
-                return response.getBody();
+            // 처리할 기사가 없을 때까지(hasMoreArticles == false) 루프
+            while (hasMoreArticles) {
+
+                // 1. FastAPI 배치 API 호출 (limit=50)
+                String url = String.format("%s/api/nlp/vectorize/batch?limit=%d&force_update=%b",
+                        fastapiUrl, batchSize, reprocess);
+
+                log.info("FastAPI 배치 요청: ({}개)", batchSize);
+
+                ResponseEntity<Map> response = longTimeoutRestTemplate.postForEntity(url, request, Map.class);
+                Map<String, Object> body = response.getBody();
+
+                // 2. FastAPI 응답 결과 확인
+                if (body == null || "no_articles".equals(body.get("status"))) {
+                    // "no_articles" 응답이 오면 루프 종료
+                    hasMoreArticles = false;
+                    log.info("처리할 기사가 더 이상 없습니다. 루프를 종료합니다.");
+
+                } else {
+                    // 처리 결과 로그
+                    int processedInThisBatch = (int) body.getOrDefault("processed", 0);
+                    totalProcessed += processedInThisBatch;
+                    log.info("이번 배치에서 {}개 처리 완료 (총 {}개 처리)", processedInThisBatch, totalProcessed);
+
+                    // 만약 FastAPI가 50개를 꽉 채워서 처리했다면,
+                    // 아직 처리할 기사가 더 남았을 것이라 가정하고 루프 계속
+                    // 만약 50개 미만으로 처리했다면, 이게 마지막 배치일 것이므로 루프 종료
+                    if (processedInThisBatch < batchSize) {
+                        hasMoreArticles = false;
+                        log.info("마지막 배치를 완료했습니다.");
+                    }
+                }
+
+                if (hasMoreArticles) {
+                    Thread.sleep(1000); // 1초 대기
+                }
             }
-            // 응답 본문이 null인 경우
-            throw new CustomException(ErrorCode.NLP_9808);
-        } catch (ResourceAccessException e) {
-            log.error("FastAPI 연결 시간 초과: {}", url, e);
-            throw new CustomException(ErrorCode.SERVER_5102);
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("FastAPI HTTP 오류: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new CustomException(ErrorCode.NLP_9899);
+
+            log.info("비동기 전체 기사 처리 완료. 총 {}개 기사 처리됨.", totalProcessed);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("기사 처리 스레드가 중단되었습니다.", e);
         } catch (Exception e) {
-            log.error("FastAPI 호출 중 알 수 없는 오류: {}", e.getMessage(), e);
-            throw new CustomException(ErrorCode.SERVER_5101);
+            log.error("비동기 기사 처리 중 심각한 오류 발생", e);
         }
     }
 
