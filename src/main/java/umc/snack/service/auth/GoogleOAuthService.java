@@ -16,6 +16,7 @@ import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.auth.dto.SocialLoginResponseDto;
 import umc.snack.domain.auth.entity.RefreshToken;
+import umc.snack.domain.auth.entity.SocialLogin;
 import umc.snack.domain.user.entity.User;
 import umc.snack.repository.auth.RefreshTokenRepository;
 import umc.snack.repository.user.UserRepository;
@@ -164,7 +165,7 @@ public class GoogleOAuthService {
             // 신규 소셜 로그인 회원
             User newUser = User.builder()
                     .email(userInfo.getEmail())
-                    .password(null) // 소셜 로그인 사용자는 비밀번호 없음
+                    .password("SOCIAL_LOGIN_USER") // 소셜 로그인 사용자 임시 패스워드
                     .nickname(userInfo.getName())
                     .role(User.Role.ROLE_USER)
                     .status(User.Status.ACTIVE)
