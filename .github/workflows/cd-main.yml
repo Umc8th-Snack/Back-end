@@ -131,5 +131,5 @@ jobs:
             if grep -q '^PYTHON_IMAGE_TAG=' .deploy.env; then sed -i "s/^PYTHON_IMAGE_TAG=.*/PYTHON_IMAGE_TAG=$TAG/" .deploy.env; else echo "PYTHON_IMAGE_TAG=$TAG" >> .deploy.env; fi
 
             docker compose --env-file .deploy.env pull
-            docker compose --env-file .deploy.env up -d
+            docker compose --env-file .deploy.env up -d --no-deps --force-recreate spring python
             docker image prune -f
