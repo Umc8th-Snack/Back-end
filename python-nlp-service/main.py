@@ -544,7 +544,8 @@ async def _get_representative_vectors(article_ids: List[int]) -> Dict[int, np.nd
     return vectors
 
 async def _calculate_user_profile_vector(interactions: List[UserInteraction]) -> Optional[np.ndarray]:
-    # 행동 로그를 기반으로 사용자 프로필 벡터 계산
+    TARGET_DIMENSION = 768
+
     # articleId가 있는 경우만 추출
     article_ids = [interaction.articleId for interaction in interactions if interaction.articleId]
     search_keywords = [inter.keyword for inter in interactions if inter.keyword]
@@ -560,6 +561,7 @@ async def _calculate_user_profile_vector(interactions: List[UserInteraction]) ->
 
     weighted_vectors = []
     total_weight = 0
+    found_valid_vector = False
 
     for interaction in interactions:
         action = interaction.action
@@ -572,10 +574,16 @@ async def _calculate_user_profile_vector(interactions: List[UserInteraction]) ->
             vector = article_vectors_map[interaction.articleId]
 
         if vector is not None:
-            weighted_vectors.append(vector * weight)
-            total_weight += weight
-
-    if not weighted_vectors or total_weight == 0:
+            if vector.shape == (TARGET_DIMENSION,):
+                weighted_vectors.append(vector * weight)
+                total_weight += weight
+                found_valid_vector = True
+            else:
+                logger.warning(
+                    f"Skipping vector for action '{action}' (ID: {interaction.articleId}, Keyword: {interaction.keyword}). "
+                    f"Expected dimension {TARGET_DIMENSION}, but got {vector.shape}."
+                )
+    if not found_valid_vector or not weighted_vectors or total_weight == 0:
         return None
 
     # 가중 평균 계산

@@ -114,7 +114,7 @@ class FeedServiceImpl implements FeedService {
         }
 
         // FastAPI한테 맞춤피드 페이지 요청
-        FeedResponseDto recommendedFeed = nlpService.getPersonalizedFeed(userId, 0, 150);
+        FeedResponseDto recommendedFeed = nlpService.getPersonalizedFeed(userId, 0, 100);
 
         if (recommendedFeed == null || recommendedFeed.getArticles().isEmpty()) {
             log.warn("맞춤 추천 결과가 없어 빈 피드를 반환합니다.");
