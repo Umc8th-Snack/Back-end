@@ -25,8 +25,10 @@ import umc.snack.common.exception.CustomException;
 import umc.snack.common.exception.ErrorCode;
 import umc.snack.domain.auth.dto.SocialLoginResponseDto;
 import umc.snack.domain.auth.entity.RefreshToken;
+import umc.snack.domain.auth.entity.SocialLogin;
 import umc.snack.domain.user.entity.User;
 import umc.snack.repository.auth.RefreshTokenRepository;
+import umc.snack.repository.auth.SocialLoginRepository;
 import umc.snack.repository.user.UserRepository;
 
 import java.time.LocalDateTime;
@@ -40,6 +42,7 @@ public class KakaoOAuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final SocialLoginRepository socialLoginRepository;
     private final JWTUtil jwtUtil;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -61,6 +64,7 @@ public class KakaoOAuthService {
 
     private static final String KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token";
     private static final String KAKAO_USER_INFO_URL = "https://kapi.kakao.com/v2/user/me";
+    private static final String KAKAO_UNLINK_URL = "https://kapi.kakao.com/v1/user/unlink";
     private static final String KAKAO_PLACEHOLDER_EMAIL_DOMAIN = "kakao-user.snacknews";
 
     @Transactional
@@ -306,7 +310,97 @@ public class KakaoOAuthService {
     }
 
     private void saveSocialLoginInfo(Long userId, String kakaoAccessToken, String kakaoUserId) {
-        log.info("카카오 소셜 로그인 - 사용자 ID: {}, Kakao ID: {}", userId, kakaoUserId);
+        // 기존 소셜 로그인 정보 조회
+        Optional<SocialLogin> existingOpt = socialLoginRepository.findByUserIdAndProvider(userId, "KAKAO");
+        
+        if (existingOpt.isPresent()) {
+            // 기존 정보 업데이트 (액세스 토큰 갱신)
+            SocialLogin existing = existingOpt.get();
+            SocialLogin updated = SocialLogin.builder()
+                    .socialLoginId(existing.getSocialLoginId())
+                    .userId(userId)
+                    .provider("KAKAO")
+                    .providerSocialId(kakaoUserId)
+                    .accessToken(kakaoAccessToken)
+                    .build();
+            socialLoginRepository.save(updated);
+        } else {
+            // 신규 소셜 로그인 정보 저장
+            SocialLogin socialLogin = SocialLogin.builder()
+                    .userId(userId)
+                    .provider("KAKAO")
+                    .providerSocialId(kakaoUserId)
+                    .accessToken(kakaoAccessToken)
+                    .build();
+            socialLoginRepository.save(socialLogin);
+        }
+        
+        log.info("카카오 소셜 로그인 정보 저장 완료 - 사용자 ID: {}, Kakao ID: {}", userId, kakaoUserId);
+    }
+    
+    /**
+     * 카카오 연결 해제 (회원 탈퇴 시 호출)
+     */
+    @Transactional
+    public void unlinkUser(Long userId) {
+        try {
+            // 저장된 소셜 로그인 정보 조회
+            Optional<SocialLogin> socialLoginOpt = socialLoginRepository.findByUserIdAndProvider(userId, "KAKAO");
+            
+            if (socialLoginOpt.isEmpty()) {
+                log.warn("카카오 소셜 로그인 정보가 없습니다. 사용자 ID: {}", userId);
+                // 정보가 없어도 탈퇴는 진행되어야 하므로 예외를 던지지 않음
+                return;
+            }
+            
+            SocialLogin socialLogin = socialLoginOpt.get();
+            String accessToken = socialLogin.getAccessToken();
+            
+            if (accessToken == null || accessToken.isBlank()) {
+                log.warn("카카오 액세스 토큰이 없습니다. 사용자 ID: {}", userId);
+                // 토큰이 없어도 DB 정보는 삭제
+                socialLoginRepository.deleteByUserId(userId);
+                return;
+            }
+            
+            // 카카오 연결 해제 API 호출
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(
+                        KAKAO_UNLINK_URL,
+                        HttpMethod.POST,
+                        entity,
+                        String.class
+                );
+                
+                if (response.getStatusCode() == HttpStatus.OK) {
+                    log.info("카카오 연결 해제 성공 - 사용자 ID: {}", userId);
+                } else {
+                    log.warn("카카오 연결 해제 응답 이상 - 사용자 ID: {}, 상태: {}", userId, response.getStatusCode());
+                }
+            } catch (HttpClientErrorException e) {
+                // 401, 403 등의 에러는 이미 만료된 토큰이거나 권한 문제
+                log.warn("카카오 연결 해제 실패 (Client Error) - 사용자 ID: {}, 에러: {}", userId, e.getMessage());
+            } catch (HttpServerErrorException e) {
+                // 카카오 서버 에러
+                log.error("카카오 연결 해제 실패 (Server Error) - 사용자 ID: {}, 에러: {}", userId, e.getMessage());
+            } catch (Exception e) {
+                log.error("카카오 연결 해제 중 예외 발생 - 사용자 ID: {}", userId, e);
+            }
+            
+            // API 호출 성공 여부와 관계없이 DB에서 소셜 로그인 정보 삭제
+            socialLoginRepository.deleteByUserId(userId);
+            log.info("카카오 소셜 로그인 정보 삭제 완료 - 사용자 ID: {}", userId);
+            
+        } catch (Exception e) {
+            log.error("카카오 연결 해제 처리 중 오류 발생 - 사용자 ID: {}", userId, e);
+            // 탈퇴는 계속 진행되어야 하므로 예외를 던지지 않음
+        }
     }
 
     @Builder

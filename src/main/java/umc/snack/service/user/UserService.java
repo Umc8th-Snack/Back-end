@@ -19,6 +19,8 @@ import umc.snack.repository.memo.MemoRepository;
 import umc.snack.repository.scrap.UserScrapRepository;
 import umc.snack.repository.user.UserRepository;
 import umc.snack.repository.user.VerificationCodeRepository;
+import umc.snack.service.auth.GoogleOAuthService;
+import umc.snack.service.auth.KakaoOAuthService;
 
 import java.time.LocalDateTime;
 import java.util.Random;
@@ -35,6 +37,8 @@ public class UserService {
     private final JavaMailSender mailSender;
     private final VerificationCodeService verificationCodeService;
     private final VerificationCodeRepository verificationCodeRepository;
+    private final GoogleOAuthService googleOAuthService;
+    private final KakaoOAuthService kakaoOAuthService;
 
     @Transactional
     public UserSignupResponseDto signup(UserSignupRequestDto request) {
@@ -107,8 +111,14 @@ public class UserService {
             if (!passwordEncoder.matches(password, managedUser.getPassword())) {
                 throw new CustomException(ErrorCode.USER_2611); // 비밀번호 불일치
             }
+        } else {
+            // 소셜 로그인(GOOGLE, KAKAO): 플랫폼 연결 해제
+            if (managedUser.getLoginType() == User.LoginType.GOOGLE) {
+                googleOAuthService.revokeToken(managedUser.getUserId());
+            } else if (managedUser.getLoginType() == User.LoginType.KAKAO) {
+                kakaoOAuthService.unlinkUser(managedUser.getUserId());
+            }
         }
-        // 소셜 로그인(GOOGLE, KAKAO): 비밀번호 검증 없이 탈퇴 가능 (JWT 인증으로 본인 확인됨)
 
         managedUser.withdraw();
         // refresh 토큰, 탈퇴한 user관련 메모, 스크랩 DB에서 삭제
