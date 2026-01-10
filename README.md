@@ -43,7 +43,8 @@
 
 ---
 ## 🏗 서비스 아키텍쳐
-![img.png](image/img.png)
+<img width="1816" height="1006" alt="image" src="https://github.com/user-attachments/assets/a4d99227-db61-482e-a947-14240f19ac0c" />
+
 
 ---
 ## 📌 주요 기능 
