@@ -6,7 +6,6 @@
 
 
 ---
-
 ## 🚀 서비스 소개
 
 **Snack**은 사용자가 뉴스를 더 쉽고 재미있게 읽을 수 있도록 돕는 서비스입니다.  
@@ -21,6 +20,11 @@
 | <img src="image/img_1.png" width="120"/> <br> **인증 · 사용자 · AI** <br> [@danaggero](https://github.com/danaggero) | <img src="image/img_5.png" width="120"/> <br> **소셜 로그인 · 퀴즈 · 신고** <br> [@LABYRINTH3](https://github.com/LABYRINTH3) |
 | <img src="image/img_2.png" width="120"/> <br> **피드 · 검색 · 인프라** <br> [@weeeeestern](https://github.com/weeeeestern) |  |
 
+---
+## 🏗 서비스 아키텍쳐
+<img width="1796" height="995" alt="image" src="https://github.com/user-attachments/assets/8b9ef827-311b-4395-8264-b27c6cf4112b" />
+
+---
 ## 🛠 기술 스택
 
 ### Backend
@@ -45,14 +49,7 @@
 - 네이버 뉴스 API
 
 ---
-## 🏗 서비스 아키텍쳐
-<img width="1796" height="995" alt="image" src="https://github.com/user-attachments/assets/8b9ef827-311b-4395-8264-b27c6cf4112b" />
-
-
-
----
 ## 📌 주요 기능 
-- https://snacknews.site/swagger-ui/index.html
 
 ### 인증 & 사용자
 - 회원가입, 로그인/로그아웃
