@@ -36,6 +36,9 @@
 - Nginx
 - Docker, Docker Compose
 - GitHub Actions (CI/CD)
+- AWS Lambda, EventBridge
+- AWS Cloudwatch
+- Grafana
 
 ### NLP & Data
 - Python FastAPI (TF-IDF + 의미 벡터화)
@@ -43,7 +46,8 @@
 
 ---
 ## 🏗 서비스 아키텍쳐
-<img width="1816" height="1006" alt="image" src="https://github.com/user-attachments/assets/a4d99227-db61-482e-a947-14240f19ac0c" />
+<img width="1796" height="995" alt="image" src="https://github.com/user-attachments/assets/8b9ef827-311b-4395-8264-b27c6cf4112b" />
+
 
 
 ---
