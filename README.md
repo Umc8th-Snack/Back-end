@@ -7,10 +7,15 @@
 
 ---
 ## 🚀 서비스 소개
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/a29b2085-8afa-4a64-a935-6d7f05c6fe7a" />
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/c5ee7d8d-b121-444f-b2d5-9addc174aca8" />
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/ba958b49-9d91-4180-8a7d-d9cf3a39f743" />
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/dc865e35-59d1-4952-aee1-a8d9d0bdb471" />
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/3a361d0c-1422-4916-b65d-9697cfe28b89" />
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/c50ea18a-7e51-4539-8d9f-2626845edfa5" />
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/71bb1db4-7da2-415e-a204-045bf5a68a02" />
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/a8884f7e-8e5a-4c4e-9822-721dedb1ae75" />
 
-**Snack**은 사용자가 뉴스를 더 쉽고 재미있게 읽을 수 있도록 돕는 서비스입니다.  
-네이버 API를 활용해 기사를 수집하고, 각 기사에 대한 요약·용어 해설·퀴즈를 자동으로 생성합니다.  
-또한 사용자의 클릭·스크랩·검색 로그를 분석해 맞춤형 피드를 제공합니다.
 
 ---
 ## 팀원 소개
